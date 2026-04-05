@@ -54,8 +54,7 @@ Python
 ## 📦 Deliverables (MANDATORY)
 - Source code  
 - README with setup  
-- Demo video  
-- Architecture diagram  
+
 
 ## ⏱️ Constraints
 - 24 hours  
