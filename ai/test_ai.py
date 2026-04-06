@@ -29,6 +29,53 @@ JOB_DESCRIPTION = (
 )
 
 
+class _FakeGoogleEmbedding:
+    def __init__(self, values):
+        self.values = values
+
+
+class _FakeGoogleEmbeddingResponse:
+    def __init__(self, embeddings):
+        self.embeddings = embeddings
+
+
+class _FakeGoogleGenerationResponse:
+    def __init__(self, text="", parsed=None):
+        self.text = text
+        self.parsed = parsed
+
+
+class _FakeGoogleModels:
+    def embed_content(self, model, contents, config=None):
+        chunks = [contents] if isinstance(contents, str) else list(contents)
+        joined_text = " ".join(chunks).lower()
+        if "looking for a python developer" in joined_text:
+            vector = [0.9, 0.1, 0.0]
+        else:
+            vector = [1.0, 0.0, 0.0]
+
+        return _FakeGoogleEmbeddingResponse(
+            [_FakeGoogleEmbedding(vector) for _ in chunks]
+        )
+
+    def generate_content(self, model, contents, config=None):
+        return _FakeGoogleGenerationResponse(
+            parsed={
+                "summary": (
+                    "Candidate shows strong Python, SQL, and machine learning "
+                    "experience for this role."
+                ),
+                "skills": ["python", "sql", "machine learning", "aws"],
+                "missing_skills": ["kubernetes"],
+            }
+        )
+
+
+class _FakeGoogleClient:
+    def __init__(self):
+        self.models = _FakeGoogleModels()
+
+
 class AnalyzeResumeTests(unittest.TestCase):
     def test_fake_template_resume_is_blocked_from_ranking(self):
         with (
@@ -37,6 +84,7 @@ class AnalyzeResumeTests(unittest.TestCase):
                 "extract_text_from_pdf",
                 return_value=FAKE_TEMPLATE_TEXT,
             ),
+            patch.object(pipeline, "_load_google_client", return_value=None),
             patch.object(pipeline, "_load_embedding_model", return_value=None),
         ):
             result = pipeline.analyze_resume("fake.pdf", JOB_DESCRIPTION)
@@ -60,7 +108,10 @@ class AnalyzeResumeTests(unittest.TestCase):
     def test_real_resume_is_ranked(self):
         sample_pdf = Path(__file__).with_name("sample_resume.pdf")
 
-        with patch.object(pipeline, "_load_embedding_model", return_value=None):
+        with (
+            patch.object(pipeline, "_load_google_client", return_value=None),
+            patch.object(pipeline, "_load_embedding_model", return_value=None),
+        ):
             result = pipeline.analyze_resume(str(sample_pdf), JOB_DESCRIPTION)
 
         self.assertFalse(result["is_fake"])
@@ -75,7 +126,10 @@ class AnalyzeResumeTests(unittest.TestCase):
         sample_pdf = Path(__file__).with_name("sample_resume.pdf")
         file_bytes = sample_pdf.read_bytes()
 
-        with patch.object(pipeline, "_load_embedding_model", return_value=None):
+        with (
+            patch.object(pipeline, "_load_google_client", return_value=None),
+            patch.object(pipeline, "_load_embedding_model", return_value=None),
+        ):
             result = pipeline.analyze_resume_bytes(
                 file_bytes,
                 JOB_DESCRIPTION,
@@ -97,6 +151,27 @@ class AnalyzeResumeTests(unittest.TestCase):
         self.assertFalse(result["ranked"])
         self.assertEqual("unknown", result["resume_status"])
         self.assertIn("Uploaded file must be a PDF.", result["fraud_reasons"])
+
+    def test_google_api_is_used_for_resume_analysis_and_ranking(self):
+        sample_pdf = Path(__file__).with_name("sample_resume.pdf")
+        google_job_description = f"{JOB_DESCRIPTION} Kubernetes experience is required."
+
+        with (
+            patch.object(
+                pipeline,
+                "_load_google_client",
+                return_value=_FakeGoogleClient(),
+            ),
+            patch.object(pipeline, "_load_embedding_model", return_value=None),
+        ):
+            result = pipeline.analyze_resume(str(sample_pdf), google_job_description)
+
+        self.assertFalse(result["is_fake"])
+        self.assertEqual("google", result["ai_provider"])
+        self.assertGreater(result["match_score"], 0.8)
+        self.assertIn("aws", result["skills"])
+        self.assertIn("kubernetes", result["missing_skills"])
+        self.assertIn("strong Python", result["explanation"])
 
 
 if __name__ == "__main__":

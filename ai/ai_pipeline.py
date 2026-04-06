@@ -1,7 +1,9 @@
 from collections import Counter
 from functools import lru_cache
+import json
 import math
 import os
+from pathlib import Path
 import re
 import tempfile
 
@@ -196,6 +198,67 @@ os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS_WARNING", "1")
 os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
 os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 
+DEFAULT_GOOGLE_ANALYSIS_MODEL = "gemini-2.5-flash"
+DEFAULT_GOOGLE_EMBEDDING_MODEL = "gemini-embedding-001"
+DEFAULT_GOOGLE_EMBEDDING_DIMENSION = 768
+GOOGLE_ANALYSIS_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "summary": {
+            "type": "string",
+            "description": (
+                "One or two short sentences explaining the candidate's fit for the role."
+            ),
+        },
+        "skills": {
+            "type": "array",
+            "description": (
+                "Important skills or tools explicitly evidenced in the resume. "
+                "Use short lowercase labels."
+            ),
+            "items": {"type": "string"},
+        },
+        "missing_skills": {
+            "type": "array",
+            "description": (
+                "Important job requirements not clearly evidenced in the resume. "
+                "Use short lowercase labels."
+            ),
+            "items": {"type": "string"},
+        },
+    },
+    "required": ["summary", "skills", "missing_skills"],
+    "additionalProperties": False,
+}
+
+
+def _load_environment_files():
+    try:
+        from dotenv import load_dotenv
+    except Exception:
+        return
+
+    module_dir = Path(__file__).resolve().parent
+    search_roots = (
+        Path.cwd(),
+        module_dir,
+        module_dir.parent,
+    )
+    seen_paths = set()
+
+    for root in search_roots:
+        for filename in (".env", ".env.local"):
+            env_path = (root / filename).resolve()
+            env_path_key = str(env_path)
+            if env_path_key in seen_paths or not env_path.is_file():
+                continue
+
+            seen_paths.add(env_path_key)
+            load_dotenv(env_path, override=False)
+
+
+_load_environment_files()
+
 
 class InvalidPDFError(ValueError):
     pass
@@ -220,8 +283,206 @@ def _default_result(reasons=None, explanation="Unable to analyze resume."):
         "is_fake": False,
         "resume_status": "unknown",
         "ranked": False,
+        "ai_provider": "local",
         "explanation": explanation,
     }
+
+
+def _normalize_string_list(values):
+    normalized_values = []
+    seen = set()
+
+    for value in values or []:
+        normalized_value = clean_text(value)
+        if not normalized_value or normalized_value in seen:
+            continue
+
+        seen.add(normalized_value)
+        normalized_values.append(normalized_value)
+
+    return normalized_values
+
+
+def _merge_normalized_strings(*groups):
+    merged = []
+    seen = set()
+
+    for group in groups:
+        for value in _normalize_string_list(group):
+            if value in seen:
+                continue
+
+            seen.add(value)
+            merged.append(value)
+
+    return merged
+
+
+def _get_google_api_key():
+    return str(os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or "").strip()
+
+
+def _get_google_analysis_model():
+    return (
+        str(os.getenv("GOOGLE_ANALYSIS_MODEL") or DEFAULT_GOOGLE_ANALYSIS_MODEL).strip()
+        or DEFAULT_GOOGLE_ANALYSIS_MODEL
+    )
+
+
+def _get_google_embedding_model():
+    return (
+        str(
+            os.getenv("GOOGLE_EMBEDDING_MODEL") or DEFAULT_GOOGLE_EMBEDDING_MODEL
+        ).strip()
+        or DEFAULT_GOOGLE_EMBEDDING_MODEL
+    )
+
+
+def _get_google_embedding_dimension():
+    raw_value = str(
+        os.getenv("GOOGLE_EMBEDDING_DIMENSION") or DEFAULT_GOOGLE_EMBEDDING_DIMENSION
+    ).strip()
+
+    try:
+        parsed_value = int(raw_value)
+    except (TypeError, ValueError):
+        return DEFAULT_GOOGLE_EMBEDDING_DIMENSION
+
+    return max(128, min(3072, parsed_value))
+
+
+@lru_cache(maxsize=4)
+def _build_google_client(api_key):
+    if not api_key:
+        return None
+
+    try:
+        from google import genai
+    except Exception:
+        return None
+
+    try:
+        return genai.Client(api_key=api_key)
+    except TypeError:
+        try:
+            return genai.Client()
+        except Exception:
+            return None
+    except Exception:
+        return None
+
+
+def _load_google_client():
+    return _build_google_client(_get_google_api_key())
+
+
+def _get_google_embed_config():
+    config = {
+        "task_type": "SEMANTIC_SIMILARITY",
+        "output_dimensionality": _get_google_embedding_dimension(),
+    }
+
+    try:
+        from google.genai import types as genai_types
+    except Exception:
+        return config
+
+    try:
+        return genai_types.EmbedContentConfig(**config)
+    except Exception:
+        return config
+
+
+def _get_google_analysis_config():
+    config = {
+        "temperature": 0.1,
+        "max_output_tokens": 300,
+        "response_mime_type": "application/json",
+        "response_json_schema": GOOGLE_ANALYSIS_SCHEMA,
+        # Disable thinking so the model reliably returns compact JSON instead of
+        # consuming output tokens on hidden reasoning.
+        "thinking_config": {"thinking_budget": 0},
+    }
+
+    try:
+        from google.genai import types as genai_types
+    except Exception:
+        return config
+
+    try:
+        return genai_types.GenerateContentConfig(
+            temperature=0.1,
+            max_output_tokens=300,
+            response_mime_type="application/json",
+            response_json_schema=GOOGLE_ANALYSIS_SCHEMA,
+            thinking_config=genai_types.ThinkingConfig(thinking_budget=0),
+        )
+    except Exception:
+        return config
+
+
+def _extract_embedding_values(embedding):
+    values = getattr(embedding, "values", None)
+    if values is None and isinstance(embedding, dict):
+        values = embedding.get("values")
+    if values is None and isinstance(embedding, (list, tuple)):
+        values = embedding
+    if hasattr(values, "tolist"):
+        values = values.tolist()
+    if not values:
+        return []
+
+    try:
+        return [float(value) for value in values]
+    except (TypeError, ValueError):
+        return []
+
+
+def _parse_json_object(raw_text):
+    payload = str(raw_text or "").strip()
+    if not payload:
+        return {}
+
+    if payload.startswith("```"):
+        payload = re.sub(r"^```(?:json)?\s*", "", payload)
+        payload = re.sub(r"\s*```$", "", payload)
+
+    object_start = payload.find("{")
+    object_end = payload.rfind("}")
+    if object_start != -1 and object_end >= object_start:
+        payload = payload[object_start : object_end + 1]
+
+    try:
+        parsed_payload = json.loads(payload)
+    except json.JSONDecodeError:
+        return {}
+
+    return parsed_payload if isinstance(parsed_payload, dict) else {}
+
+
+def _extract_google_response_payload(response):
+    parsed_payload = getattr(response, "parsed", None)
+    if isinstance(parsed_payload, dict):
+        return parsed_payload
+
+    if hasattr(parsed_payload, "model_dump"):
+        try:
+            parsed_payload = parsed_payload.model_dump()
+        except Exception:
+            parsed_payload = None
+
+        if isinstance(parsed_payload, dict):
+            return parsed_payload
+
+    response_text = getattr(response, "text", "")
+    if not response_text:
+        candidates = getattr(response, "candidates", None) or []
+        if candidates:
+            content = getattr(candidates[0], "content", None)
+            parts = getattr(content, "parts", None) or []
+            response_text = "".join(str(getattr(part, "text", "") or "") for part in parts)
+
+    return _parse_json_object(response_text)
 
 
 def _compile_boundary_pattern(term):
@@ -366,6 +627,100 @@ def _normalize_vector(vector):
     return [float(value) / norm for value in vector]
 
 
+def _average_embeddings(embeddings):
+    if not embeddings:
+        return []
+
+    averaged = [0.0] * len(embeddings[0])
+    for embedding in embeddings:
+        for index, value in enumerate(embedding):
+            averaged[index] += float(value)
+
+    total_embeddings = float(len(embeddings))
+    averaged = [value / total_embeddings for value in averaged]
+    return _normalize_vector(averaged)
+
+
+def _generate_google_embedding(text):
+    chunks = _chunk_text(text)
+    if not chunks:
+        return []
+
+    client = _load_google_client()
+    if client is None:
+        return []
+
+    try:
+        result = client.models.embed_content(
+            model=_get_google_embedding_model(),
+            contents=chunks,
+            config=_get_google_embed_config(),
+        )
+    except Exception:
+        return []
+
+    embeddings = getattr(result, "embeddings", None)
+    if embeddings is None and isinstance(result, dict):
+        embeddings = result.get("embeddings")
+    if embeddings is None:
+        return []
+    if not isinstance(embeddings, (list, tuple)):
+        embeddings = [embeddings]
+
+    normalized_embeddings = []
+    for embedding in embeddings:
+        values = _extract_embedding_values(embedding)
+        if values:
+            normalized_embeddings.append(values)
+
+    return _average_embeddings(normalized_embeddings)
+
+
+def _build_google_analysis_prompt(resume_text, job_description):
+    return (
+        "You are screening a single resume against a single job description.\n"
+        "Use only evidence from the provided text.\n"
+        "Do not invent experience, certifications, or skills.\n"
+        "Keep the summary short and practical.\n"
+        "Normalize skills to short lowercase labels.\n\n"
+        "JOB DESCRIPTION:\n"
+        f"{str(job_description or '').strip()}\n\n"
+        "RESUME:\n"
+        f"{str(resume_text or '').strip()}"
+    )
+
+
+def _generate_google_resume_analysis(resume_text, job_description):
+    client = _load_google_client()
+    if client is None:
+        return {}
+
+    if not clean_text(resume_text) or not clean_text(job_description):
+        return {}
+
+    prompt = _build_google_analysis_prompt(resume_text, job_description)
+
+    try:
+        response = client.models.generate_content(
+            model=_get_google_analysis_model(),
+            contents=prompt,
+            config=_get_google_analysis_config(),
+        )
+    except Exception:
+        return {}
+
+    payload = _extract_google_response_payload(response)
+    if not payload:
+        return {}
+
+    summary = str(payload.get("summary") or "").strip()
+    return {
+        "summary": summary,
+        "skills": _normalize_string_list(payload.get("skills")),
+        "missing_skills": _normalize_string_list(payload.get("missing_skills")),
+    }
+
+
 @lru_cache(maxsize=1)
 def _load_embedding_model():
     try:
@@ -385,7 +740,7 @@ def _load_embedding_model():
         return None
 
 
-def generate_embedding(text):
+def _generate_local_embedding(text):
     chunks = _chunk_text(text)
     if not chunks:
         return []
@@ -414,14 +769,27 @@ def generate_embedding(text):
     if isinstance(embeddings[0], (int, float)):
         return _normalize_vector([float(value) for value in embeddings])
 
-    averaged = [0.0] * len(embeddings[0])
-    for embedding in embeddings:
-        for index, value in enumerate(embedding):
-            averaged[index] += float(value)
+    normalized_embeddings = [
+        [float(value) for value in embedding] for embedding in embeddings
+    ]
+    return _average_embeddings(normalized_embeddings)
 
-    total_embeddings = float(len(embeddings))
-    averaged = [value / total_embeddings for value in averaged]
-    return _normalize_vector(averaged)
+
+def _generate_embedding_with_source(text):
+    google_embedding = _generate_google_embedding(text)
+    if google_embedding:
+        return google_embedding, "google"
+
+    local_embedding = _generate_local_embedding(text)
+    if local_embedding:
+        return local_embedding, "local"
+
+    return [], "keyword-overlap"
+
+
+def generate_embedding(text):
+    embedding, _ = _generate_embedding_with_source(text)
+    return embedding
 
 
 def _cosine_similarity(vector_a, vector_b):
@@ -455,17 +823,25 @@ def _fallback_match_score(resume_text, job_description):
     return max(0.0, min(1.0, overlap))
 
 
-def compute_match_score(resume_text, job_description):
+def _compute_match_score_details(resume_text, job_description):
     if not clean_text(resume_text) or not clean_text(job_description):
-        return 0.0
+        return 0.0, "keyword-overlap"
 
-    resume_embedding = generate_embedding(resume_text)
-    job_embedding = generate_embedding(job_description)
+    resume_embedding, resume_source = _generate_embedding_with_source(resume_text)
+    job_embedding, job_source = _generate_embedding_with_source(job_description)
     if resume_embedding and job_embedding:
         cosine_score = _cosine_similarity(resume_embedding, job_embedding)
-        return max(0.0, min(1.0, (cosine_score + 1.0) / 2.0))
+        match_score = max(0.0, min(1.0, (cosine_score + 1.0) / 2.0))
+        if "google" in {resume_source, job_source}:
+            return match_score, "google"
+        return match_score, "local"
 
-    return _fallback_match_score(resume_text, job_description)
+    return _fallback_match_score(resume_text, job_description), "keyword-overlap"
+
+
+def compute_match_score(resume_text, job_description):
+    match_score, _ = _compute_match_score_details(resume_text, job_description)
+    return match_score
 
 
 def extract_skills(text):
@@ -612,7 +988,13 @@ def compute_final_score(match_score, fraud_score):
     return max(0.0, min(1.0, weighted_score))
 
 
-def build_explanation(is_fake, match_score, fraud_score, authenticity_score):
+def build_explanation(
+    is_fake,
+    match_score,
+    fraud_score,
+    authenticity_score,
+    analysis_summary="",
+):
     if is_fake:
         return (
             "Resume appears to be fake or template-based "
@@ -622,10 +1004,16 @@ def build_explanation(is_fake, match_score, fraud_score, authenticity_score):
 
     match_percent = int(round(max(0.0, min(1.0, match_score)) * 100))
     fraud_percent = int(max(0, min(100, round(fraud_score))))
-    return (
+    base_explanation = (
         f"Resume appears real. Candidate matches {match_percent}% "
         f"with {fraud_percent}% review risk."
     )
+
+    summary = str(analysis_summary or "").strip()
+    if not summary:
+        return base_explanation
+
+    return f"{base_explanation} {summary}"
 
 
 def analyze_resume(file_path, job_description):
@@ -687,6 +1075,7 @@ def analyze_resume(file_path, job_description):
             "is_fake": True,
             "resume_status": "fake",
             "ranked": False,
+            "ai_provider": "local",
             "explanation": build_explanation(
                 True,
                 0.0,
@@ -695,15 +1084,32 @@ def analyze_resume(file_path, job_description):
             ),
         }
 
-    match_score = compute_match_score(cleaned_resume_text, cleaned_job_description)
+    google_analysis = _generate_google_resume_analysis(resume_text, job_description)
+    match_score, match_provider = _compute_match_score_details(
+        cleaned_resume_text,
+        cleaned_job_description,
+    )
+    if google_analysis:
+        skills = _merge_normalized_strings(skills, google_analysis.get("skills"))
+
     missing_skills = detect_missing_skills(cleaned_job_description, skills)
+    if google_analysis:
+        missing_skills = _merge_normalized_strings(
+            google_analysis.get("missing_skills"),
+            missing_skills,
+        )
+
+    skill_set = set(skills)
+    missing_skills = [skill for skill in missing_skills if skill not in skill_set]
     final_score = compute_final_score(match_score, fraud_score)
     explanation = build_explanation(
         False,
         match_score,
         fraud_score,
         authenticity_score,
+        google_analysis.get("summary"),
     )
+    ai_provider = "google" if google_analysis or match_provider == "google" else "local"
 
     return {
         "match_score": round(match_score, 4),
@@ -719,6 +1125,7 @@ def analyze_resume(file_path, job_description):
         "is_fake": False,
         "resume_status": "real",
         "ranked": True,
+        "ai_provider": ai_provider,
         "explanation": explanation,
     }
 
