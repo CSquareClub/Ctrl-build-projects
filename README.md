@@ -235,13 +235,11 @@ Frontend:
 cd frontend
 npm test
 ```
-
-### Judges: What to look for
-
-- Clear PR workflow and review trail (collaboration quality)
-- Consistent commit conventions and meaningful commit history
-- Contribution distribution across team members (not a single-author dump)
-- Reproducible setup/demo commands and clean repository structure
+##Made by: Team AsLongAsItWorks
+###Members:
+1. Priyanshu (Delegation, Pitch && Backend)
+2. Khyat Ghosh (UI & Frontend)
+3. Parth Sharma (AI Login and Integration)
 
 ## License
 
