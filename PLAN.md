@@ -1,102 +1,115 @@
 # PLAN.md
 
-## Execution Update (2026-04-06): Wave 2 MiniLM primary correction
+## Execution Update (2026-04-06): Wave 2 semantic embedding correction (MiniLM)
 
 Current goal:
 
-- make `sentence-transformers/all-MiniLM-L6-v2` the real primary embedding path and confirm no deterministic hash embedding path powers retrieval
+- correct Wave 2 vector indexing so canonical semantic retrieval runs on real `sentence-transformers/all-MiniLM-L6-v2` embeddings (not hashing placeholders)
 
 Exact scope:
 
-- switch default provider selection to MiniLM (`minilm-l6`)
-- keep provider abstraction stable for downstream indexing/retrieval
-- make embedding normalization and truncation behavior explicit in provider metadata/docs
-- verify repeated encoding stability through real model inference
-- inspect codebase for deterministic hashing/vector stand-ins and ensure they are not in the main path
-
-Files/components likely affected:
-
-- `services/api/app/core/settings.py`
-- `services/api/app/embeddings/contracts.py`
-- `services/api/app/embeddings/providers.py`
-- `services/api/app/embeddings/service.py`
-- `services/api/.env.example`
-- `services/api/README.md`
-
-Sequencing:
-
-1. inspect embedding and vector paths for deterministic/hash behavior
-2. update provider defaults to MiniLM primary
-3. surface normalization/truncation policy in provider metadata/docs
-4. validate model output dimensions and repeat-call stability
-
-Validation strategy:
-
-- compile backend package
-- run embedding smoke script for `embed_one` and `embed_many`
-- verify MiniLM vectors are 384-dimensional and stable across repeated calls
-
-Risks / open questions:
-
-- first-run model download latency from Hugging Face
-- small floating-point differences are possible across hardware backends but should be negligible in same-process repeated calls
-
-Explicitly out of scope:
-
-- vector index implementation
-- duplicate heuristics/reranking
-- proprietary embedding providers
-
-## Execution Update (2026-04-06): Wave 2 embedding provider layer
-
-Current goal:
-
-- implement a swappable open-source embedding provider layer for backend analysis workflows
-
-Exact scope:
-
-- define a clean embedding provider abstraction with `embed_one` and `embed_many`
-- implement `BAAI/bge-small-en-v1.5` as primary provider
-- implement `sentence-transformers/all-MiniLM-L6-v2` as lightweight fallback provider
-- expose discoverable provider identity and vector dimension metadata
-- add settings/docs for local model loading and runtime expectations
+- replace default embedding path with real MiniLM provider under existing embedding abstraction
+- refine vector store/indexing contracts to track embedding signatures and prevent silent mixed indexes
+- implement stale-index invalidation/reindex behavior when repository vectors were built with a different signature
+- preserve retrieval metadata for downstream reranking/display while keeping vector layer local + swappable
 
 Files/components likely affected:
 
 - `services/api/app/embeddings/contracts.py`
-- `services/api/app/embeddings/providers.py`
 - `services/api/app/embeddings/service.py`
-- `services/api/app/embeddings/__init__.py`
 - `services/api/app/core/settings.py`
+- `services/api/app/core/dependencies.py`
+- `services/api/app/vectorstore/contracts.py`
+- `services/api/app/vectorstore/service.py`
+- `services/api/app/vectorindex/contracts.py`
+- `services/api/app/vectorindex/service.py`
+- `services/api/app/schemas/vector.py`
+- `services/api/app/routes/vectors.py`
 - `services/api/requirements.txt`
 - `services/api/.env.example`
 - `services/api/README.md`
 
 Sequencing:
 
-1. inspect existing backend contracts and embedding placeholders
-2. define provider interface + concrete sentence-transformer-backed providers
-3. add provider factory + configuration wiring
-4. document runtime/setup assumptions for local development
-5. validate both providers through sample embedding calls
+1. inspect current hashing-based embedding and index flow
+2. add MiniLM embedding provider and switch default provider config
+3. add embedding-signature-aware storage/query/invalidation behavior
+4. wire indexing responses to expose reindex/invalidation status clearly
+5. validate real MiniLM indexing/query on real normalized issue data
 
 Validation strategy:
 
-- run Python compile check on backend package
-- run a small Python command that instantiates configured provider and calls `embed_one`
-- run a small Python command that instantiates fallback provider and verifies shared contract behavior
+- compile backend modules
+- run real index+query smoke test against public repo using MiniLM provider
+- verify stale hashed/placeholder vectors are excluded or invalidated during reindex
 
 Risks / open questions:
 
-- first model load requires network download from Hugging Face and may be slow
-- local environment may not have enough RAM/CPU acceleration for fast embedding generation
-- if dependency install fails locally, runtime checks may be limited to compile-level validation
+- first MiniLM run may download model weights and can be slower
+- local SQLite cosine scan remains MVP-oriented and may not scale to large corpora
+- existing pre-correction rows without embedding signatures may become legacy/orphan entries and should not be used for canonical retrieval
 
 Explicitly out of scope:
 
-- vector store integration details
-- duplicate detection or priority-scoring logic
-- hosted/proprietary embedding APIs
+- duplicate reranking heuristics
+- production vector infrastructure
+- paid hosted embedding/vector services
+- frontend UX work
+
+## Execution Update (2026-04-06): Wave 2 vector indexing foundation
+
+Current goal:
+
+- implement local-first vector indexing and similarity query infrastructure for normalized issues on `feat/w2-vector-indexing`
+
+Exact scope:
+
+- define a concrete, swappable vector store interface implementation (local SQLite)
+- implement issue vector upsert and top-k query flows using the embedding provider boundary
+- build an indexing pipeline that accepts normalized issues and stores retrieval-ready metadata
+- expose lightweight API routes for indexing and querying without coupling retrieval logic to endpoint internals
+- keep dependencies local/free and avoid production infra complexity
+
+Files/components likely affected:
+
+- `services/api/app/vectorstore/contracts.py`
+- `services/api/app/vectorstore/service.py`
+- `services/api/app/embeddings/service.py`
+- `services/api/app/core/settings.py`
+- `services/api/app/core/dependencies.py`
+- `services/api/app/schemas/vector.py` (new)
+- `services/api/app/vectorindex/*` (new)
+- `services/api/app/routes/vectors.py` (new)
+- `services/api/app/api/router.py`
+- `services/api/.env.example`
+- `services/api/README.md`
+
+Sequencing:
+
+1. inspect current normalization + embedding + vectorstore placeholders and lock interfaces
+2. implement concrete local vector store and deterministic local embedding provider
+3. implement normalized-issue indexing and similarity query orchestration service
+4. wire thin routes that call the orchestration service
+5. validate compile + index/query behavior on real normalized GitHub issue data
+
+Validation strategy:
+
+- run Python compile checks
+- run a local index+query script against a public repository via existing ingestion normalization
+- verify top-k query returns candidates with preserved metadata fields
+
+Risks / open questions:
+
+- hash-based local embeddings are deterministic and free, but quality is lower than transformer embeddings
+- SQLite scan-based similarity query is acceptable for MVP scale but not optimized for large corpora
+- existing repo has both `schemas/issue.py` and `schemas/issues.py`; this work must avoid widening that mismatch
+
+Explicitly out of scope:
+
+- full duplicate reranking heuristics
+- production vector infrastructure
+- paid/proprietary embedding APIs
+- frontend retrieval UX changes
 
 ## Execution Update (2026-04-06): Wave 0 backend foundation
 

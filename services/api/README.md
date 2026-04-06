@@ -15,6 +15,28 @@ This folder hosts the FastAPI backend foundation for OpenIssue.
   - `app/embeddings`
   - `app/vectorstore`
   - `app/triage`
+- local vector indexing/query route support:
+  - `POST /api/vectors/index`
+  - `POST /api/vectors/query`
+
+## Vector indexing layer
+
+This branch includes a local, swappable vector indexing path for normalized issues:
+
+- embedding provider boundary (`app/embeddings/contracts.py`)
+- canonical semantic embedding implementation (`minilm-local` via `sentence-transformers/all-MiniLM-L6-v2`)
+- vector store boundary (`app/vectorstore/contracts.py`)
+- local persistent SQLite vector store (`sqlite-local`)
+- indexing/query orchestration service (`app/vectorindex/service.py`)
+
+The vector layer is intentionally local/free-first and replaceable for later branches.
+
+### Reindex/invalidation behavior
+
+- Each stored vector row is tagged with an `embedding_signature` (provider + model + dimension).
+- Queries only search rows matching the active runtime signature.
+- On indexing, if a repository already has rows from a different signature (for example older hashing vectors), the repository slice is cleared before MiniLM upsert continues.
+- This prevents mixed placeholder/semantic indexes from silently masquerading as one index.
 
 Embedding providers now support open-source local inference with:
 
@@ -59,28 +81,40 @@ Expected response shape:
 }
 ```
 
-## Embeddings configuration
+## Index issues and query similar candidates
 
-Use `.env` to select providers:
+Index normalized issues from a repository:
 
-```env
-OPENISSUE_EMBEDDINGS_PROVIDER=minilm-l6
-OPENISSUE_EMBEDDINGS_FALLBACK_PROVIDER=bge-small
+```bash
+curl -X POST http://127.0.0.1:8000/api/vectors/index \
+  -H "Content-Type: application/json" \
+  -d '{
+    "owner": "vercel",
+    "repo": "next.js",
+    "state": "open",
+    "include_pull_requests": false
+  }'
 ```
 
-Provider keys:
+Query top-k similar issue candidates:
 
-- `minilm-l6` -> `sentence-transformers/all-MiniLM-L6-v2`
-- `bge-small` -> `BAAI/bge-small-en-v1.5`
+```bash
+curl -X POST http://127.0.0.1:8000/api/vectors/query \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query_text": "build fails on arm64",
+    "k": 5,
+    "owner": "vercel",
+    "repo": "next.js"
+  }'
+```
 
-Provider behavior:
+The index response includes:
 
-- embeddings are L2-normalized (`normalize_embeddings=True`)
-- tokenizer sequence length is capped at 256 tokens (`max_seq_length=256`)
-- MiniLM output dimension is 384 vectors per text
+- `embedding_provider`
+- `embedding_model`
+- `embedding_signature`
+- `reindex_required`
+- `cleared_count`
 
-## Runtime assumptions
-
-- first provider load downloads model files from Hugging Face and caches locally
-- local dev requires Python environment that can install `sentence-transformers` and its torch dependency
-- embedding calls are synchronous and CPU-compatible; GPU acceleration is optional
+These fields indicate whether stale rows were invalidated before indexing.

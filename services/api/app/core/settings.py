@@ -1,5 +1,5 @@
 from functools import lru_cache
-from typing import Literal, Optional
+from typing import Optional
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -31,13 +31,26 @@ class Settings(BaseSettings):
     )
     github_token: Optional[str] = Field(default=None, alias="OPENISSUE_GITHUB_TOKEN")
 
-    embeddings_provider: Literal["minilm-l6", "bge-small"] = Field(
-        default="minilm-l6",
-        alias="OPENISSUE_EMBEDDINGS_PROVIDER",
+    embedding_provider: str = Field(
+        default="minilm-local",
+        alias="OPENISSUE_EMBEDDING_PROVIDER",
     )
-    embeddings_fallback_provider: Literal["bge-small", "minilm-l6"] = Field(
-        default="bge-small",
-        alias="OPENISSUE_EMBEDDINGS_FALLBACK_PROVIDER",
+    embedding_model_name: str = Field(
+        default="sentence-transformers/all-MiniLM-L6-v2",
+        alias="OPENISSUE_EMBEDDING_MODEL_NAME",
+    )
+    embedding_vector_dim: int = Field(
+        default=256,
+        alias="OPENISSUE_EMBEDDING_VECTOR_DIM",
+    )
+
+    vector_store_provider: str = Field(
+        default="sqlite-local",
+        alias="OPENISSUE_VECTOR_STORE_PROVIDER",
+    )
+    vector_store_path: str = Field(
+        default=".openissue/openissue_vectors.db",
+        alias="OPENISSUE_VECTOR_STORE_PATH",
     )
 
 
