@@ -3731,6 +3731,99 @@ body.quiz-modal-open {
 	border: 1px solid rgba(239, 68, 68, 0.28);
 }
 
+.quiz-modal-result {
+	margin-top: 4px;
+	padding: 14px;
+	border-radius: 12px;
+	border: 1px solid var(--border);
+	background: var(--bg-input);
+}
+
+.quiz-modal-result-title {
+	font-size: 0.79rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	color: var(--text-sub);
+	margin-bottom: 10px;
+}
+
+.quiz-modal-result-values {
+	display: flex;
+	gap: 10px;
+	flex-wrap: wrap;
+	margin-bottom: 10px;
+}
+
+.quiz-modal-result-values .score-correct,
+.quiz-modal-result-values .score-wrong {
+	display: inline-flex;
+	align-items: center;
+	padding: 6px 10px;
+	border-radius: 999px;
+	font-size: 0.82rem;
+	font-weight: 600;
+}
+
+.quiz-modal-result-values .score-correct {
+	color: #22c55e;
+	background: rgba(34, 197, 94, 0.12);
+	border: 1px solid rgba(34, 197, 94, 0.28);
+}
+
+.quiz-modal-result-values .score-wrong {
+	color: #ef4444;
+	background: rgba(239, 68, 68, 0.12);
+	border: 1px solid rgba(239, 68, 68, 0.28);
+}
+
+.quiz-modal-result-message {
+	margin: 0;
+	font-size: 0.92rem;
+	line-height: 1.5;
+	color: var(--text-main);
+}
+
+.quiz-modal-result-actions {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 10px;
+	margin-top: 14px;
+}
+
+.quiz-modal-retry-btn,
+.quiz-modal-result-close-btn {
+	border-radius: 10px;
+	padding: 10px 14px;
+	font-family: var(--font-main);
+	font-size: 0.84rem;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.quiz-modal-retry-btn {
+	border: 1px solid #7c3aed;
+	background: linear-gradient(135deg, #7c3aed, #6d28d9);
+	color: #ffffff;
+}
+
+.quiz-modal-retry-btn:hover {
+	filter: brightness(1.05);
+	transform: translateY(-1px);
+}
+
+.quiz-modal-result-close-btn {
+	border: 1px solid var(--border);
+	background: var(--bg-body);
+	color: var(--text-main);
+}
+
+.quiz-modal-result-close-btn:hover {
+	background: var(--hover);
+	border-color: rgba(124, 58, 237, 0.45);
+}
+
 .quiz-modal-footer {
 	display: grid;
 	grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -3767,6 +3860,10 @@ body.quiz-modal-open {
 	}
 
 	.quiz-modal-footer {
+		grid-template-columns: 1fr;
+	}
+
+	.quiz-modal-result-actions {
 		grid-template-columns: 1fr;
 	}
 }

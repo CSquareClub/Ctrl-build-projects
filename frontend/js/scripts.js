@@ -2712,6 +2712,12 @@ const quizModalState = {
 	options: null,
 	tipBox: null,
 	scoreBox: null,
+	resultView: null,
+	resultCorrectValue: null,
+	resultWrongValue: null,
+	resultMessage: null,
+	retryBtn: null,
+	resultCloseBtn: null,
 	prevBtn: null,
 	nextBtn: null,
 	closeFooterBtn: null,
@@ -2721,6 +2727,9 @@ const quizModalState = {
 	answers: {},
 	attemptsByQuestion: {},
 	tips: {},
+	correctCount: 0,
+	wrongCount: 0,
+	isResultView: false,
 };
 
 function ensureQuizModal() {
@@ -2785,6 +2794,53 @@ function ensureQuizModal() {
 	scoreBox.hidden = true;
 	contentView.appendChild(scoreBox);
 
+	const resultView = document.createElement("div");
+	resultView.className = "quiz-modal-result";
+	resultView.hidden = true;
+
+	const resultTitle = document.createElement("div");
+	resultTitle.className = "quiz-modal-result-title";
+	resultTitle.textContent = "Quiz Result";
+	resultView.appendChild(resultTitle);
+
+	const resultValues = document.createElement("div");
+	resultValues.className = "quiz-modal-result-values";
+
+	const resultCorrectValue = document.createElement("span");
+	resultCorrectValue.className = "score-correct";
+	resultCorrectValue.textContent = "0 Correct";
+	resultValues.appendChild(resultCorrectValue);
+
+	const resultWrongValue = document.createElement("span");
+	resultWrongValue.className = "score-wrong";
+	resultWrongValue.textContent = "0 Wrong";
+	resultValues.appendChild(resultWrongValue);
+
+	resultView.appendChild(resultValues);
+
+	const resultMessage = document.createElement("p");
+	resultMessage.className = "quiz-modal-result-message";
+	resultMessage.textContent = "Keep practicing!";
+	resultView.appendChild(resultMessage);
+
+	const resultActions = document.createElement("div");
+	resultActions.className = "quiz-modal-result-actions";
+
+	const retryBtn = document.createElement("button");
+	retryBtn.type = "button";
+	retryBtn.className = "quiz-modal-retry-btn";
+	retryBtn.textContent = "Retry Quiz";
+	resultActions.appendChild(retryBtn);
+
+	const resultCloseBtn = document.createElement("button");
+	resultCloseBtn.type = "button";
+	resultCloseBtn.className = "quiz-modal-result-close-btn";
+	resultCloseBtn.textContent = "Close";
+	resultActions.appendChild(resultCloseBtn);
+
+	resultView.appendChild(resultActions);
+	contentView.appendChild(resultView);
+
 	const footer = document.createElement("div");
 	footer.className = "quiz-modal-footer";
 
@@ -2821,6 +2877,12 @@ function ensureQuizModal() {
 	quizModalState.options = options;
 	quizModalState.tipBox = tipBox;
 	quizModalState.scoreBox = scoreBox;
+	quizModalState.resultView = resultView;
+	quizModalState.resultCorrectValue = resultCorrectValue;
+	quizModalState.resultWrongValue = resultWrongValue;
+	quizModalState.resultMessage = resultMessage;
+	quizModalState.retryBtn = retryBtn;
+	quizModalState.resultCloseBtn = resultCloseBtn;
 	quizModalState.prevBtn = prevBtn;
 	quizModalState.nextBtn = nextBtn;
 	quizModalState.closeFooterBtn = closeFooterBtn;
@@ -2838,6 +2900,7 @@ function ensureQuizModal() {
 		if (!quizModalState.quizData || quizModalState.currentIndex <= 0) {
 			return;
 		}
+		quizModalState.isResultView = false;
 		quizModalState.currentIndex -= 1;
 		renderQuizModalQuestion();
 	});
@@ -2847,12 +2910,33 @@ function ensureQuizModal() {
 			return;
 		}
 		const maxIndex = quizModalState.quizData.questions.length - 1;
-		if (quizModalState.currentIndex >= maxIndex) {
+		if (quizModalState.currentIndex < maxIndex) {
+			quizModalState.isResultView = false;
+			quizModalState.currentIndex += 1;
+			renderQuizModalQuestion();
 			return;
 		}
-		quizModalState.currentIndex += 1;
+
+		const finalAttempt = getQuestionAttempt(maxIndex);
+		if (!finalAttempt) {
+			return;
+		}
+
+		showQuizModalResultView();
+	});
+
+	retryBtn.addEventListener("click", () => {
+		quizModalState.currentIndex = 0;
+		quizModalState.answers = {};
+		quizModalState.attemptsByQuestion = {};
+		quizModalState.tips = {};
+		quizModalState.correctCount = 0;
+		quizModalState.wrongCount = 0;
+		quizModalState.isResultView = false;
 		renderQuizModalQuestion();
 	});
+
+	resultCloseBtn.addEventListener("click", closeQuizModal);
 
 	return quizModalState;
 }
@@ -2864,27 +2948,58 @@ function handleQuizModalKeydown(event) {
 	}
 }
 
-function computeQuizScore(quizData, answers) {
-	if (!quizData || !Array.isArray(quizData.questions)) {
-		return { correct: 0, wrong: 0 };
-	}
+function setQuizScoreFromMergedAttempts() {
+	const mergedAttempts = {
+		...quizModalState.attemptsByQuestion,
+		...quizModalState.answers,
+	};
 
 	let correct = 0;
 	let wrong = 0;
-	quizData.questions.forEach((question, index) => {
-		const selected = answers[index];
-		if (!selected) {
+	Object.values(mergedAttempts).forEach((attempt) => {
+		if (!attempt || typeof attempt !== "object") {
 			return;
 		}
 
-		if (selected === question.correct_option) {
+		if (attempt.is_correct) {
 			correct += 1;
 		} else {
 			wrong += 1;
 		}
 	});
 
-	return { correct, wrong };
+	quizModalState.correctCount = correct;
+	quizModalState.wrongCount = wrong;
+}
+
+function updateQuizScoreCounters(previousAttempt, nextAttempt) {
+	if (previousAttempt) {
+		if (previousAttempt.is_correct) {
+			quizModalState.correctCount = Math.max(0, quizModalState.correctCount - 1);
+		} else {
+			quizModalState.wrongCount = Math.max(0, quizModalState.wrongCount - 1);
+		}
+	}
+
+	if (nextAttempt) {
+		if (nextAttempt.is_correct) {
+			quizModalState.correctCount += 1;
+		} else {
+			quizModalState.wrongCount += 1;
+		}
+	}
+}
+
+function getQuizResultMessage(correctCount, totalQuestions) {
+	if (!totalQuestions || totalQuestions <= 0) {
+		return "Keep practicing!";
+	}
+
+	if (correctCount >= Math.ceil(totalQuestions * 0.7)) {
+		return "Great job!";
+	}
+
+	return "Keep practicing!";
 }
 
 function normalizeAttemptRecord(rawAttempt) {
@@ -2929,6 +3044,8 @@ function getQuestionAttempt(questionIndex) {
 async function loadQuizAttempts(quizId) {
 	if (!quizId) {
 		quizModalState.attemptsByQuestion = {};
+		quizModalState.correctCount = 0;
+		quizModalState.wrongCount = 0;
 		return;
 	}
 
@@ -2941,6 +3058,7 @@ async function loadQuizAttempts(quizId) {
 			}
 			quizModalState.attemptsByQuestion[questionIndex] = latestMap[questionIndex];
 		});
+		setQuizScoreFromMergedAttempts();
 	} catch (error) {
 		console.error("Failed to load quiz attempts:", error);
 	}
@@ -3012,6 +3130,24 @@ function renderQuizModalQuestion() {
 		return;
 	}
 
+	quizModalState.isResultView = false;
+
+	if (quizModalState.counter) {
+		quizModalState.counter.hidden = false;
+	}
+	if (quizModalState.questionText) {
+		quizModalState.questionText.hidden = false;
+	}
+	if (quizModalState.options) {
+		quizModalState.options.hidden = false;
+	}
+	if (quizModalState.resultView) {
+		quizModalState.resultView.hidden = true;
+	}
+	if (quizModalState.prevBtn && quizModalState.prevBtn.parentElement) {
+		quizModalState.prevBtn.parentElement.hidden = false;
+	}
+
 	const questions = quizModalState.quizData.questions;
 	const index = quizModalState.currentIndex;
 	const question = questions[index];
@@ -3057,11 +3193,14 @@ function renderQuizModalQuestion() {
 
 		optionBtn.addEventListener("click", () => {
 			const isCorrect = key === question.correct_option;
+			const previousAttempt = getQuestionAttempt(index);
 			const currentAttempt = {
 				question_index: index,
 				selected_option: key,
 				is_correct: isCorrect,
 			};
+
+			updateQuizScoreCounters(previousAttempt, currentAttempt);
 
 			quizModalState.answers[index] = currentAttempt;
 			quizModalState.attemptsByQuestion[index] = currentAttempt;
@@ -3098,32 +3237,70 @@ function renderQuizModalQuestion() {
 	}
 
 	if (quizModalState.scoreBox) {
-		if (index === questions.length - 1) {
-			const combinedAnswers = {
-				...quizModalState.attemptsByQuestion,
-				...quizModalState.answers,
-			};
-			const score = computeQuizScore(quizModalState.quizData, combinedAnswers);
-			quizModalState.scoreBox.hidden = false;
-			quizModalState.scoreBox.innerHTML = (
-				`<div class="quiz-modal-score-title">Final Score</div>` +
-				`<div class="quiz-modal-score-values">` +
-				`<span class="score-correct">${score.correct} Correct</span>` +
-				`<span class="score-wrong">${score.wrong} Wrong</span>` +
-				`</div>`
-			);
-		} else {
-			quizModalState.scoreBox.hidden = true;
-			quizModalState.scoreBox.innerHTML = "";
-		}
+		quizModalState.scoreBox.hidden = false;
+		quizModalState.scoreBox.innerHTML = (
+			`<div class="quiz-modal-score-title">Score So Far</div>` +
+			`<div class="quiz-modal-score-values">` +
+			`<span class="score-correct">${quizModalState.correctCount} Correct</span>` +
+			`<span class="score-wrong">${quizModalState.wrongCount} Wrong</span>` +
+			`</div>`
+		);
 	}
 
 	if (quizModalState.prevBtn) {
 		quizModalState.prevBtn.disabled = index === 0;
 	}
 	if (quizModalState.nextBtn) {
-		quizModalState.nextBtn.disabled = index === questions.length - 1;
+		if (index === questions.length - 1) {
+			quizModalState.nextBtn.textContent = "View Result";
+			quizModalState.nextBtn.disabled = !activeAttempt;
+		} else {
+			quizModalState.nextBtn.textContent = "Next";
+			quizModalState.nextBtn.disabled = false;
+		}
 	}
+}
+
+function showQuizModalResultView() {
+	if (!quizModalState.quizData || !quizModalState.resultView) {
+		return;
+	}
+
+	quizModalState.isResultView = true;
+
+	if (quizModalState.counter) {
+		quizModalState.counter.hidden = true;
+	}
+	if (quizModalState.questionText) {
+		quizModalState.questionText.hidden = true;
+	}
+	if (quizModalState.options) {
+		quizModalState.options.hidden = true;
+	}
+	if (quizModalState.tipBox) {
+		quizModalState.tipBox.hidden = true;
+	}
+	if (quizModalState.scoreBox) {
+		quizModalState.scoreBox.hidden = true;
+	}
+	if (quizModalState.prevBtn && quizModalState.prevBtn.parentElement) {
+		quizModalState.prevBtn.parentElement.hidden = true;
+	}
+
+	const totalQuestions = Array.isArray(quizModalState.quizData.questions)
+		? quizModalState.quizData.questions.length
+		: 0;
+	if (quizModalState.resultCorrectValue) {
+		quizModalState.resultCorrectValue.textContent = `${quizModalState.correctCount} Correct`;
+	}
+	if (quizModalState.resultWrongValue) {
+		quizModalState.resultWrongValue.textContent = `${quizModalState.wrongCount} Wrong`;
+	}
+	if (quizModalState.resultMessage) {
+		quizModalState.resultMessage.textContent = getQuizResultMessage(quizModalState.correctCount, totalQuestions);
+	}
+
+	quizModalState.resultView.hidden = false;
 }
 
 function openQuizModal(quizData, metadata = {}) {
@@ -3140,9 +3317,15 @@ function openQuizModal(quizData, metadata = {}) {
 	quizModalState.answers = {};
 	quizModalState.attemptsByQuestion = {};
 	quizModalState.tips = {};
+	quizModalState.correctCount = 0;
+	quizModalState.wrongCount = 0;
+	quizModalState.isResultView = false;
 
 	if (quizModalState.topic) {
 		quizModalState.topic.textContent = normalizedQuiz.topic;
+	}
+	if (quizModalState.resultView) {
+		quizModalState.resultView.hidden = true;
 	}
 
 	if (quizModalState.overlay) {

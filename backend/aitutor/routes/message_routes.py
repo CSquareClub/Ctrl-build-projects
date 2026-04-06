@@ -87,6 +87,35 @@ SUBJECT_SUGGESTIONS = {
         "Teach me time complexity with examples",
     ),
 }
+PERSONAL_REFUSAL_MESSAGE = "I can only generate educational content about academic topics, not about individuals"
+KUSH_IDENTITY_RESPONSE = "Kush Dalal is a student at Chandigarh University."
+KUSH_IDENTITY_PATTERN = re.compile(r"^\s*(?:who\s+is|who\'s)\s+kush\s+dalal\s*[?.!]*\s*$", re.IGNORECASE)
+PERSONAL_QUERY_PATTERNS = (
+    re.compile(r"^\s*(?:who\s+is|who\'s)\s+(.+?)\s*[?.!]*\s*$", re.IGNORECASE),
+    re.compile(r"^\s*(?:tell\s+me\s+about|information\s+about|facts\s+about|biography\s+of|bio\s+of)\s+(.+?)\s*[?.!]*\s*$", re.IGNORECASE),
+)
+STRUCTURED_TARGET_PATTERNS = (
+    re.compile(r"\b(?:quiz|test)\b(?:\s+me)?\s+(?:on|about|for)\s+(.+)$", re.IGNORECASE),
+    re.compile(r"\b(?:flash\s*cards?|study\s*cards?)\b\s+(?:on|about|for)\s+(.+)$", re.IGNORECASE),
+    re.compile(r"\b(?:make|create|generate|give)\b.*\b(?:quiz|flash\s*cards?|study\s*cards?)\b\s+(?:on|about|for)\s+(.+)$", re.IGNORECASE),
+)
+ACADEMIC_TOPIC_HINTS = (
+    "math", "maths", "algebra", "geometry", "calculus", "statistics", "probability",
+    "physics", "chemistry", "biology", "coding", "programming", "algorithm", "theorem",
+    "equation", "law", "laws", "integral", "derivative", "mechanics", "thermodynamics",
+    "electricity", "magnetism", "atom", "molecule", "stoichiometry", "acid", "base",
+    "history", "geography", "economics", "democracy", "photosynthesis", "ecosystem",
+    "python", "java", "javascript", "html", "css", "sql", "database", "api", "dsa",
+    "data structure", "machine learning", "deep learning", "neural network", "ai", "cybersecurity",
+    "blockchain", "frontend", "backend", "react", "node", "operating system", "network",
+    "compiler", "encryption", "cryptography", "recursion", "trigonometry", "linear algebra",
+)
+PERSON_LIKE_SINGLE_TOKENS = {
+    "einstein", "newton", "tesla", "musk", "obama", "gandhi", "mandela", "darwin", "curie",
+    "feynman", "oppenheimer", "ramanujan", "turing", "lovelace", "plato", "aristotle", "socrates",
+    "napoleon", "lincoln", "shakespeare", "mozart", "beethoven", "hitler", "stalin", "putin",
+    "trump", "biden", "ambani", "tata", "elon", "kush",
+}
 
 # NOTE: Greeting/small-talk detection logic has been moved to:
 # backend/rename/backuprenamelogic.py
@@ -258,6 +287,155 @@ def _is_flashcard_request(value: str) -> bool:
         return True
 
     return bool(re.search(r"\bflash\s*cards?\b\s+(?:on|about|for)\b", lowered))
+
+
+def _normalize_person_target(raw_value: str) -> str:
+    candidate = raw_value.strip().strip('"\'').strip()
+    candidate = re.sub(r"\s+", " ", candidate)
+    candidate = re.sub(r"[?.!,;:]+$", "", candidate).strip()
+    return candidate
+
+
+def _contains_academic_topic_hint(value: str) -> bool:
+    lowered = f" {value.lower()} "
+    for hint in ACADEMIC_TOPIC_HINTS:
+        token = hint if " " in hint else f" {hint} "
+        if token in lowered:
+            return True
+    return False
+
+
+def _looks_like_person_name(target: str) -> bool:
+    normalized_target = _normalize_person_target(target)
+    if not normalized_target:
+        return False
+
+    lowered = normalized_target.lower()
+    if lowered == "kush dalal":
+        return True
+
+    if _contains_academic_topic_hint(lowered):
+        return False
+
+    if any(char.isdigit() for char in lowered):
+        return False
+
+    parts = [item for item in lowered.split(" ") if item]
+    if not parts or len(parts) > 4:
+        return False
+
+    for part in parts:
+        if not re.fullmatch(r"[a-z][a-z\'\.-]*", part):
+            return False
+
+    if len(parts) == 1:
+        return parts[0] in PERSON_LIKE_SINGLE_TOKENS
+
+    connectives = {"the", "a", "an", "of", "in", "on", "for", "to", "with", "and"}
+    if any(part in connectives for part in parts):
+        return False
+
+    return True
+
+
+def _is_kush_identity_query(value: str) -> bool:
+    return bool(KUSH_IDENTITY_PATTERN.match(value or ""))
+
+
+def _extract_structured_request_target(value: str) -> Optional[str]:
+    for pattern in STRUCTURED_TARGET_PATTERNS:
+        match = pattern.search(value)
+        if not match:
+            continue
+
+        target = _normalize_person_target(match.group(1))
+        if target:
+            return target
+
+    return None
+
+
+def _is_structured_request_about_person(value: str) -> bool:
+    if not (_is_quiz_request(value) or _is_flashcard_request(value)):
+        return False
+
+    target = _extract_structured_request_target(value)
+    if not target:
+        return False
+
+    return _looks_like_person_name(target)
+
+
+def _is_general_person_question(value: str) -> bool:
+    for pattern in PERSONAL_QUERY_PATTERNS:
+        match = pattern.match(value)
+        if not match:
+            continue
+
+        target = _normalize_person_target(match.group(1))
+        if not target:
+            continue
+
+        if _contains_academic_topic_hint(target):
+            continue
+
+        if _looks_like_person_name(target):
+            return True
+
+        # For direct "who is X" style, treat unknown one-token names as personal.
+        if "who" in pattern.pattern.lower() and re.fullmatch(r"[A-Za-z][A-Za-z\'\.-]{2,}", target):
+            return True
+
+    return False
+
+
+def _extract_summary_target(value: str) -> Optional[str]:
+    match = re.match(r"^\s*summarize\s+(.+?)\s*$", value or "", re.IGNORECASE)
+    if not match:
+        return None
+    return _normalize_person_target(match.group(1))
+
+
+def _is_summary_request_about_person(value: str, context: List[str]) -> bool:
+    target = _extract_summary_target(value)
+    if target and _looks_like_person_name(target):
+        return True
+
+    for entry in reversed(context):
+        if not isinstance(entry, str):
+            continue
+
+        lowered = entry.lower().strip()
+        if not lowered.startswith("user:"):
+            continue
+
+        user_text = entry.split(":", 1)[1].strip()
+        if not user_text:
+            continue
+
+        if user_text.lower().startswith("summarize"):
+            continue
+
+        return (
+            _is_kush_identity_query(user_text)
+            or _is_general_person_question(user_text)
+            or _is_structured_request_about_person(user_text)
+        )
+
+    return False
+
+
+def _get_personal_guard_response(value: str) -> Optional[str]:
+    if _is_kush_identity_query(value):
+        return KUSH_IDENTITY_RESPONSE
+
+    if _is_structured_request_about_person(value):
+        return PERSONAL_REFUSAL_MESSAGE
+
+    if _is_general_person_question(value):
+        return PERSONAL_REFUSAL_MESSAGE
+
+    return None
 
 
 def _should_block_for_subject(user_message: str, session_subject: str) -> bool:
@@ -496,6 +674,36 @@ async def send_message(
     )
     response_level = difficulty if difficulty != "Neutral" else None
 
+    personal_guard_response = _get_personal_guard_response(payload.content)
+    if personal_guard_response is not None:
+        assistant_message = Message.create(
+            chat_id=chat_id,
+            user_id=user_id,
+            role="assistant",
+            content=personal_guard_response,
+        )
+        assistant_document = assistant_message.to_document()
+        assistant_document["message_index"] = assistant_index
+        assistant_document["ai_generated"] = False
+        assistant_document["was_stopped"] = False
+        if response_level:
+            assistant_document["response_level"] = response_level
+
+        result = await db["messages"].insert_one(assistant_document)
+        response = {
+            "type": "text",
+            "content": personal_guard_response,
+            "chat_id": str(chat_id),
+            "user_id": str(user_id),
+            "message_id": str(result.inserted_id),
+            "message_index": assistant_index,
+            "pending": False,
+            "response_level": response_level,
+        }
+        if new_title:
+            response["new_title"] = new_title
+        return response
+
     if _should_block_for_subject(payload.content, session_subject):
         reply = _build_subject_mismatch_response(session_subject)
 
@@ -530,6 +738,35 @@ async def send_message(
     is_flashcard = _is_flashcard_request(payload.content)
     is_quiz = _is_quiz_request(payload.content)
     is_summary = content_lower.strip() == "summarize" or content_lower.strip().startswith("summarize ")
+
+    if is_summary and _is_summary_request_about_person(payload.content, context):
+        assistant_message = Message.create(
+            chat_id=chat_id,
+            user_id=user_id,
+            role="assistant",
+            content=PERSONAL_REFUSAL_MESSAGE,
+        )
+        assistant_document = assistant_message.to_document()
+        assistant_document["message_index"] = assistant_index
+        assistant_document["ai_generated"] = False
+        assistant_document["was_stopped"] = False
+        if response_level:
+            assistant_document["response_level"] = response_level
+
+        result = await db["messages"].insert_one(assistant_document)
+        response = {
+            "type": "text",
+            "content": PERSONAL_REFUSAL_MESSAGE,
+            "chat_id": str(chat_id),
+            "user_id": str(user_id),
+            "message_id": str(result.inserted_id),
+            "message_index": assistant_index,
+            "pending": False,
+            "response_level": response_level,
+        }
+        if new_title:
+            response["new_title"] = new_title
+        return response
 
     if is_flashcard:
         flashcard_data = await generate_flashcard_payload(
