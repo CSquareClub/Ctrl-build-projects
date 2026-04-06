@@ -187,14 +187,23 @@ export default function Home() {
         onSearch={(query) => fetchRepoData(query)}
       />
 
-      {/* Search button — top right */}
-      <button
-        onClick={() => setShowSearch(true)}
-        className="fixed top-4 right-4 z-40 bg-terminal-surface border border-terminal-border text-terminal-muted hover:border-terminal-text hover:text-terminal-bright p-2.5 rounded transition font-mono"
-        title="Search repository (Ctrl+K)"
-      >
-        <Search size={16} />
-      </button>
+      {/* Search bar — top right */}
+<div className="fixed top-4 right-4 z-40 flex items-center bg-terminal-surface border border-terminal-border rounded transition hover:border-terminal-text group">
+  <input
+    type="text"
+    placeholder="Search repo... (Ctrl+K)"
+    readOnly
+    onClick={() => setShowSearch(true)}
+    className="bg-transparent text-terminal-text text-xs px-3 py-2 w-52 focus:outline-none placeholder-terminal-muted font-mono cursor-pointer"
+  />
+  <button
+    onClick={() => setShowSearch(true)}
+    className="text-terminal-muted group-hover:text-terminal-bright p-2.5 border-l border-terminal-border transition"
+    title="Search repository (Ctrl+K)"
+  >
+    <Search size={16} />
+  </button>
+</div>
 
       <main className="ml-64 bg-terminal-bg h-screen overflow-hidden flex flex-col p-6">
         <div className="flex flex-col flex-1 min-h-0 max-w-7xl w-full">
@@ -216,7 +225,7 @@ export default function Home() {
 
           {!loading && repoOwner && repoData && (
             <>
-              <div className="flex-shrink-0">
+              <div className="flex-shrink-0 mt-10">
                 <UserProfile user={repoOwner} />
               </div>
 
