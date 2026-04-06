@@ -17,7 +17,7 @@ import {
   type Unsubscribe,
   where,
 } from 'firebase/firestore'
-import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage'
+import { getDownloadURL, ref, uploadBytes } from 'firebase/storage'
 
 import { db, storage } from '../lib/firebase'
 
@@ -51,6 +51,25 @@ export type RoomMessage = {
   createdAt: Timestamp | null
 }
 
+const FILE_MESSAGE_PREFIX = '__focusroom_file__:'
+
+const parseEncodedFileMessage = (text: string) => {
+  if (!text.startsWith(FILE_MESSAGE_PREFIX)) {
+    return null
+  }
+
+  try {
+    return JSON.parse(decodeURIComponent(text.slice(FILE_MESSAGE_PREFIX.length))) as {
+      name?: string
+      url?: string
+      size?: number
+      type?: string
+    }
+  } catch {
+    return null
+  }
+}
+
 export type CreateRoomInput = {
   name: string
   topic: string
@@ -80,17 +99,22 @@ const mapRoomMember = (id: string, data: DocumentData): RoomMember => ({
   joinedAt: (data.joinedAt as Timestamp | undefined) ?? null,
 })
 
-const mapRoomMessage = (id: string, data: DocumentData): RoomMessage => ({
-  id,
-  text: String(data.text ?? ''),
-  senderId: String(data.senderId ?? ''),
-  senderName: String(data.senderName ?? 'Member'),
-  messageType: data.messageType === 'file' ? 'file' : 'text',
-  fileName: typeof data.fileName === 'string' ? data.fileName : undefined,
-  fileUrl: typeof data.fileUrl === 'string' ? data.fileUrl : undefined,
-  fileSize: typeof data.fileSize === 'number' ? data.fileSize : undefined,
-  createdAt: (data.createdAt as Timestamp | undefined) ?? null,
-})
+const mapRoomMessage = (id: string, data: DocumentData): RoomMessage => {
+  const text = String(data.text ?? '')
+  const encodedFile = parseEncodedFileMessage(text)
+
+  return {
+    id,
+    text,
+    senderId: String(data.senderId ?? ''),
+    senderName: String(data.senderName ?? 'Member'),
+    messageType: data.messageType === 'file' || Boolean(encodedFile) ? 'file' : 'text',
+    fileName: typeof data.fileName === 'string' ? data.fileName : encodedFile?.name,
+    fileUrl: typeof data.fileUrl === 'string' ? data.fileUrl : encodedFile?.url,
+    fileSize: typeof data.fileSize === 'number' ? data.fileSize : encodedFile?.size,
+    createdAt: (data.createdAt as Timestamp | undefined) ?? null,
+  }
+}
 
 const getDisplayName = (user: User) => {
   if (user.displayName?.trim()) return user.displayName.trim()
@@ -116,6 +140,77 @@ const handleFirestoreError = (error: unknown, fallback: string): never => {
   }
 
   throw new Error(fallback)
+}
+
+const readFileAsDataUrl = async (file: File): Promise<string> => {
+  const result = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result ?? ''))
+    reader.onerror = () => reject(new Error('Unable to read file locally.'))
+    reader.readAsDataURL(file)
+  })
+
+  if (!result) {
+    throw new Error('Unable to read file locally.')
+  }
+
+  return result
+}
+
+const withTimeout = async <T>(promise: Promise<T>, timeoutMs: number, timeoutMessage: string): Promise<T> => {
+  let timeoutHandle: ReturnType<typeof setTimeout> | undefined
+
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timeoutHandle = setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs)
+      }),
+    ])
+  } finally {
+    if (timeoutHandle) {
+      clearTimeout(timeoutHandle)
+    }
+  }
+}
+
+const encodeFileMessage = (file: File, fileUrl: string) =>
+  `${FILE_MESSAGE_PREFIX}${encodeURIComponent(JSON.stringify({
+    name: file.name,
+    size: file.size,
+    type: file.type,
+    url: fileUrl,
+  }))}`
+
+const writeRoomFileMessage = async (
+  roomId: string,
+  user: User,
+  file: File,
+  fileUrl: string,
+) => {
+  const messagesRef = collection(db, 'rooms', roomId, 'messages')
+  const encodedText = encodeFileMessage(file, fileUrl)
+
+  try {
+    await addDoc(messagesRef, {
+      text: encodedText,
+      senderId: user.uid,
+      senderName: getDisplayName(user),
+      messageType: 'file',
+      fileName: file.name,
+      fileUrl,
+      fileSize: file.size,
+      createdAt: serverTimestamp(),
+    })
+  } catch {
+    // Keep the encoded file payload even if strict message schemas reject metadata fields.
+    await addDoc(messagesRef, {
+      text: encodedText,
+      senderId: user.uid,
+      senderName: getDisplayName(user),
+      createdAt: serverTimestamp(),
+    })
+  }
 }
 
 export const createRoom = async (input: CreateRoomInput, user: User | null): Promise<string> => {
@@ -232,42 +327,25 @@ export const shareRoomFile = async (roomId: string, file: File, user: User | nul
   try {
     const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
     const filePath = `rooms/${roomId}/shared/${Date.now()}-${authenticatedUser.uid}-${sanitizedName}`
-    const storageRef = ref(storage, filePath)
 
-    const uploadTask = uploadBytesResumable(storageRef, file)
-    await new Promise<void>((resolve, reject) => {
-      uploadTask.on(
-        'state_changed',
-        () => {
-          // Progress can be wired to UI later if needed.
-        },
-        (error) => reject(error),
-        () => resolve(),
-      )
-    })
-
-    const fileUrl = await getDownloadURL(uploadTask.snapshot.ref)
-
-    const messagesRef = collection(db, 'rooms', roomId, 'messages')
     try {
-      await addDoc(messagesRef, {
-        text: `${getDisplayName(authenticatedUser)} shared a file`,
-        senderId: authenticatedUser.uid,
-        senderName: getDisplayName(authenticatedUser),
-        messageType: 'file',
-        fileName: file.name,
-        fileUrl,
-        fileSize: file.size,
-        createdAt: serverTimestamp(),
-      })
-    } catch {
-      // Fallback for strict Firestore schemas that only allow text chat fields.
-      await addDoc(messagesRef, {
-        text: `${getDisplayName(authenticatedUser)} shared ${file.name}: ${fileUrl}`,
-        senderId: authenticatedUser.uid,
-        senderName: getDisplayName(authenticatedUser),
-        createdAt: serverTimestamp(),
-      })
+      const storageRef = ref(storage, filePath)
+      const uploadResult = await withTimeout(
+        uploadBytes(storageRef, file),
+        12000,
+        'File upload timed out. Falling back to inline sharing.',
+      )
+
+      const fileUrl = await getDownloadURL(uploadResult.ref)
+      await writeRoomFileMessage(roomId, authenticatedUser, file, fileUrl)
+    } catch (uploadError) {
+      // If Storage is blocked or quota-limited, keep sharing working by storing the attachment inline.
+      if (file.size > 700 * 1024) {
+        return handleFirestoreError(uploadError, 'Unable to share file.')
+      }
+
+      const fallbackUrl = await readFileAsDataUrl(file)
+      await writeRoomFileMessage(roomId, authenticatedUser, file, fallbackUrl)
     }
   } catch (error) {
     return handleFirestoreError(error, 'Unable to share file.')

@@ -198,7 +198,7 @@ export function RoomPage() {
     return (
       <div className="min-h-screen w-full bg-[var(--bg)] text-[var(--text)]">
         <Sidebar />
-        <main className="ml-72 flex min-h-screen items-center justify-center p-6">
+        <main className="flex min-h-screen items-center justify-center p-4 sm:p-6 lg:ml-72">
           <p className="text-sm text-[var(--muted)]">Joining room...</p>
         </main>
       </div>
@@ -209,7 +209,7 @@ export function RoomPage() {
     return (
       <div className="min-h-screen w-full bg-[var(--bg)] text-[var(--text)]">
         <Sidebar />
-        <main className="ml-72 flex min-h-screen items-center justify-center p-6">
+        <main className="flex min-h-screen items-center justify-center p-4 sm:p-6 lg:ml-72">
           <section className="w-full max-w-xl rounded-2xl border border-[var(--border)] bg-[var(--card)] p-6 text-center">
             <h1 className="text-2xl font-semibold">Unable to open room</h1>
             <p className="mt-2 text-sm text-[var(--muted)]">{roomError}</p>
@@ -230,7 +230,7 @@ export function RoomPage() {
     <div className="min-h-screen w-full bg-[var(--bg)] text-[var(--text)]">
       <Sidebar />
 
-      <main className="ml-72 flex min-h-screen items-center justify-center p-6">
+      <main className="flex min-h-screen items-center justify-center p-4 sm:p-6 lg:ml-72">
         <section className="w-full max-w-3xl rounded-3xl border border-[var(--border)] bg-[var(--card)] p-8 text-center shadow-sm">
           <p className="text-sm uppercase tracking-[0.22em] text-[var(--muted)]">Live Session</p>
           <h1 className="mt-3 font-display text-4xl font-semibold">{roomTitle}</h1>

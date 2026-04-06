@@ -1,4 +1,4 @@
-import { ExternalLink, MapPin, MessageCircle, Navigation, Star, Video } from 'lucide-react'
+import { MapPin, MessageCircle, Navigation, Star, Video } from 'lucide-react'
 import { useState } from 'react'
 
 import { Sidebar } from '../components/Sidebar'
@@ -32,7 +32,7 @@ export function NearbyEducatorsPage() {
 
       <Sidebar />
 
-      <main className="relative ml-0 p-4 sm:p-6 lg:ml-72 lg:p-8">
+      <main className="relative p-4 sm:p-6 lg:ml-72 lg:p-8">
         <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           {educators.map((educator) => {
             const isNearCu = educator.name === 'CU Adda Coaching Classes'
@@ -127,21 +127,12 @@ export function NearbyEducatorsPage() {
                   </button>
                 </div>
 
-                <div className="mt-3 grid grid-cols-2 gap-2.5">
-                  <a
-                    href={educator.map}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center justify-center gap-1 rounded-xl border border-[var(--border)] bg-[var(--bg-elev)] px-3 py-2 text-sm font-medium text-[var(--text)] transition-colors duration-200 hover:opacity-90"
-                  >
-                    <ExternalLink className="h-3.5 w-3.5" />
-                    View Location
-                  </a>
+                <div className="mt-3">
                   <a
                     href={educator.directions}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-[var(--border)] bg-[var(--bg-elev)] px-3 py-2 text-sm font-semibold text-[var(--text)] transition-colors duration-200 hover:opacity-90"
+                    className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-[var(--border)] bg-[var(--bg-elev)] px-3 py-2 text-sm font-semibold text-[var(--text)] transition-colors duration-200 hover:opacity-90"
                   >
                     <Navigation className="h-3.5 w-3.5" />
                     Get Directions

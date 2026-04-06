@@ -83,7 +83,7 @@ export function DashboardPage() {
     <div className="min-h-screen w-full bg-[var(--bg)] text-[var(--text)]">
       <Sidebar />
 
-      <main className="ml-72 p-6">
+      <main className="p-4 sm:p-6 lg:ml-72">
         <header className="mb-5 flex items-center justify-between rounded-2xl border border-[var(--border)] bg-[var(--card)] px-5 py-4 shadow-sm">
           <div>
             <h1 className="font-display text-2xl font-semibold">Dashboard</h1>

@@ -3,14 +3,22 @@ import { getAuth } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
 import { getStorage } from 'firebase/storage'
 
+function requireEnv(name: string): string {
+  const value = import.meta.env[name]
+  if (!value || String(value).trim() === '') {
+    throw new Error(`Missing required environment variable: ${name}`)
+  }
+  return value
+}
+
 const firebaseConfig = {
-  apiKey: 'AIzaSyD-7vt3xanEyXGLzs6kDC6Sz_7xiHwSPio',
-  authDomain: 'focusroom-9cfdb.firebaseapp.com',
-  projectId: 'focusroom-9cfdb',
-  storageBucket: 'focusroom-9cfdb.firebasestorage.app',
-  messagingSenderId: '132664214538',
-  appId: '1:132664214538:web:8564df644cdf5263820bf3',
-  measurementId: 'G-9507NK2N0D',
+  apiKey: requireEnv('VITE_FIREBASE_API_KEY'),
+  authDomain: requireEnv('VITE_FIREBASE_AUTH_DOMAIN'),
+  projectId: requireEnv('VITE_FIREBASE_PROJECT_ID'),
+  storageBucket: requireEnv('VITE_FIREBASE_STORAGE_BUCKET'),
+  messagingSenderId: requireEnv('VITE_FIREBASE_MESSAGING_SENDER_ID'),
+  appId: requireEnv('VITE_FIREBASE_APP_ID'),
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 }
 
 export const app = initializeApp(firebaseConfig)

@@ -317,7 +317,7 @@ export function ArcadeModePage() {
     <div className="min-h-screen w-full bg-[var(--bg)] text-[var(--text)]">
       <Sidebar />
 
-      <main className="relative ml-0 min-h-screen overflow-hidden p-4 sm:p-6 lg:ml-72 lg:p-8">
+      <main className="relative min-h-screen overflow-hidden p-4 sm:p-6 lg:ml-72 lg:p-8">
         <div className="pointer-events-none absolute inset-0 mesh-bg" />
 
         <div className="relative grid gap-5 xl:grid-cols-[1fr_320px]">

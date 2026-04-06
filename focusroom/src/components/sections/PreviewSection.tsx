@@ -39,7 +39,7 @@ export function PreviewSection() {
               />
             </div>
             <div className="mt-6 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-              {flashcardMocks.slice(0, 6).map((card) => (
+              {flashcardMocks.slice(0, 4).map((card) => (
                 <motion.article
                   key={card.id}
                   whileHover={{ y: -3, scale: 1.01 }}
@@ -75,8 +75,8 @@ export function PreviewSection() {
                       {card.mastery}% mastery
                     </span>
                   </div>
-                  <p className="line-clamp-2 text-xs font-medium leading-relaxed text-[var(--text)]">{card.front}</p>
-                  <p className="mt-1.5 line-clamp-1 text-[11px] text-[var(--muted)]">{card.back}</p>
+                  <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--muted)]">Question</p>
+                  <p className="mt-1 line-clamp-2 text-sm font-medium leading-snug text-[var(--text)]">{card.front}</p>
                   <div className="mt-3 flex items-center justify-between text-[10px] text-[var(--muted)]">
                     <span>Streak {card.streak}x</span>
                     <div className="h-1.5 w-20 overflow-hidden rounded-full bg-[var(--bg-elev)]">
