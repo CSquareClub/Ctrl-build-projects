@@ -10,7 +10,7 @@ export default function IssuesCard({ issues }) {
   const closedCount = list.filter((issue) => issue.state === 'closed').length;
 
   return (
-    <div className="bg-github-bg border border-github-border rounded-lg p-5 flex flex-col h-full">
+    <div className="bg-github-bg border border-github-border rounded-lg p-5 flex flex-col h-full overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-sm font-semibold text-white flex items-center gap-2">

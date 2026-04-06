@@ -3,7 +3,7 @@ import { GitCommit, User, Clock } from 'lucide-react';
 
 export default function ActivitiesCard({ commits }) {
   return (
-    <div className="bg-github-bg border border-github-border rounded-lg p-5 flex flex-col h-full">
+    <div className="bg-github-bg border border-github-border rounded-lg p-5 flex flex-col h-full overflow-hidden">
       <h2 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
         <GitCommit size={15} className="text-blue-400" />
         Commit History
