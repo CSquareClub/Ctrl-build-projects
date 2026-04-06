@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SecureVault - Password Manager</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1>🔐 SecureVault</h1>
+    
+    <!-- Master Password Setup -->
+    <div id="auth-section">
+      <h2>Enter Master Password</h2>
+      <input type="password" id="master-password" placeholder="Master Password">
+      <button onclick="unlockVault()">Unlock Vault</button>
+    </div>
+
+    <!-- Password Manager -->
+    <div id="vault-section" style="display: none;">
+      <h2>Add New Password</h2>
+      <input type="text" id="website" placeholder="Website (e.g., gmail.com)">
+      <input type="text" id="username" placeholder="Username/Email">
+      <input type="password" id="password" placeholder="Password">
+      <button onclick="savePassword()">Save Password</button>
+
+      <h2>Your Saved Passwords</h2>
+      <div id="password-list"></div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
