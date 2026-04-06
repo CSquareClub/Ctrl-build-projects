@@ -1,3 +1,6 @@
+import re
+
+
 def extract_text(file_path):
     try:
         import pdfplumber
@@ -23,3 +26,13 @@ def extract_text(file_path):
         return "\n".join(extracted_pages).strip()
     except Exception:
         return ""
+
+
+def clean_text(text):
+    if not text:
+        return ""
+
+    text = text.lower()
+    text = re.sub(r"[^a-z0-9\s]", "", text)
+    text = re.sub(r"\s+", " ", text)
+    return text.strip()
