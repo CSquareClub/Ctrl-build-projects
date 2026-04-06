@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DevMatch — Login</title>
+
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --bg:#0a0b0f;
+  --card:#181b24;
+  --border:rgba(255,255,255,0.1);
+  --green:#00ffa3;
+  --text:#e2e8f0;
+  --muted:#94a3b8;
+  --font-mono:'JetBrains Mono', monospace;
+  --font-display:'Syne', sans-serif;
+}
+
+body {
+  margin:0;
+  font-family:var(--font-display);
+  background:var(--bg);
+  color:var(--text);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  height:100vh;
+}
+
+/* card */
+.login-box {
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:20px;
+  padding:2.5rem;
+  width:100%;
+  max-width:380px;
+  text-align:center;
+}
+
+/* logo */
+.logo {
+  font-family:var(--font-mono);
+  font-weight:700;
+  margin-bottom:1rem;
+}
+.logo span { color:var(--green); }
+
+/* heading */
+h2 {
+  font-size:1.8rem;
+  margin-bottom:0.5rem;
+}
+
+p {
+  font-size:0.9rem;
+  color:var(--muted);
+  margin-bottom:2rem;
+}
+
+/* input */
+.input {
+  width:100%;
+  padding:12px;
+  margin-bottom:1rem;
+  border-radius:10px;
+  border:1px solid var(--border);
+  background:#12141a;
+  color:white;
+  outline:none;
+}
+
+.input:focus {
+  border-color:var(--green);
+}
+
+/* button */
+.btn {
+  width:100%;
+  padding:12px;
+  border:none;
+  border-radius:10px;
+  background:var(--green);
+  color:black;
+  font-weight:700;
+  cursor:pointer;
+  transition:0.2s;
+}
+
+.btn:hover {
+  opacity:0.85;
+}
+
+/* link */
+.link {
+  margin-top:1rem;
+  font-size:0.8rem;
+  color:var(--muted);
+}
+
+.link span {
+  color:var(--green);
+  cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+
+<div class="login-box">
+  <div class="logo">Dev<span>Match</span></div>
+
+  <h2>Welcome back</h2>
+  <p>Login to start matching 🚀</p>
+
+  <input id="email" type="email" class="input" placeholder="Email">
+  <input id="password" type="password" class="input" placeholder="Password">
+
+  <button class="btn" onclick="login()">Login</button>
+
+  <div class="link">
+    New here? <span onclick="goSignup()">Create account</span>
+  </div>
+</div>
+
+<script>
+function login() {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+
+  if (!email || !password) {
+    alert("Fill all fields");
+    return;
+  }
+
+  // TEMP FAKE LOGIN (frontend only)
+  localStorage.setItem("user", email);
+
+  alert("Login successful 🚀");
+
+  // redirect to dashboard (next step)
+  window.location.href = "skills.html";
+}
+
+function goSignup() {
+  alert("Signup page next step 😎");
+}
+</script>
+
+</body>
+</html>

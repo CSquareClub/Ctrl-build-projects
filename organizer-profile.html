@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat with Organizer - DevMatch</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary: #00ff9d; --bg: #0a0b0f; --card: #12141a; }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 40px;
+            display: flex;
+            justify-content: center;
+        }
+        .profile-container {
+            width: 100%; max-width: 680px;
+            background: var(--card);
+            border-radius: 24px;
+            padding: 50px 40px;
+            text-align: center;
+        }
+        .avatar { width:130px; height:130px; margin:0 auto 20px; background:linear-gradient(135deg,#00ff9d,#00cc7a); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:60px; }
+        h1 { font-family:'Space Grotesk',sans-serif; font-size:32px; margin-bottom:8px; }
+        .role { color:var(--primary); font-size:18px; margin-bottom:30px; }
+        .bio { color:#aaa; line-height:1.7; margin-bottom:40px; }
+
+        .btn {
+            width:100%; padding:18px; margin:12px 0; border:none; border-radius:16px;
+            font-size:16px; font-weight:700; cursor:pointer;
+        }
+        .invite-btn { background:linear-gradient(90deg,#00ff9d,#00e68a); color:#000; }
+        .message-btn { background:#222; color:#888; }
+        .message-btn.enabled { background:#00ff9d; color:#000; cursor:pointer; }
+
+        /* Chat Modal */
+        .chat-modal {
+            position:fixed; top:0; left:0; width:100%; height:100%;
+            background:rgba(0,0,0,0.95); display:none; align-items:center; justify-content:center; z-index:2000;
+        }
+        .chat-box {
+            width:100%; max-width:520px; background:#12141a; border-radius:20px; overflow:hidden;
+            border:1px solid rgba(0,255,157,0.2);
+        }
+        .chat-header {
+            background:#1a1d24; padding:16px 20px; display:flex; align-items:center; gap:12px;
+        }
+        .chat-avatar { width:45px; height:45px; border-radius:50%; background:#00ff9d; display:flex; align-items:center; justify-content:center; font-size:26px; }
+        .chat-messages {
+            height:460px; padding:20px; overflow-y:auto; background:#0a0b0f; display:flex; flex-direction:column; gap:14px;
+        }
+        .message {
+            max-width:85%; padding:13px 17px; border-radius:18px; font-size:15.5px;
+        }
+        .message.organizer { align-self:flex-start; background:#1f2229; border-bottom-left-radius:6px; }
+        .message.user { align-self:flex-end; background:var(--primary); color:#000; border-bottom-right-radius:6px; }
+        .chat-input-area { padding:15px; background:#1a1d24; display:flex; gap:10px; }
+        .chat-input { flex:1; padding:14px 18px; background:#0a0b0f; border:1px solid #333; border-radius:14px; color:white; }
+        .send-btn { background:var(--primary); color:#000; border:none; width:52px; border-radius:14px; font-size:20px; cursor:pointer; }
+        .typing { font-style:italic; color:#666; padding:10px; }
+    </style>
+</head>
+<body>
+
+    <div class="profile-container">
+        <div class="avatar" id="avatar">👤</div>
+        <h1 id="name">Organizer</h1>
+        <p class="role" id="role"></p>
+        <div class="bio" id="bio"></div>
+
+        <button class="btn invite-btn" onclick="sendInvitation()">Send Invitation Request</button>
+        <button class="btn message-btn" id="message-btn" onclick="openChat()">💬 Message Organizer</button>
+        <div class="status" id="status"></div>
+    </div>
+
+    <!-- Chat Modal -->
+    <div class="chat-modal" id="chat-modal">
+        <div class="chat-box">
+            <div class="chat-header">
+                <div class="chat-avatar" id="chat-avatar">👤</div>
+                <div>
+                    <strong id="chat-name">Organizer</strong><br>
+                    <small style="color:#00ff9d;">Online</small>
+                </div>
+            </div>
+            <div class="chat-messages" id="chat-messages"></div>
+            <div class="chat-input-area">
+                <input type="text" class="chat-input" id="chat-input" placeholder="Type your message...">
+                <button class="send-btn" onclick="sendChatMessage()">↑</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const organizer = JSON.parse(localStorage.getItem('selectedOrganizer') || '{}');
+        
+        document.getElementById('avatar').textContent = organizer.emoji || '👤';
+        document.getElementById('name').textContent = organizer.name || 'Organizer';
+        document.getElementById('role').textContent = (organizer.role || '') + " • " + (organizer.org || '');
+        document.getElementById('chat-avatar').textContent = organizer.emoji || '👤';
+        document.getElementById('chat-name').textContent = organizer.name || 'Organizer';
+
+        let invitationApproved = false;
+
+        function sendInvitation() {
+            document.getElementById('status').innerHTML = '✅ Invitation request sent! Waiting for approval...';
+            setTimeout(() => {
+                invitationApproved = true;
+                document.getElementById('message-btn').classList.add('enabled');
+            }, 1500);
+        }
+
+        function openChat() {
+            if (!invitationApproved) {
+                alert("You can only message after your invitation is approved.");
+                return;
+            }
+            document.getElementById('chat-modal').style.display = 'flex';
+            
+            setTimeout(() => {
+                addMessage("organizer", `Hey! I'm ${organizer.name.split(' ')[0]}. How can I help you with the hackathon?`);
+            }, 600);
+        }
+
+        function addMessage(sender, text) {
+            const container = document.getElementById('chat-messages');
+            const div = document.createElement('div');
+            div.className = `message ${sender}`;
+            div.innerHTML = `<div class="message-bubble">${text}</div>`;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        async function sendChatMessage() {
+            const input = document.getElementById('chat-input');
+            const userMessage = input.value.trim();
+            if (!userMessage) return;
+
+            addMessage("user", userMessage);
+            input.value = "";
+
+            // Show typing indicator
+            const typing = document.createElement('div');
+            typing.className = 'message organizer typing';
+            typing.textContent = "thinking...";
+            document.getElementById('chat-messages').appendChild(typing);
+            document.getElementById('chat-messages').scrollTop = document.getElementById('chat-messages').scrollHeight;
+
+            try {
+                // Call Ollama (Make sure Ollama is running on localhost:11434)
+                const response = await fetch('http://localhost:11434/api/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: "llama3",        // Change to "mistral", "phi3", etc. if you prefer
+                        prompt: `You are ${organizer.name}, a friendly hackathon organizer. Keep replies short, helpful and professional.\n\nUser: ${userMessage}\nAssistant:`,
+                        stream: false
+                    })
+                });
+
+                const data = await response.json();
+                typing.remove();
+                addMessage("organizer", data.response || "Sorry, I didn't understand that.");
+            } catch (err) {
+                typing.remove();
+                addMessage("organizer", "Sorry, Ollama is not responding. Make sure it's running on localhost:11434");
+            }
+        }
+
+        // Enter key support
+        document.getElementById('chat-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendChatMessage();
+        });
+
+        // Close chat when clicking outside
+        document.getElementById('chat-modal').addEventListener('click', function(e) {
+            if (e.target === this) this.style.display = 'none';
+        });
+    </script>
+</body>
+</html>

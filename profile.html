@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Profile — DevMatch</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700&display=swap" rel="stylesheet">
+
+<style>
+
+body {
+  margin:0;
+  font-family:'Syne', sans-serif;
+  background:#0a0b0f;
+  color:white;
+  display:flex;
+}
+
+/* SIDEBAR */
+.sidebar {
+  width:250px;
+  padding:20px;
+  border-right:1px solid rgba(255,255,255,0.05);
+}
+
+.logo {
+  color:#00ffa3;
+  font-weight:700;
+  margin-bottom:20px;
+}
+
+.menu div {
+  margin:15px 0;
+  cursor:pointer;
+  padding:10px;
+  border-radius:10px;
+}
+
+.menu div:hover {
+  background:rgba(0,255,163,0.1);
+}
+
+/* MAIN */
+.main {
+  flex:1;
+  padding:30px;
+}
+
+.card {
+  background:#12141a;
+  padding:25px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,0.05);
+  max-width:600px;
+}
+
+/* avatar */
+.avatar {
+  width:80px;
+  height:80px;
+  border-radius:50%;
+  background:#00ffa3;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:30px;
+  color:black;
+  margin-bottom:15px;
+}
+
+/* tags */
+.tag {
+  display:inline-block;
+  padding:6px 12px;
+  background:rgba(0,255,163,0.1);
+  color:#00ffa3;
+  border-radius:8px;
+  margin:5px;
+  font-size:0.75rem;
+}
+
+/* button */
+.btn {
+  margin-top:15px;
+  padding:10px 16px;
+  background:#00ffa3;
+  border:none;
+  border-radius:10px;
+  cursor:pointer;
+}
+
+</style>
+</head>
+
+<body>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="logo">DevMatch</div>
+
+  <div class="menu">
+    <div onclick="go('events.html')">🏆 Discover</div>
+    <div onclick="alert('Notifications')">🔔 Notifications</div>
+    <div onclick="alert('Organizer')">👤 Organizer</div>
+    <div onclick="alert('Join by ID')">🔑 Join by ID</div>
+    <div onclick="go('profile.html')">👤 Profile</div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+<h2>Your Profile</h2>
+
+<div class="card">
+
+<div class="avatar" id="avatar">U</div>
+
+<h3 id="username">User</h3>
+
+<p id="goal"></p>
+<p id="availability"></p>
+
+<h4>Skills</h4>
+<div id="skills"></div>
+
+<h4>Interests</h4>
+<div id="interests"></div>
+
+<button class="btn" onclick="editProfile()">Edit Profile</button>
+
+</div>
+
+</div>
+
+<script>
+
+// LOAD DATA
+const skills = JSON.parse(localStorage.getItem("skills")) || [];
+const interests = JSON.parse(localStorage.getItem("interests")) || [];
+const goal = localStorage.getItem("goal") || "No goal set";
+const availability = localStorage.getItem("availability") || "Not set";
+
+// OPTIONAL NAME
+let name = localStorage.getItem("username") || "User";
+
+// SET UI
+document.getElementById("username").innerText = name;
+document.getElementById("avatar").innerText = name.charAt(0).toUpperCase();
+
+document.getElementById("goal").innerText = "🎯 Goal: " + goal;
+document.getElementById("availability").innerText = "⏳ Availability: " + availability;
+
+// SKILLS
+skills.forEach(s => {
+  document.getElementById("skills").innerHTML += `<span class="tag">${s}</span>`;
+});
+
+// INTERESTS
+interests.forEach(i => {
+  document.getElementById("interests").innerHTML += `<span class="tag">${i}</span>`;
+});
+
+// NAV
+function go(page) {
+  window.location.href = page;
+}
+
+// EDIT PROFILE
+function editProfile() {
+  const newName = prompt("Enter your name:");
+  if (newName) {
+    localStorage.setItem("username", newName);
+    location.reload();
+  }
+}
+
+</script>
+
+</body>
+</html>

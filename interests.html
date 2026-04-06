@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DevMatch — Preferences</title>
+
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --bg:#0a0b0f;
+  --card:#12141a;
+  --border:rgba(255,255,255,0.08);
+  --green:#00ffa3;
+  --text:#e2e8f0;
+  --muted:#94a3b8;
+}
+
+body {
+  margin:0;
+  font-family:'Syne', sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  height:100vh;
+}
+
+/* container */
+.box {
+  width:100%;
+  max-width:700px;
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:20px;
+  padding:2.5rem;
+}
+
+/* header */
+.logo {
+  text-align:center;
+  font-family:'JetBrains Mono';
+  font-size:1.6rem;
+}
+.logo span { color:var(--green); }
+
+.step {
+  text-align:center;
+  font-size:0.8rem;
+  color:var(--muted);
+  margin-bottom:20px;
+}
+
+/* title */
+h2 { margin-bottom:5px; }
+p {
+  color:var(--muted);
+  font-size:0.9rem;
+  margin-bottom:20px;
+}
+
+/* tags */
+.tags {
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin-bottom:25px;
+}
+
+.tag {
+  padding:8px 14px;
+  border-radius:20px;
+  border:1px solid var(--border);
+  cursor:pointer;
+  font-size:0.8rem;
+  transition:0.2s;
+}
+
+.tag.active {
+  background:var(--green);
+  color:black;
+  border-color:var(--green);
+}
+
+/* roles */
+.roles {
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:10px;
+  margin-top:10px;
+}
+
+.role {
+  padding:12px;
+  border-radius:12px;
+  border:1px solid var(--border);
+  text-align:center;
+  cursor:pointer;
+  font-size:0.85rem;
+  transition:0.2s;
+}
+
+.role.active {
+  border-color:var(--green);
+  color:var(--green);
+}
+
+/* button */
+.btn {
+  width:100%;
+  margin-top:25px;
+  padding:14px;
+  border:none;
+  border-radius:12px;
+  background:var(--green);
+  color:black;
+  font-weight:700;
+  cursor:pointer;
+  font-size:1rem;
+}
+
+.btn:hover { opacity:0.9; }
+
+</style>
+</head>
+
+<body>
+
+<div class="box">
+
+  <div class="logo">Dev<span>Match</span></div>
+  <div class="step">Step 3 of 3 — Preferences</div>
+
+  <h2>Your interests</h2>
+  <p>Select all that apply</p>
+
+  <!-- INTEREST TAGS -->
+  <div class="tags" id="tags">
+
+    <div class="tag">Startup</div>
+    <div class="tag">Hackathon</div>
+    <div class="tag">Open Source</div>
+    <div class="tag">Freelance</div>
+    <div class="tag">Full-time Job</div>
+    <div class="tag">Side Project</div>
+    <div class="tag">Learning</div>
+    <div class="tag">Networking</div>
+    <div class="tag">Co-founder</div>
+    <div class="tag">Remote Work</div>
+
+  </div>
+
+  <!-- ROLE SELECTION -->
+  <h3 style="margin-top:10px;font-size:1rem">Preferred teammate role</h3>
+
+  <div class="roles" id="roles">
+
+    <div class="role">Frontend Dev</div>
+    <div class="role">Backend Dev</div>
+    <div class="role">Full Stack</div>
+    <div class="role">AI/ML Engineer</div>
+    <div class="role">UI/UX Designer</div>
+    <div class="role">DevOps</div>
+    <div class="role">Blockchain Dev</div>
+    <div class="role">Mobile Dev</div>
+    <div class="role">Data Scientist</div>
+
+  </div>
+
+  <button class="btn" onclick="finish()">Finish →</button>
+
+</div>
+
+<script>
+
+// INTERESTS
+let interests = [];
+document.querySelectorAll(".tag").forEach(tag => {
+  tag.onclick = () => {
+    tag.classList.toggle("active");
+    const val = tag.innerText;
+
+    if (interests.includes(val)) {
+      interests = interests.filter(v => v !== val);
+    } else {
+      interests.push(val);
+    }
+  };
+});
+
+// ROLES
+let role = "";
+document.querySelectorAll(".role").forEach(r => {
+  r.onclick = () => {
+    document.querySelectorAll(".role").forEach(x => x.classList.remove("active"));
+    r.classList.add("active");
+    role = r.innerText;
+  };
+});
+
+function finish() {
+  localStorage.setItem("interests", JSON.stringify(interests));
+  localStorage.setItem("preferredRole", role);
+
+  window.location.href = "goals.html";
+}
+
+</script>
+
+</body>
+</html>

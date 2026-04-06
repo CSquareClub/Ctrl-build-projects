@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DevMatch — Goals</title>
+
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --bg:#0a0b0f;
+  --card:#12141a;
+  --border:rgba(255,255,255,0.08);
+  --green:#00ffa3;
+  --text:#e2e8f0;
+  --muted:#94a3b8;
+}
+
+body {
+  margin:0;
+  font-family:'Syne', sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  height:100vh;
+}
+
+.box {
+  width:100%;
+  max-width:650px;
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:20px;
+  padding:2.5rem;
+}
+
+.logo {
+  text-align:center;
+  font-family:'JetBrains Mono';
+  font-size:1.6rem;
+}
+.logo span { color:var(--green); }
+
+.step {
+  text-align:center;
+  font-size:0.8rem;
+  color:var(--muted);
+  margin-bottom:20px;
+}
+
+h2 { margin-bottom:10px; }
+p { color:var(--muted); font-size:0.9rem; margin-bottom:20px; }
+
+/* options */
+.option {
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:14px;
+  margin-bottom:12px;
+  cursor:pointer;
+  transition:0.2s;
+}
+
+.option.active {
+  border-color:var(--green);
+  background:rgba(0,255,163,0.05);
+}
+
+.title { font-weight:600; }
+.sub { font-size:0.8rem; color:var(--muted); }
+
+/* button */
+.btn {
+  width:100%;
+  margin-top:20px;
+  padding:14px;
+  border:none;
+  border-radius:12px;
+  background:var(--green);
+  color:black;
+  font-weight:700;
+  cursor:pointer;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="box">
+
+  <div class="logo">Dev<span>Match</span></div>
+  <div class="step">Step 4 of 4 — Preferences</div>
+
+  <h2>Your goals & availability</h2>
+  <p>This helps us match you better</p>
+
+  <!-- GOALS -->
+  <h3 style="font-size:0.95rem">What's your goal?</h3>
+
+  <div class="option" onclick="selectGoal(this,'Win')">
+    <div class="title">🏆 Win</div>
+    <div class="sub">Competitive mindset</div>
+  </div>
+
+  <div class="option" onclick="selectGoal(this,'Build')">
+    <div class="title">🚀 Build</div>
+    <div class="sub">Ship something real</div>
+  </div>
+
+  <div class="option" onclick="selectGoal(this,'Learn')">
+    <div class="title">🧠 Learn</div>
+    <div class="sub">Explore & grow</div>
+  </div>
+
+  <!-- AVAILABILITY -->
+  <h3 style="margin-top:20px;font-size:0.95rem">Availability</h3>
+
+  <div class="option" onclick="selectTime(this,'Full')">
+    <div class="title">Full commitment</div>
+    <div class="sub">24/7 grind mode</div>
+  </div>
+
+  <div class="option" onclick="selectTime(this,'Partial')">
+    <div class="title">Partial commitment</div>
+    <div class="sub">Few hours/day</div>
+  </div>
+
+  <div class="option" onclick="selectTime(this,'Flexible')">
+    <div class="title">Flexible</div>
+    <div class="sub">As needed</div>
+  </div>
+
+  <button class="btn" onclick="finish()">Enter DevMatch 🚀</button>
+
+</div>
+
+<script>
+
+let goal = "";
+let time = "";
+
+function selectGoal(el, val) {
+  document.querySelectorAll("h3 + .option, h3 + .option + .option, h3 + .option + .option + .option")
+    .forEach(o => o.classList.remove("active"));
+
+  el.classList.add("active");
+  goal = val;
+}
+
+function selectTime(el, val) {
+  document.querySelectorAll("h3:nth-of-type(2) ~ .option")
+    .forEach(o => o.classList.remove("active"));
+
+  el.classList.add("active");
+  time = val;
+}
+
+function finish() {
+  localStorage.setItem("goal", goal);
+  localStorage.setItem("availability", time);
+
+  window.location.href = "dashboard.html";
+}
+
+</script>
+
+</body>
+</html>
