@@ -21,6 +21,14 @@ class Settings(BaseSettings):
     api_log_level: str = Field(default="info", alias="OPENISSUE_API_LOG_LEVEL")
     api_prefix: str = Field(default="/api", alias="OPENISSUE_API_PREFIX")
 
+    github_api_base_url: str = Field(
+        default="https://api.github.com",
+        alias="OPENISSUE_GITHUB_API_BASE_URL",
+    )
+    github_timeout_seconds: float = Field(
+        default=20.0,
+        alias="OPENISSUE_GITHUB_TIMEOUT_SECONDS",
+    )
     github_token: Optional[str] = Field(default=None, alias="OPENISSUE_GITHUB_TOKEN")
 
 
