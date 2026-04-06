@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FocusRoom</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+
+  <div class="shell">
+
+    <!-- ── Header ── -->
+    <header class="header">
+      <span class="wordmark">FOCUSROOM</span>
+      <div class="badge idle" id="statusBadge">Idle</div>
+    </header>
+
+    <!-- ── Timer focal point ── -->
+    <section class="timer-section">
+      <div class="timer-big idle-t" id="timerBig">--:--</div>
+      <p class="timer-sub" id="timerSub">No session running</p>
+      <div class="progress-track">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+    </section>
+
+    <!-- ── Stats ── -->
+    <section class="stats">
+      <div class="stat">
+        <span class="stat-val" id="eloVal">—</span>
+        <span class="stat-label">ELO</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat">
+        <span class="stat-val" id="focusVal">—</span>
+        <span class="stat-label">Focus</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat">
+        <span class="stat-val" id="distractVal">0</span>
+        <span class="stat-label">Flags</span>
+      </div>
+    </section>
+
+    <!-- ── Duration picker ── -->
+    <section class="duration-section">
+      <p class="section-label">Duration</p>
+      <div class="dur-pills">
+        <div class="dur-pill" data-val="25">25m</div>
+        <div class="dur-pill selected" data-val="45">45m</div>
+        <div class="dur-pill" data-val="60">60m</div>
+        <input type="number" class="dur-pill" id="customDur" placeholder="Custom" style="width: 70px; background: none; border: 1px solid #333; color: #fff; text-align: center; font-family: inherit;" />
+      </div>
+    </section>
+
+    <!-- ── Actions ── -->
+    <section class="actions">
+      <button class="btn btn-start" id="btnStart">▶ START FOCUS</button>
+      <button class="btn btn-stop" id="btnStop" disabled>■ END SESSION</button>
+      <button class="btn btn-newtab" id="btnDash">Open Dashboard</button>
+    </section>
+
+    <!-- ── Toast ── -->
+    <div class="toast" id="toast"></div>
+
+    <!-- ── Footer: socket status ── -->
+    <footer class="socket-row">
+      <div class="s-dot off" id="sDot"></div>
+      <span id="sLabel">Backend offline — manual mode</span>
+    </footer>
+
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
