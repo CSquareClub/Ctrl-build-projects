@@ -1,5 +1,59 @@
 # PLAN.md
 
+## Execution Update (2026-04-06): Wave 4 backend integration hardening
+
+Current goal:
+
+- harden backend behavior against real Wave 4 frontend integration paths while preserving the frozen analyze contract and avoiding disruptive late-cycle changes
+
+Exact scope:
+
+- fix backend/frontend request contract mismatch on issue list retrieval (`/api/issues`) discovered in real frontend usage
+- add a minimal analyze orchestration route that returns the canonical `AnalyzeResponse` shape (no alternate response envelope)
+- tighten analyze payload consistency so reason fields and duplicate candidate reasons are predictable for frontend consumption
+- improve backend failure handling for upstream GitHub/network errors and malformed integration inputs
+- remove avoidable field ambiguity (for example repository metadata key alignment used by retrieval/classification)
+
+Files/components likely affected:
+
+- `services/api/app/routes/issues.py`
+- `services/api/app/routes/analyze.py` (new)
+- `services/api/app/api/router.py`
+- `services/api/app/schemas/analyze.py`
+- `services/api/app/services/analyze.py` (new)
+- `services/api/app/services/similar_issues.py`
+- `services/api/app/core/dependencies.py`
+- `services/api/app/github/client.py`
+- `services/api/README.md`
+
+Sequencing:
+
+1. inspect current frontend integration calls and backend route/request contracts
+2. patch `/api/issues` contract compatibility for frontend repo query shape without breaking existing owner/repo inputs
+3. add thin analyze endpoint/service that composes existing similar+classification logic into canonical analyze response
+4. normalize analyze reasons/duplicate reason shaping and repository metadata key usage for predictable frontend mapping
+5. harden GitHub client error propagation for timeout/network failures
+6. validate by running backend and smoke-calling integration-critical endpoints (`/api/issues`, `/api/analyze`, `/api/similar-issues`, `/api/classification`) against current frontend path assumptions
+
+Validation strategy:
+
+- run Python compile checks for touched backend modules
+- run backend locally via uvicorn
+- execute endpoint smoke calls that mirror frontend integration (including `repo=owner/repo` query)
+- verify analyze response shape stays canonical and stable for mapped frontend contract fields
+
+Risks / open questions:
+
+- analyze endpoint may have slower response time because it composes retrieval + classification in one call and may trigger index updates
+- GitHub API rate limiting may still affect unauthenticated smoke tests; route-level error handling must remain explicit
+- existing vector rows written with legacy metadata keys may not be fully normalized until touched by fresh indexing
+
+Explicitly out of scope:
+
+- redesigning backend architecture or replacing current retrieval/classification strategy
+- changing stable frontend-consumed field names without a strict compatibility reason
+- introducing new product features unrelated to integration hardening
+
 ## Execution Update (2026-04-06): Wave 3 classification + label suggestion layer
 
 Current goal:

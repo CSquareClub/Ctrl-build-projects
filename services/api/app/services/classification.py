@@ -122,6 +122,15 @@ class ClassificationService:
         if label_vote_reasons:
             all_type_reasons = all_type_reasons + label_vote_reasons[:2]
 
+        if not all_type_reasons:
+            all_type_reasons = [
+                "No dominant lexical markers found; default classification fallback applied."
+            ]
+        if not label_reasons:
+            label_reasons = [
+                "Primary label suggestion derived from predicted issue type."
+            ]
+
         return IssueClassificationResponse(
             owner=request.owner,
             repo=request.repo,
