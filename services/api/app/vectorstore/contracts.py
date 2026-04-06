@@ -8,6 +8,8 @@ class VectorRecord(Protocol):
 
 
 class VectorStore(Protocol):
+    def index_name(self) -> str: ...
+
     def upsert(
         self, issue_id: str, vector: list[float], metadata: dict[str, Any]
     ) -> None: ...

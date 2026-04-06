@@ -1,5 +1,110 @@
 # PLAN.md
 
+## Execution Update (2026-04-06): MiniLM semantic retrieval correction
+
+Current goal:
+
+- switch similar-issues retrieval from hashing placeholder vectors to real `sentence-transformers/all-MiniLM-L6-v2` embeddings as the canonical path
+
+Exact scope:
+
+- implement a real MiniLM embedding provider in the provider layer
+- make provider selection explicit via settings with `minilm` as canonical default
+- keep hashing fallback available only when explicitly configured as non-canonical
+- preserve stable similar-issues response contract while exposing provider/index path metadata for debugging
+- validate retrieval end-to-end against a real indexed public issue
+
+Files/components likely affected:
+
+- `services/api/app/embeddings/service.py`
+- `services/api/app/core/settings.py`
+- `services/api/app/core/dependencies.py`
+- `services/api/app/vectorstore/contracts.py`
+- `services/api/app/vectorstore/service.py`
+- `services/api/app/schemas/similar.py`
+- `services/api/app/services/similar_issues.py`
+- `services/api/.env.example`
+- `services/api/requirements.txt`
+- `services/api/README.md`
+
+Sequencing:
+
+1. implement MiniLM provider and explicit fallback behavior
+2. wire settings/dependencies to use MiniLM by default
+3. surface provider and vector-index identity in response
+4. update docs and env/dependency config
+5. run backend and verify semantic retrieval for a real issue
+
+Validation strategy:
+
+- run Python compile check
+- run backend and call `/api/similar-issues`
+- verify response reports `all-MiniLM-L6-v2` provider path and non-hashing canonical flow
+
+Risks / open questions:
+
+- first run may download model artifacts and take longer startup time
+- unauthenticated GitHub calls may rate-limit endpoint tests
+- semantic quality still depends on corpus size and ingestion window
+
+Explicitly out of scope:
+
+- duplicate reranking heuristics
+- persistent production vector database integration
+- frontend integration changes
+
+## Execution Update (2026-04-06): Wave 2 similar-issues retrieval path
+
+Current goal:
+
+- expose a real backend path that returns top-k similar issues for a target issue using the existing ingestion -> embedding -> vector retrieval flow
+
+Exact scope:
+
+- add a stable request/response contract for similar-issues retrieval
+- implement concrete embedding provider and vector store services (replace placeholders for this path)
+- orchestrate GitHub ingestion, normalization, indexing, target embedding, and vector query
+- expose a route that accepts either target issue number or normalized target payload
+- keep response candidate shape stable and suitable for future duplicate reranking in Wave 3
+
+Files/components likely affected:
+
+- `services/api/app/schemas/*` (new similar-issues schema)
+- `services/api/app/embeddings/service.py`
+- `services/api/app/vectorstore/service.py`
+- `services/api/app/core/dependencies.py`
+- `services/api/app/github/client.py`
+- `services/api/app/routes/*` (new similar route + router wiring)
+- `services/api/app/api/router.py`
+- `services/api/README.md`
+
+Sequencing:
+
+1. inspect current ingestion, normalization, embedding, and vector boundaries
+2. implement concrete embedding and vector services with deterministic behavior
+3. implement similar-issues orchestrator service and API contract
+4. wire route/dependencies and document endpoint behavior
+5. run backend and verify with a real indexed issue
+
+Validation strategy:
+
+- run Python compile check for backend package
+- run backend with uvicorn
+- call similar-issues endpoint for a real public repo issue and inspect candidate quality
+
+Risks / open questions:
+
+- hash-based local embeddings are semantically shallow compared to model embeddings; retrieval will be directional but not production quality
+- repo issue coverage is bounded by current GitHub list pagination limits in client
+- in-memory vector store is process-local and non-persistent
+
+Explicitly out of scope:
+
+- duplicate reranking heuristics
+- priority/classification changes
+- persistence or production vector DB integration
+- frontend rendering changes
+
 ## Execution Update (2026-04-06): Wave 0 backend foundation
 
 Current goal:

@@ -31,6 +31,15 @@ class Settings(BaseSettings):
     )
     github_token: Optional[str] = Field(default=None, alias="OPENISSUE_GITHUB_TOKEN")
 
+    embedding_provider: str = Field(
+        default="minilm",
+        alias="OPENISSUE_EMBEDDING_PROVIDER",
+    )
+    embedding_model_name: str = Field(
+        default="sentence-transformers/all-MiniLM-L6-v2",
+        alias="OPENISSUE_EMBEDDING_MODEL_NAME",
+    )
+
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
