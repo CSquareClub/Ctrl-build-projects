@@ -77,7 +77,7 @@ export default function PullRequestsCard({ pullRequests, error, loading }) {
             </div>
           ))
         ) : (
-          <p className="text-terminal-muted text-xs pt-3">// no {filter} pull requests</p>
+          <p className="text-terminal-muted text-xs pt-3">{`// no ${filter} pull requests`}</p>
         )}
       </div>
     </div>

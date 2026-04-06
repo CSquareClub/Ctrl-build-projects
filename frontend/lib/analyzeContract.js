@@ -19,6 +19,29 @@ function toStringArray(value) {
     .filter(Boolean);
 }
 
+function normalizeReasonItems(value) {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .map((item) => {
+      if (typeof item === 'string') return item.trim();
+      if (!item || typeof item !== 'object') return '';
+
+      const signal = toStringOrEmpty(item.signal);
+      const detail = toStringOrEmpty(item.detail);
+      const strength = toNumberOrNull(item.strength);
+
+      if (signal && detail && strength != null) {
+        return `${signal}: ${detail} (strength ${strength.toFixed(2)})`;
+      }
+      if (signal && detail) return `${signal}: ${detail}`;
+      if (detail) return detail;
+      if (signal) return signal;
+      return '';
+    })
+    .filter(Boolean);
+}
+
 function dedupe(items) {
   return [...new Set(items)];
 }
@@ -93,7 +116,7 @@ function mapDuplicateCandidate(candidate, sourceRank = null) {
     finalScore,
     primaryScore: primary.score,
     primaryScoreKind: primary.kind,
-    reasons: toStringArray(candidate.reasons),
+    reasons: normalizeReasonItems(candidate.reasons),
     sourceRank: Number.isInteger(sourceRank) && sourceRank >= 0 ? sourceRank : null,
   };
 }
@@ -211,6 +234,13 @@ export function mapAnalyzePayload(payload) {
     missingInformation,
     explanation,
   };
+}
+
+export function buildAnalyzeUrl(apiBaseUrl) {
+  const base = (apiBaseUrl || '').replace(/\/$/, '');
+  const path = '/api/analyze';
+  if (!base) return path;
+  return `${base}${path}`;
 }
 
 export function getSectionState({ loading = false, error = null, items = null }) {

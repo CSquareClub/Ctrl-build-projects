@@ -201,6 +201,105 @@ Explicitly out of scope:
 - replacing team-owned visual language
 - implementing full triage orchestration logic
 
+## Execution Update (2026-04-06): Wave 4 native frontend analyze integration
+
+Current goal:
+
+- integrate analytics/suggestions as a native extension of the existing homepage shell and wire it to a real backend `/analyze` path end-to-end
+
+Exact scope:
+
+- inspect and preserve current homepage shell, spacing rhythm, card composition, state treatments, and typography
+- add backend analyze endpoint that returns the canonical `AnalyzeResponse` using real classification/similarity outputs plus deterministic priority/missing-info synthesis
+- add thin frontend API/adapter wiring from homepage-selected issue into backend analyze request/response
+- render predicted type, suggested labels, duplicate candidates, priority, missing-information, and explanation sections using existing card patterns
+- keep loading, empty, and error states honest and visually consistent with homepage primitives
+
+Files/components likely affected:
+
+- `services/api/app/routes/analyze.py` (new)
+- `services/api/app/api/router.py`
+- `services/api/app/schemas/analyze.py`
+- `services/api/app/core/dependencies.py`
+- `frontend/pages/index.js`
+- `frontend/components/IssuesCard.js`
+- `frontend/components/*` (new thin analysis section card primitive(s), if needed)
+- `frontend/lib/analyzeContract.js` (reuse + minor adapter additions if needed)
+- `frontend/tests/analyze-contract.test.mjs` (contract/state assertions, if shape changed)
+- `services/api/README.md` (document `/api/analyze`)
+
+Sequencing:
+
+1. add backend `/api/analyze` route that accepts a target issue payload and emits canonical `AnalyzeResponse`
+2. reuse existing classification and similar-services outputs to populate analyze sections
+3. add lightweight priority/missing-information synthesis to keep response complete/explainable
+4. wire homepage issue selection to analyze fetch using existing shell/layout continuity
+5. render analyze sections as terminal cards matching current card title bars, spacing, and copy treatments
+6. validate backend route + frontend build/tests and run local end-to-end smoke flow
+
+Validation strategy:
+
+- run backend compile/import checks for changed modules
+- run frontend contract tests and build
+- run backend service locally and hit `/api/analyze` with sample payload
+- run frontend with backend base URL and verify homepage -> issue select -> analyze render flow
+
+Risks / open questions:
+
+- no dedicated issue-detail route exists yet, so analysis progression must be in-page while preserving continuity
+- backend vector/index prerequisites can affect duplicate-candidate quality if repository vectors are not indexed yet
+- classification/similar reason shapes differ (string vs structured object); frontend adapter may need normalization
+
+Explicitly out of scope:
+
+- redesigning homepage shell/navigation/palette
+- replacing existing card system or spacing rhythm
+- introducing non-terminal visual language
+- building unrelated analytics dashboards
+
+## Execution Update (2026-04-06): Wave 4 stabilization (lint + network fetch)
+
+Current goal:
+
+- remove current frontend lint breakage and fix repo/analyze fetch failures caused by backend connectivity constraints
+
+Exact scope:
+
+- fix ESLint toolchain compatibility in frontend so `npm run lint` works with Next 14
+- add backend CORS middleware for local frontend-to-backend browser requests
+- align frontend backend issue-list URL query params with actual backend route contract (`owner` + `repo`)
+- keep UX behavior and visual design unchanged
+
+Files/components likely affected:
+
+- `frontend/package.json`
+- `frontend/lib/issueListContract.js`
+- `services/api/app/main.py`
+- `services/api/app/core/settings.py`
+
+Sequencing:
+
+1. add required ESLint dependencies matching Next version
+2. add CORS config and middleware in backend app bootstrap
+3. fix frontend issue-list URL construction
+4. run lint/build/tests and backend smoke calls
+
+Validation strategy:
+
+- run `npm run lint` and `npm run build` in `frontend`
+- run backend health and analyze route smoke checks from local runtime
+- verify frontend contract tests still pass
+
+Risks / open questions:
+
+- CORS defaults should remain safe for local dev while still overrideable via env
+- if frontend is hosted on a non-local origin, env override will still be required
+
+Explicitly out of scope:
+
+- redesigning frontend UI
+- changing analyze contract shape
+
 ## Execution Update (2026-04-06): Wave 2 semantic embedding correction (MiniLM)
 
 Current goal:

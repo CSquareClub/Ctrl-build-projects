@@ -7,7 +7,9 @@ import ActivitiesCard from '../components/ActivitiesCard';
 import PullRequestsCard from '../components/PullRequestsCard';
 import IssuesCard from '../components/IssuesCard';
 import SearchModal from '../components/SearchModal';
+import AnalyzePanel from '../components/AnalyzePanel';
 import { buildIssueListUrl, mapIssueListPayloadToCardIssues } from '../lib/issueListContract';
+import { buildAnalyzeUrl, mapAnalyzePayload } from '../lib/analyzeContract';
 import { Star, GitFork, Eye, CircleDot, Search } from 'lucide-react';
 
 export default function Home() {
@@ -23,6 +25,10 @@ export default function Home() {
   const [prsError, setPrsError] = useState(null);
   const [issuesError, setIssuesError] = useState(null);
   const [extrasLoading, setExtrasLoading] = useState(false);
+  const [selectedIssue, setSelectedIssue] = useState(null);
+  const [analyzeLoading, setAnalyzeLoading] = useState(false);
+  const [analyzeError, setAnalyzeError] = useState(null);
+  const [analyzeData, setAnalyzeData] = useState(null);
 
   // Ctrl+K global shortcut
   useEffect(() => {
@@ -84,6 +90,10 @@ export default function Home() {
     setCommitsData([]);
     setPullRequestsData([]);
     setIssuesData([]);
+    setSelectedIssue(null);
+    setAnalyzeLoading(false);
+    setAnalyzeError(null);
+    setAnalyzeData(null);
     setCommitsError(null);
     setPrsError(null);
     setIssuesError(null);
@@ -209,6 +219,54 @@ export default function Home() {
     setExtrasLoading(false);
   };
 
+  const fetchAnalyzeData = async (issue, owner, repo) => {
+    if (!issue || !owner || !repo) return;
+
+    setAnalyzeLoading(true);
+    setAnalyzeError(null);
+    setAnalyzeData(null);
+
+    try {
+      const analyzeUrl = buildAnalyzeUrl(process.env.NEXT_PUBLIC_API_BASE_URL);
+      const token = localStorage.getItem('gh_token') || null;
+
+      const response = await fetch(analyzeUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          owner,
+          repo,
+          issue_number: issue.number,
+          token,
+          k: 5,
+          state: 'all',
+          include_pull_requests: false,
+        }),
+      });
+
+      if (!response.ok) {
+        const err = await parseApiError(response);
+        throw new Error(err);
+      }
+
+      const payload = await response.json();
+      setAnalyzeData(mapAnalyzePayload(payload));
+    } catch (err) {
+      setAnalyzeError(err.message || 'Analyze request failed');
+    } finally {
+      setAnalyzeLoading(false);
+    }
+  };
+
+  const handleIssueSelect = (issue) => {
+    setSelectedIssue(issue);
+    if (!repoData?.full_name) return;
+    const [owner, repo] = repoData.full_name.split('/');
+    fetchAnalyzeData(issue, owner, repo);
+  };
+
   return (
     <>
       <Head>
@@ -243,7 +301,7 @@ export default function Home() {
   </button>
 </div>
 
-      <main className="ml-64 bg-terminal-bg h-screen overflow-hidden flex flex-col p-6">
+      <main className="ml-64 bg-terminal-bg h-screen overflow-y-auto flex flex-col p-6">
         <div className="flex flex-col flex-1 min-h-0 max-w-7xl w-full">
 
           {error && (
@@ -273,7 +331,7 @@ export default function Home() {
                   <span className="text-terminal-bright text-sm font-bold glow">{repoData.full_name}</span>
                 </div>
                 {repoData.description && (
-                  <p className="text-terminal-muted text-xs mt-0.5 italic">// {repoData.description}</p>
+                  <p className="text-terminal-muted text-xs mt-0.5 italic">{`// ${repoData.description}`}</p>
                 )}
               </div>
 
@@ -284,10 +342,25 @@ export default function Home() {
                 <StatsCard title="open_issues" count={repoData.open_issues_count} icon={CircleDot} />
               </div>
 
-              <div className="grid grid-cols-3 gap-4 flex-1 min-h-0 overflow-hidden">
+              <div className="grid grid-cols-3 gap-4 flex-1 min-h-0 overflow-hidden mb-4">
                 <ActivitiesCard commits={commitsData} error={commitsError} loading={extrasLoading} />
                 <PullRequestsCard pullRequests={pullRequestsData} error={prsError} loading={extrasLoading} />
-                <IssuesCard issues={issuesData} error={issuesError} loading={extrasLoading} />
+                <IssuesCard
+                  issues={issuesData}
+                  error={issuesError}
+                  loading={extrasLoading}
+                  onIssueSelect={handleIssueSelect}
+                  selectedIssueId={selectedIssue?.id}
+                />
+              </div>
+
+              <div className="flex-shrink-0">
+                <AnalyzePanel
+                  issue={selectedIssue}
+                  analysis={analyzeData}
+                  loading={analyzeLoading}
+                  error={analyzeError}
+                />
               </div>
             </>
           )}

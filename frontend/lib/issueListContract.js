@@ -46,7 +46,7 @@ export function mapIssueListPayloadToCardIssues(payload, timeAgo) {
 export function buildIssueListUrl(apiBaseUrl, owner, repo) {
   const base = (apiBaseUrl || '').replace(/\/$/, '');
   const path = '/api/issues';
-  const search = new URLSearchParams({ repo: `${owner}/${repo}` }).toString();
+  const search = new URLSearchParams({ owner, repo }).toString();
   if (!base) return `${path}?${search}`;
   return `${base}${path}?${search}`;
 }

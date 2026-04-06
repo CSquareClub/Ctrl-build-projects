@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { getSectionState, mapAnalyzePayload } from '../lib/analyzeContract.js';
+import { buildAnalyzeUrl, getSectionState, mapAnalyzePayload } from '../lib/analyzeContract.js';
 
 test('mapAnalyzePayload maps canonical Wave 3 analyze envelope', () => {
   const payload = {
@@ -135,4 +135,39 @@ test('getSectionState returns loading, error, empty, ready', () => {
   assert.equal(getSectionState({ loading: false, error: 'boom', items: [] }), 'error');
   assert.equal(getSectionState({ loading: false, error: null, items: [] }), 'empty');
   assert.equal(getSectionState({ loading: false, error: null, items: [{ id: 1 }] }), 'ready');
+});
+
+test('mapAnalyzePayload normalizes structured duplicate reasons', () => {
+  const mapped = mapAnalyzePayload({
+    issue_id: 'reason-1',
+    predicted_type: { label: 'bug', confidence: 0.8, reasons: [] },
+    suggested_labels: { items: [], reasons: [] },
+    duplicate_candidates: {
+      confidence: 0.5,
+      items: [
+        {
+          issue_id: 'candidate-1',
+          title: 'Sample duplicate',
+          reasons: [{ signal: 'semantic_similarity', detail: 'MiniLM cosine similarity.', strength: 0.91 }],
+        },
+      ],
+    },
+    priority: { score: 40, band: 'medium', reasons: [] },
+    missing_information: { items: [] },
+    explanation: {
+      summary: 'Test',
+      type_reasons: [],
+      label_reasons: [],
+      duplicate_reasons: [],
+      priority_reasons: [],
+      missing_information_reasons: [],
+    },
+  });
+
+  assert.equal(mapped.duplicateCandidates.items[0].reasons[0], 'semantic_similarity: MiniLM cosine similarity. (strength 0.91)');
+});
+
+test('buildAnalyzeUrl supports base and relative paths', () => {
+  assert.equal(buildAnalyzeUrl('http://localhost:8000/'), 'http://localhost:8000/api/analyze');
+  assert.equal(buildAnalyzeUrl(''), '/api/analyze');
 });

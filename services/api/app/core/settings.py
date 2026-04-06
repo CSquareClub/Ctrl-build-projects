@@ -1,4 +1,5 @@
 from functools import lru_cache
+import json
 from typing import Optional
 
 from pydantic import Field
@@ -52,6 +53,27 @@ class Settings(BaseSettings):
         default=".openissue/openissue_vectors.db",
         alias="OPENISSUE_VECTOR_STORE_PATH",
     )
+
+    cors_allowed_origins_raw: str = Field(
+        default='["http://127.0.0.1:3000", "http://localhost:3000", "http://127.0.0.1:3001", "http://localhost:3001"]',
+        alias="OPENISSUE_CORS_ALLOWED_ORIGINS",
+    )
+
+    @property
+    def cors_allowed_origins(self) -> list[str]:
+        raw = (self.cors_allowed_origins_raw or "").strip()
+        if not raw:
+            return []
+
+        if raw.startswith("["):
+            try:
+                parsed = json.loads(raw)
+                if isinstance(parsed, list):
+                    return [str(item).strip() for item in parsed if str(item).strip()]
+            except json.JSONDecodeError:
+                pass
+
+        return [item.strip() for item in raw.split(",") if item.strip()]
 
 
 @lru_cache(maxsize=1)

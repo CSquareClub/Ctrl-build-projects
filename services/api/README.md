@@ -238,3 +238,31 @@ Design notes:
 - returns UI-friendly reasoning fields (`type_reasoning`, `label_reasoning`, `neighbor_evidence_*`)
 
 Neighbor evidence is intentionally ignored when candidate confidence is weak, to avoid noisy label transfer.
+
+## Unified analyze response
+
+Run end-to-end issue analysis in one request:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/analyze \
+  -H "Content-Type: application/json" \
+  -d '{
+    "owner": "psf",
+    "repo": "requests",
+    "k": 5,
+    "target_issue": {
+      "title": "Requests crashes with proxy auth header",
+      "body": "Steps to reproduce: configure proxy auth and call requests.get. Actual behavior: raises ProxyError and stack trace.",
+      "labels": []
+    }
+  }'
+```
+
+Response uses canonical `AnalyzeResponse` sections:
+
+- `predicted_type`
+- `suggested_labels`
+- `duplicate_candidates`
+- `priority`
+- `missing_information`
+- `explanation`

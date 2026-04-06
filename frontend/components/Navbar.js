@@ -20,7 +20,7 @@ export default function Navbar({ onTokenChange }) {
     setSavedToken(stored);
     setToken(stored);
     if (onTokenChange) onTokenChange(stored);
-  }, []);
+  }, [onTokenChange]);
 
   const handleSave = () => {
     const trimmed = token.trim();

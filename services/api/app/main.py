@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 # Support direct execution via `python main.py` from this directory.
 if __package__ in (None, ""):
@@ -21,6 +22,13 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title=settings.api_name,
         version=settings.api_version,
+    )
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_allowed_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
     )
     app.include_router(build_api_router(settings))
     return app
