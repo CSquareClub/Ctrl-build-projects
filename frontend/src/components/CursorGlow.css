@@ -1,0 +1,60 @@
+.cursor-glow-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9999;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.cursor-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: 50%;
+  mix-blend-mode: screen;
+  will-change: transform;
+  pointer-events: none;
+}
+
+/* Base Head */
+.cursor-layer.base {
+  width: 150px;
+  height: 150px;
+  background: 
+    radial-gradient(circle at 60% 40%, rgba(177, 0, 255, 0.2) 0%, transparent 50%),
+    radial-gradient(circle at 40% 60%, rgba(79, 172, 254, 0.25) 0%, transparent 50%);
+  filter: blur(15px);
+  opacity: 0.4;
+}
+
+/* Trailing Tail Segments */
+.cursor-layer.trail-1 {
+  width: 100px;
+  height: 100px;
+  background: radial-gradient(circle, rgba(177, 0, 255, 0.15) 0%, transparent 50%);
+  filter: blur(10px);
+  opacity: 0.25;
+}
+
+/* Interactive Hover States */
+.cursor-layer {
+  transition: opacity 0.3s ease, filter 0.3s ease;
+}
+
+.glow-hover-active .cursor-layer.base {
+  background: 
+    radial-gradient(circle at 60% 40%, rgba(220, 100, 255, 0.2) 0%, transparent 50%),
+    radial-gradient(circle at 40% 60%, rgba(100, 200, 255, 0.25) 0%, transparent 50%);
+  animation: pulse-glow-intensity 1.2s infinite alternate ease-in-out;
+  opacity: 0.6;
+}
+
+.glow-hover-active .cursor-layer.trail-1 { opacity: 0.35; }
+
+@keyframes pulse-glow-intensity {
+  0% { filter: blur(10px); opacity: 0.5; }
+  100% { filter: blur(20px); opacity: 0.7; }
+}
