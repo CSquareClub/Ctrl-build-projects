@@ -98,7 +98,7 @@ async def github_callback(code: str, state: str, response: Response):
         }
         
         # Redirect to frontend with session token
-        redirect_url = f"{FRONTEND_URL}/pages/home.html?session={session_id}"
+        redirect_url = f"{FRONTEND_URL}/pages/dashboard.html?session={session_id}"
         return RedirectResponse(url=redirect_url)
 
 @router.get("/user")
