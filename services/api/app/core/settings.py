@@ -31,12 +31,12 @@ class Settings(BaseSettings):
     )
     github_token: Optional[str] = Field(default=None, alias="OPENISSUE_GITHUB_TOKEN")
 
-    embeddings_provider: Literal["bge-small", "minilm-l6"] = Field(
-        default="bge-small",
+    embeddings_provider: Literal["minilm-l6", "bge-small"] = Field(
+        default="minilm-l6",
         alias="OPENISSUE_EMBEDDINGS_PROVIDER",
     )
-    embeddings_fallback_provider: Literal["minilm-l6", "bge-small"] = Field(
-        default="minilm-l6",
+    embeddings_fallback_provider: Literal["bge-small", "minilm-l6"] = Field(
+        default="bge-small",
         alias="OPENISSUE_EMBEDDINGS_FALLBACK_PROVIDER",
     )
 

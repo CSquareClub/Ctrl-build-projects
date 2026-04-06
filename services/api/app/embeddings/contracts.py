@@ -7,6 +7,8 @@ class EmbeddingProviderInfo:
     provider_name: str
     model_name: str
     vector_dim: int
+    normalized: bool
+    truncation: str
 
 
 @runtime_checkable
