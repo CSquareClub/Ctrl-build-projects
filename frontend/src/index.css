@@ -36,6 +36,18 @@
   100% { background-position: 200% 0; }
 }
 
+.terminal-input {
+  background-color: #0b0e14;
+  border: 1px solid rgba(74, 68, 85, 0.2);
+  transition: all 0.2s ease;
+}
+
+.terminal-input:focus {
+  border-color: #7c3aed;
+  box-shadow: 0 0 10px rgba(124, 58, 237, 0.15);
+  outline: none;
+}
+
 ::selection {
   @apply bg-primary-container/30;
 }
