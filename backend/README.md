@@ -1,88 +1,125 @@
-# OpenIssue Backend Instructions
+# OpenIssue Backend
 
-This folder contains the FastAPI backend for **OpenIssue**, an intelligent GitHub issue triage assistant.
+AI-powered GitHub issue triage backend built with FastAPI.
 
 ## Features
-- **Automatic Classification:** Classifies issues into 'bug', 'feature', or 'question' based on keywords.
-- **Priority Assignment:** Assigns 'high', 'medium', or 'low' priority based on text content and critical keywords.
-- **Duplicate Detection:** Uses `sentence-transformers` (`all-MiniLM-L6-v2`) and cosine similarity via `NumPy` to detect similar or duplicate issues.
 
-## Tech Stack
-- **Framework:** FastAPI + Uvicorn
-- **Validation:** Pydantic
-- **NLP / Embeddings:** `sentence-transformers`
-- **Vector Operations:** `NumPy`
+### AI Services (Gemini-powered)
+- **Classification**: Categorizes issues into bug/feature/docs/question
+- **Priority Assignment**: Assigns low/medium/high/critical priority
+- **Label Generation**: Suggests relevant labels (ui, api, database, auth, etc.)
+- **Embeddings**: Gemini text-embedding-004 for semantic similarity
+- **Fallback**: Heuristic-based classification when AI unavailable
 
-## Project Structure
-```
-backend/
-├── app/
-│   ├── main.py                 # FastAPI application, CORS, and router registration
-│   ├── db.py                   # In-memory storage for issues
-│   ├── models/                 # Additional data models
-│   ├── schemas/
-│   │   └── issue_schema.py     # Pydantic models for request/response validation
-│   ├── services/
-│   │   ├── classifier_service.py # Keyword-based classification logic
-│   │   ├── embedding_service.py  # Lazy-loaded sentence transformer embedding generation
-│   │   ├── priority_service.py   # Priority assignment logic
-│   │   └── vector_service.py     # NumPy cosine similarity search
-│   └── routes/
-│       ├── analyze.py          # POST /analyze endpoint
-│       ├── health.py           # GET /health endpoint
-│       ├── issues.py           # GET /issues endpoint
-│       └── similar.py          # GET /similar endpoint
-├── requirements.txt            # Python dependencies
-└── .env                        # Environment variables (if any)
-```
+### Vector Database
+- **ChromaDB**: Persistent vector storage for issue embeddings
+- **Similarity Search**: Find semantically similar issues using cosine similarity
 
-## Running the Backend Locally
+### Authentication & Authorization
+- **Firebase Auth**: JWT token verification for protected endpoints
+- **GitHub OAuth**: Direct GitHub login flow at `/auth/login`
 
-### 1. Prerequisites
-Ensure you have Python 3.9+ installed.
+### GitHub Integration
+- **Repository Listing**: Fetch user's GitHub repositories
+- **Issue Fetching**: Get issues from specific repositories
+- **Token Support**: Header (`X-GitHub-Token`) or env (`GITHUB_TOKEN`) fallback
 
-### 2. Setup Virtual Environment
-Navigate to the `backend` directory and create a virtual environment:
+## API Endpoints
+
+| Endpoint | Method | Auth | Description |
+|----------|--------|------|-------------|
+| `/analyze` | POST | Optional | AI-powered issue analysis |
+| `/analyze/batch` | POST | Optional | Batch issue analysis |
+| `/repos` | GET | Required | User repositories |
+| `/repos/{owner}/{repo}/issues` | GET | Required | Repo issues |
+| `/issues` | GET/POST/PUT/DELETE | Optional | CRUD operations |
+| `/similar` | POST | Optional | Find similar issues |
+| `/conflicts` | POST | Optional | Code comparison |
+| `/auth/login` | GET | No | Start GitHub OAuth flow |
+| `/auth/callback` | GET | No | GitHub OAuth callback |
+| `/health` | GET | No | Health check |
+
+## Quick Start
+
+### 1. Setup
+
 ```bash
 cd backend
 python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\\Scripts\\activate
-```
-
-### 3. Install Dependencies
-```bash
+source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
-*(If `requirements.txt` is incomplete, the primary packages are: `fastapi uvicorn pydantic sentence-transformers numpy`)*
 
-### 4. Start the Development Server
+### 2. Configure
+
+Copy `.env.example` to `.env` and fill in your API keys:
+
+```bash
+cp .env.example .env
+# Edit .env with your keys
+```
+
+**Required:**
+- `GEMINI_API_KEY` - Get from [Google AI Studio](https://aistudio.google.com/)
+
+**Optional:**
+- `GITHUB_TOKEN` - For GitHub API access ([create token](https://github.com/settings/tokens))
+- `FIREBASE_CREDENTIALS_PATH` - For Firebase auth
+
+### 3. Run
+
 ```bash
 uvicorn app.main:app --reload
 ```
 
-The server will start at `http://localhost:8000`.
+API docs: http://localhost:8000/docs
 
-### 5. API Documentation
-FastAPI automatically generates interactive API documentation.
-- **Swagger UI:** [http://localhost:8000/docs](http://localhost:8000/docs)
-- **ReDoc:** [http://localhost:8000/redoc](http://localhost:8000/redoc)
+## Project Structure
 
-## Key API Endpoints
-
-### `GET /health`
-Returns the health status of the API, the current loaded issue count, and metadata about the embedding model.
-
-### `POST /analyze`
-**Request Body:**
-```json
-{
-  "title": "Login page crash on Firefox",
-  "description": "When clicking the login button, the page becomes unresponsive."
-}
 ```
-**Response:**
-Returns the predicted label, calculated priority, confidence scores, and a list of similar issues found in the database.
+backend/
+├── app/
+│   ├── main.py              # FastAPI app, CORS, routers
+│   ├── db.py                # In-memory issue storage
+│   ├── routes/              # API endpoints
+│   │   ├── analyze.py       # Issue analysis
+│   │   ├── repos.py         # GitHub repos/issues
+│   │   ├── auth.py          # GitHub OAuth
+│   │   ├── issues.py        # CRUD operations
+│   │   ├── similar.py       # Similarity search
+│   │   ├── conflicts.py     # Code comparison
+│   │   └── health.py        # Health check
+│   ├── services/            # Business logic
+│   │   ├── classifier_service.py  # AI triage (Gemini + heuristics)
+│   │   ├── gemini_service.py      # Gemini embeddings
+│   │   ├── chromadb_service.py    # Vector database
+│   │   ├── github_service.py      # GitHub API client
+│   │   ├── firebase_auth.py       # Firebase JWT verification
+│   │   ├── embedding_service.py   # Sentence transformers (fallback)
+│   │   ├── vector_service.py      # FAISS (fallback)
+│   │   └── priority_service.py    # Priority assignment
+│   ├── schemas/             # Pydantic models
+│   ├── models/              # Data models
+│   └── utils/               # Utilities (issue storage)
+├── data/                    # Persistent data (ChromaDB, issues.json)
+├── tests/                   # Test files
+├── requirements.txt         # Dependencies
+├── .env.example             # Environment template
+└── Dockerfile               # Container build
+```
 
-## Notes on Performance
-- The `sentence-transformers` model is lazy-loaded on the first request to save memory during startup and idle times.
-- Embeddings are generated and queried in-memory via `NumPy` for the MVP scope.
+## Dependencies
+
+- FastAPI + Uvicorn
+- ChromaDB (vector database)
+- Gemini API (classification & embeddings)
+- Firebase Admin SDK (authentication)
+- httpx (GitHub API client)
+- sentence-transformers (fallback embeddings)
+
+## Key Design Decisions
+
+1. **Gemini-first**: All AI features use Gemini API with graceful fallbacks
+2. **No OpenAI dependency**: Fully Gemini-powered
+3. **Graceful degradation**: Works without AI/ChromaDB using heuristics
+4. **Token flexibility**: GitHub token via header or env variable
