@@ -1,0 +1,44 @@
+DevMatch/
+│
+├── frontend/                     # UI (what you've already built)
+│   ├── index.html               # Login page
+│   ├── devmatch.html            # Swipe / matching UI
+│   │
+│   ├── skills.html              # Select skills
+│   ├── interests.html           # Select interests
+│   ├── goals.html               # Goal + availability
+│   │
+│   ├── dashboard.html           # Dashboard + AI
+│   ├── city.html                # Select city
+│   ├── events.html              # Hackathons page
+│   │
+│   ├── profile.html             # User profile
+│   ├── organizer-profile.html   # Organizer profile
+│   │
+│   └── join-interest.html       # Optional join flow
+│
+├── backend/                     
+│   ├── server.js                # Main server (Node.js)
+│   │
+│   ├── routes/                  # API routes
+│   │   ├── auth.js              # login/signup
+│   │   ├── user.js              # profile, skills
+│   │   ├── events.js            # hackathons
+│   │   └── match.js             # team matching
+│   │
+│   ├── models/                  # Data structure
+│   │   ├── User.js
+│   │   ├── Event.js
+│   │   └── Team.js
+│   │
+│   ├── database/                # DB connection
+│   │   └── db.js
+│   │
+│   └── package.json             # dependencies
+│
+├── assets/                      # (optional later)
+│   ├── css/
+│   ├── js/
+│   └── images/
+│
+└── README.md
