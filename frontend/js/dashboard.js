@@ -1,6 +1,6 @@
 /**
  * Dashboard - GitHub Repositories
- * Fetches real repos after GitHub OAuth login, shows login prompt if not authenticated
+ * Shows login prompt if not authenticated, fetches real repos after OAuth login
  */
 
 const API_BASE_URL = 'http://localhost:8001';
@@ -13,10 +13,9 @@ class Dashboard {
     }
 
     init() {
-        // Check for session in URL (redirected from OAuth callback)
+        // Pick up session from URL after OAuth redirect
         const params = new URLSearchParams(window.location.search);
         const sessionFromUrl = params.get('session');
-
         if (sessionFromUrl) {
             localStorage.setItem('session_id', sessionFromUrl);
             window.history.replaceState({}, document.title, window.location.pathname);
@@ -24,7 +23,11 @@ class Dashboard {
 
         this.sessionId = localStorage.getItem('session_id');
 
-        document.getElementById('refresh-linked-repos-btn')?.addEventListener('click', () => this.loadRepos());
+        document.getElementById('refresh-linked-repos-btn')
+            ?.addEventListener('click', () => this.loadRepos());
+
+        // Always show the linked-repos section
+        document.getElementById('linked-repos-section')?.classList.remove('hidden');
 
         if (this.sessionId) {
             this.loadRepos();
@@ -37,25 +40,26 @@ class Dashboard {
         this.showLoading();
 
         try {
-            // Verify session is still valid and get user info
-            const authCheck = await fetch(`${API_BASE_URL}/auth/check?session=${this.sessionId}`);
-            const authData = await authCheck.json();
+            // Verify session
+            const authRes = await fetch(`${API_BASE_URL}/auth/check?session=${this.sessionId}`);
+            const authData = await authRes.json();
 
             if (!authData.authenticated) {
                 localStorage.removeItem('session_id');
+                this.sessionId = null;
                 this.showLoginPrompt();
                 return;
             }
 
-            // Update nav avatar/username
+            // Update nav with GitHub username/avatar
             this.updateUserUI(authData.user);
 
-            // Fetch real GitHub repos
+            // Fetch real repos
             const repoRes = await fetch(`${API_BASE_URL}/auth/repos?session=${this.sessionId}`);
             if (!repoRes.ok) throw new Error('Failed to fetch repositories');
 
             const data = await repoRes.json();
-            this.repos = data.repos;
+            this.repos = data.repos || [];
 
             if (this.repos.length === 0) {
                 this.showEmptyState();
@@ -71,18 +75,14 @@ class Dashboard {
 
     renderRepos() {
         const grid = document.getElementById('linked-repos-grid');
-        const section = document.getElementById('linked-repos-section');
         const empty = document.getElementById('linked-repos-empty');
         const loginPrompt = document.getElementById('login-prompt');
 
         loginPrompt?.classList.add('hidden');
         empty?.classList.add('hidden');
-        section?.classList.remove('hidden');
         grid.innerHTML = '';
 
-        this.repos.forEach(repo => {
-            grid.appendChild(this.createRepoCard(repo));
-        });
+        this.repos.forEach(repo => grid.appendChild(this.createRepoCard(repo)));
     }
 
     createRepoCard(repo) {
@@ -149,25 +149,18 @@ class Dashboard {
             full_name: repo.full_name,
         }));
 
-        // Toast
         const toast = document.createElement('div');
         toast.className = 'fixed bottom-6 right-6 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3 z-50';
         toast.innerHTML = `<span class="material-symbols-outlined">check_circle</span><span class="font-label font-bold">Using: ${repo.name}</span>`;
         document.body.appendChild(toast);
 
-        setTimeout(() => {
-            toast.remove();
-            window.location.href = 'home.html';
-        }, 800);
+        setTimeout(() => { toast.remove(); window.location.href = 'home.html'; }, 800);
     }
 
     showLoading() {
-        const grid = document.getElementById('linked-repos-grid');
-        const section = document.getElementById('linked-repos-section');
         document.getElementById('login-prompt')?.classList.add('hidden');
         document.getElementById('linked-repos-empty')?.classList.add('hidden');
-        section?.classList.remove('hidden');
-        grid.innerHTML = `
+        document.getElementById('linked-repos-grid').innerHTML = `
             <div class="col-span-full text-center py-12">
                 <span class="material-symbols-outlined text-3xl text-on-surface-variant animate-spin">hourglass_top</span>
                 <p class="text-on-surface-variant mt-4 font-body">Loading your repositories...</p>
@@ -175,27 +168,24 @@ class Dashboard {
     }
 
     showLoginPrompt() {
-        document.getElementById('linked-repos-section')?.classList.add('hidden');
-        const prompt = document.getElementById('login-prompt');
-        if (prompt) prompt.classList.remove('hidden');
+        document.getElementById('linked-repos-grid').innerHTML = '';
+        document.getElementById('linked-repos-empty')?.classList.add('hidden');
+        document.getElementById('login-prompt')?.classList.remove('hidden');
     }
 
     showEmptyState() {
-        const section = document.getElementById('linked-repos-section');
-        const grid = document.getElementById('linked-repos-grid');
-        const empty = document.getElementById('linked-repos-empty');
-        section?.classList.remove('hidden');
-        grid.innerHTML = '';
-        empty?.classList.remove('hidden');
+        document.getElementById('linked-repos-grid').innerHTML = '';
+        document.getElementById('login-prompt')?.classList.add('hidden');
+        document.getElementById('linked-repos-empty')?.classList.remove('hidden');
     }
 
     showError(msg) {
-        const grid = document.getElementById('linked-repos-grid');
-        grid.innerHTML = `
+        document.getElementById('linked-repos-grid').innerHTML = `
             <div class="col-span-full text-center py-12">
                 <span class="material-symbols-outlined text-3xl text-error">error</span>
                 <p class="text-error mt-4 font-body">${msg}</p>
-                <button onclick="window.dashboard.loadRepos()" class="mt-4 px-6 py-2 rounded-full bg-indigo-600/20 text-indigo-400 font-label text-sm hover:bg-indigo-600 hover:text-white transition-all">
+                <button onclick="window.dashboard.loadRepos()"
+                    class="mt-4 px-6 py-2 rounded-full bg-indigo-600/20 text-indigo-400 font-label text-sm hover:bg-indigo-600 hover:text-white transition-all">
                     Retry
                 </button>
             </div>`;
@@ -204,9 +194,7 @@ class Dashboard {
     updateUserUI(user) {
         if (!user) return;
         const avatar = document.querySelector('nav img[alt="User profile avatar"]');
-        const nameEl = document.getElementById('nav-username');
         if (avatar && user.avatar_url) avatar.src = user.avatar_url;
-        if (nameEl) nameEl.textContent = user.login || user.name || '';
     }
 }
 

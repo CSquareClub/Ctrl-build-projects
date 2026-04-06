@@ -112,6 +112,14 @@ async def get_current_user(request: Request):
     session_data = sessions[session_id]
     return {"user": session_data["user"]}
 
+@router.get("/check")
+async def check_auth(request: Request):
+    """Check if user is authenticated"""
+    session_id = request.query_params.get("session")
+    if not session_id or session_id not in sessions:
+        return {"authenticated": False}
+    return {"authenticated": True, "user": sessions[session_id]["user"]}
+
 @router.post("/logout")
 async def logout(request: Request):
     """Logout user and clear session"""
