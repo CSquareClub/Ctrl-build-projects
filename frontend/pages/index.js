@@ -8,6 +8,7 @@ import PullRequestsCard from '../components/PullRequestsCard';
 import IssuesCard from '../components/IssuesCard';
 import SearchModal from '../components/SearchModal';
 import { buildIssueListUrl, mapIssueListPayloadToCardIssues } from '../lib/issueListContract';
+import { getAuthHeaders, parseApiError, parseRepoInput, timeAgo } from '../lib/repoHelpers';
 import { Star, GitFork, Eye, CircleDot, Search } from 'lucide-react';
 
 export default function Home() {
@@ -36,45 +37,6 @@ export default function Home() {
     return () => window.removeEventListener('keydown', handler);
   }, []);
 
-  const parseRepoLink = (input) => {
-    if (input.includes('github.com/')) {
-      const parts = input.split('github.com/')[1].split('/');
-      return { owner: parts[0], repo: parts[1] };
-    }
-    const parts = input.split('/');
-    if (parts.length === 2) return { owner: parts[0], repo: parts[1] };
-    return null;
-  };
-
-  const timeAgo = (iso) => {
-    try {
-      const delta = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
-      if (delta < 60) return `${delta}s ago`;
-      if (delta < 3600) return `${Math.floor(delta / 60)}m ago`;
-      if (delta < 86400) return `${Math.floor(delta / 3600)}h ago`;
-      return `${Math.floor(delta / 86400)}d ago`;
-    } catch {
-      return iso;
-    }
-  };
-
-  const authHeaders = () => {
-    const token = localStorage.getItem('gh_token') || '';
-    return token ? { Authorization: `Bearer ${token}` } : {};
-  };
-
-  const parseApiError = async (res) => {
-    try {
-      const json = await res.json();
-      if (json.message) {
-        if (json.message.toLowerCase().includes('rate limit'))
-          return 'GitHub API rate limit exceeded. Add a token in the sidebar to get 5,000 req/hr.';
-        return json.message;
-      }
-    } catch {}
-    return `Request failed (HTTP ${res.status})`;
-  };
-
   const fetchRepoData = async (input) => {
     setLoading(true);
     setError(null);
@@ -88,11 +50,11 @@ export default function Home() {
     setPrsError(null);
     setIssuesError(null);
     try {
-      const parsed = parseRepoLink(input);
+      const parsed = parseRepoInput(input);
       if (!parsed) throw new Error('Invalid format. Use "owner/repo" or full GitHub URL');
 
       const { owner, repo } = parsed;
-      const headers = authHeaders();
+      const headers = getAuthHeaders();
 
       const [repoRes, ownerRes] = await Promise.all([
         fetch(`https://api.github.com/repos/${owner}/${repo}`, { headers }),
@@ -131,7 +93,7 @@ export default function Home() {
     setPrsError(null);
     setIssuesError(null);
 
-    const headers = authHeaders();
+    const headers = getAuthHeaders();
     const backendIssuesUrl = buildIssueListUrl(process.env.NEXT_PUBLIC_API_BASE_URL, owner, repo);
 
     const [
@@ -264,7 +226,7 @@ export default function Home() {
                   <span className="text-terminal-bright text-sm font-bold glow">{repoData.full_name}</span>
                 </div>
                 {repoData.description && (
-                  <p className="text-terminal-muted text-xs mt-0.5 italic">// {repoData.description}</p>
+                  <p className="text-terminal-muted text-xs mt-0.5 italic">{`// ${repoData.description}`}</p>
                 )}
               </div>
 

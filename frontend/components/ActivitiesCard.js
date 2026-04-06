@@ -44,7 +44,7 @@ export default function ActivitiesCard({ commits, error, loading }) {
             </div>
           ))
         ) : (
-          <p className="text-terminal-muted text-xs pt-3">// no commits found</p>
+          <p className="text-terminal-muted text-xs pt-3">{'// no commits found'}</p>
         )}
       </div>
     </div>

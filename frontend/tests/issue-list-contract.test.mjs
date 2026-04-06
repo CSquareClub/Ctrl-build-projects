@@ -98,9 +98,9 @@ test('mapIssueListPayloadToCardIssues filters invalid entries', () => {
 });
 
 test('buildIssueListUrl builds relative and absolute URLs', () => {
-  assert.equal(buildIssueListUrl('', 'openai', 'openissue'), '/api/issues?repo=openai%2Fopenissue');
+  assert.equal(buildIssueListUrl('', 'openai', 'openissue'), '/api/issues?owner=openai&repo=openissue');
   assert.equal(
     buildIssueListUrl('http://localhost:8000/', 'openai', 'openissue'),
-    'http://localhost:8000/api/issues?repo=openai%2Fopenissue'
+    'http://localhost:8000/api/issues?owner=openai&repo=openissue'
   );
 });

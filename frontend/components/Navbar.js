@@ -1,13 +1,18 @@
 import { useState, useEffect } from 'react';
-import { BookMarked, Star, Users, Bell, Settings, GitBranch, KeyRound, Eye, EyeOff, Check, X } from 'lucide-react';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
+import { BookMarked, Star, Users, Bell, Settings, GitBranch, KeyRound, Eye, EyeOff, Check, X, Radar } from 'lucide-react';
 
 export default function Navbar({ onTokenChange }) {
+  const router = useRouter();
+
   const menuItems = [
-    { icon: BookMarked, label: 'repositories' },
-    { icon: Star,       label: 'starred' },
-    { icon: Users,      label: 'followers' },
-    { icon: Bell,       label: 'notifications' },
-    { icon: Settings,   label: 'settings' },
+    { icon: BookMarked, label: 'repositories', href: '/' },
+    { icon: Radar,      label: 'repo_analysis', href: '/repo-analysis' },
+    { icon: Star,       label: 'starred', href: '#' },
+    { icon: Users,      label: 'followers', href: '#' },
+    { icon: Bell,       label: 'notifications', href: '#' },
+    { icon: Settings,   label: 'settings', href: '#' },
   ];
 
   const [token, setToken]         = useState('');
@@ -20,7 +25,7 @@ export default function Navbar({ onTokenChange }) {
     setSavedToken(stored);
     setToken(stored);
     if (onTokenChange) onTokenChange(stored);
-  }, []);
+  }, [onTokenChange]);
 
   const handleSave = () => {
     const trimmed = token.trim();
@@ -55,19 +60,25 @@ export default function Navbar({ onTokenChange }) {
       <nav className="flex-1 overflow-y-auto p-3 space-y-0.5">
         {menuItems.map((item, index) => {
           const Icon = item.icon;
+          const isActive = item.href !== '#' && router.pathname === item.href;
+
           return (
-            <a
+            <Link
               key={index}
-              href="#"
-              className="flex items-center gap-3 px-3 py-2.5 rounded text-terminal-muted hover:text-terminal-bright hover:bg-terminal-dim transition group"
+              href={item.href}
+              className={`flex items-center gap-3 px-3 py-2.5 rounded transition group ${
+                isActive
+                  ? 'text-terminal-bright bg-terminal-dim border border-terminal-border'
+                  : 'text-terminal-muted hover:text-terminal-bright hover:bg-terminal-dim'
+              }`}
             >
-              <span className="text-terminal-muted group-hover:text-terminal-text">
+              <span className={`group-hover:text-terminal-text ${isActive ? 'text-terminal-text' : 'text-terminal-muted'}`}>
                 <Icon size={13} className="flex-shrink-0" />
               </span>
               <span className="text-xs">
                 <span className="text-terminal-muted">~/</span>{item.label}
               </span>
-            </a>
+            </Link>
           );
         })}
       </nav>

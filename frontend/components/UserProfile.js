@@ -33,7 +33,7 @@ export default function UserProfile({ user }) {
         {/* info */}
         <div className="flex-1 min-w-0">
           <div className="text-terminal-bright font-bold text-base glow">{p.login}</div>
-          {p.bio && <div className="text-terminal-muted text-xs mt-0.5 italic">// {p.bio}</div>}
+          {p.bio && <div className="text-terminal-muted text-xs mt-0.5 italic">{`// ${p.bio}`}</div>}
 
           <div className="flex gap-5 mt-2">
             <div className="flex items-center gap-1.5 text-xs">

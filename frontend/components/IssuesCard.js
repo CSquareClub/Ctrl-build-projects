@@ -77,7 +77,7 @@ export default function IssuesCard({ issues, error, loading }) {
             </div>
           ))
         ) : (
-          <p className="text-terminal-muted text-xs pt-3">// no {filter} issues</p>
+          <p className="text-terminal-muted text-xs pt-3">{`// no ${filter} issues`}</p>
         )}
       </div>
     </div>
