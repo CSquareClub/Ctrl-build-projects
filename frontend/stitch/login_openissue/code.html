@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;family=Space+Grotesk:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-surface": "#f4f6fe",
+                        "secondary-fixed-dim": "#c8bbff",
+                        "secondary-container": "#49339d",
+                        "surface": "#0a0e13",
+                        "background": "#0a0e13",
+                        "surface-container-lowest": "#000000",
+                        "on-tertiary-container": "#63054a",
+                        "on-tertiary-fixed-variant": "#6e1354",
+                        "on-secondary-container": "#d4c9ff",
+                        "inverse-surface": "#f8f9ff",
+                        "primary-container": "#9396ff",
+                        "surface-container": "#151a20",
+                        "primary-fixed-dim": "#8387ff",
+                        "error-container": "#a70138",
+                        "surface-variant": "#21262e",
+                        "secondary-dim": "#a28efc",
+                        "on-tertiary-fixed": "#3b002b",
+                        "primary-fixed": "#9396ff",
+                        "outline-variant": "#44484e",
+                        "on-secondary-fixed-variant": "#533ea7",
+                        "error": "#ff6e84",
+                        "tertiary": "#ffa5d9",
+                        "secondary": "#a28efc",
+                        "primary-dim": "#6063ee",
+                        "tertiary-dim": "#ef81c4",
+                        "on-tertiary": "#701455",
+                        "outline": "#72767c",
+                        "primary": "#a3a6ff",
+                        "surface-tint": "#a3a6ff",
+                        "on-error": "#490013",
+                        "on-primary-fixed-variant": "#0e009d",
+                        "error-dim": "#d73357",
+                        "tertiary-fixed-dim": "#ef81c4",
+                        "tertiary-fixed": "#ff8ed2",
+                        "inverse-on-surface": "#51555b",
+                        "surface-dim": "#0a0e13",
+                        "on-primary-container": "#0a0081",
+                        "on-primary": "#0f00a4",
+                        "surface-bright": "#262d35",
+                        "on-primary-fixed": "#000000",
+                        "tertiary-container": "#ff8ed2",
+                        "on-surface-variant": "#a8abb2",
+                        "inverse-primary": "#494bd7",
+                        "on-background": "#f4f6fe",
+                        "surface-container-high": "#1b2027",
+                        "secondary-fixed": "#d6cbff",
+                        "on-error-container": "#ffb2b9",
+                        "on-secondary-fixed": "#361c89",
+                        "surface-container-low": "#0f1419",
+                        "surface-container-highest": "#21262e",
+                        "on-secondary": "#21006d"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Space Grotesk"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            line-height: 1;
+            text-transform: none;
+            letter-spacing: normal;
+            word-wrap: normal;
+            white-space: nowrap;
+            direction: ltr;
+        }
+        .glass-card {
+            background: linear-gradient(135deg, rgba(33, 38, 46, 0.4) 0%, rgba(15, 20, 25, 0.6) 100%);
+            backdrop-filter: blur(24px);
+        }
+        .primary-glow:hover {
+            box-shadow: 0 0 30px 2px rgba(163, 166, 255, 0.3);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body min-h-screen flex items-center justify-center selection:bg-primary/30 selection:text-primary overflow-hidden">
+<!-- Ambient Background Elements -->
+<div class="fixed inset-0 overflow-hidden pointer-events-none">
+<div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-primary/10 blur-[120px]"></div>
+<div class="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-secondary/10 blur-[120px]"></div>
+</div>
+<!-- Main Content Canvas -->
+<main class="relative z-10 w-full max-w-md px-6 flex flex-col items-center">
+<!-- Logo Branding -->
+<div class="mb-12 flex flex-col items-center text-center">
+<div class="relative mb-6">
+<div class="absolute inset-0 bg-primary/20 blur-2xl rounded-full scale-150"></div>
+<div class="relative w-16 h-16 rounded-xl bg-gradient-to-br from-primary to-primary-dim flex items-center justify-center shadow-2xl">
+<span class="material-symbols-outlined text-on-primary text-4xl" data-icon="auto_awesome" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+</div>
+</div>
+<h1 class="font-headline font-extrabold text-5xl tracking-tighter text-on-surface mb-3">
+                OpenIssue
+            </h1>
+<p class="font-body text-on-surface-variant font-medium tracking-tight">
+                AI-powered GitHub Issue Intelligence
+            </p>
+</div>
+<!-- Glassmorphism Container -->
+<div class="w-full glass-card border border-white/5 p-8 rounded-lg shadow-[0_32px_64px_-12px_rgba(0,0,0,0.5)]">
+<div class="space-y-6">
+<div class="text-center space-y-2">
+<h2 class="font-headline text-lg font-bold text-on-surface">Welcome back</h2>
+<p class="font-label text-xs uppercase tracking-widest text-outline">Accelerate your workflow</p>
+</div>
+<div class="space-y-4">
+<!-- GitHub Action Button -->
+<button class="w-full group relative flex items-center justify-center gap-3 bg-gradient-to-br from-primary to-primary-dim text-on-primary font-headline font-bold py-4 px-6 rounded-full primary-glow transition-all duration-300 transform active:scale-[0.98]">
+<span class="material-symbols-outlined text-2xl" data-icon="terminal">terminal</span>
+<span class="tracking-tight">Continue with GitHub</span>
+<div class="absolute inset-0 rounded-full border-2 border-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+</button>
+<!-- Alternative Options -->
+<div class="flex items-center gap-4 py-2">
+<div class="h-[1px] flex-1 bg-outline-variant/30"></div>
+<span class="font-label text-[10px] text-outline uppercase tracking-[0.2em]">or</span>
+<div class="h-[1px] flex-1 bg-outline-variant/30"></div>
+</div>
+<button class="w-full flex items-center justify-center gap-3 bg-surface-container-low hover:bg-surface-variant text-on-surface-variant border border-outline-variant/10 font-headline font-semibold py-4 px-6 rounded-full transition-all duration-200">
+<span class="material-symbols-outlined text-xl" data-icon="mail">mail</span>
+<span>Sign in with Email</span>
+</button>
+</div>
+</div>
+<!-- Footer metadata inside card -->
+<div class="mt-8 pt-8 border-t border-white/5 flex flex-col items-center gap-4">
+<div class="flex gap-6">
+<a class="font-label text-[10px] text-outline hover:text-primary transition-colors uppercase tracking-widest" href="#">Privacy</a>
+<a class="font-label text-[10px] text-outline hover:text-primary transition-colors uppercase tracking-widest" href="#">Terms</a>
+<a class="font-label text-[10px] text-outline hover:text-primary transition-colors uppercase tracking-widest" href="#">Docs</a>
+</div>
+</div>
+</div>
+<!-- System Status Indicator (Editorial Detail) -->
+<div class="mt-12 flex items-center gap-2 bg-surface-container-highest/30 px-4 py-2 rounded-full border border-outline-variant/5">
+<div class="w-1.5 h-1.5 rounded-full bg-tertiary animate-pulse shadow-[0_0_8px_rgba(255,165,217,0.6)]"></div>
+<span class="font-label text-[10px] text-on-surface-variant tracking-wider uppercase">Systems Operational</span>
+</div>
+</main>
+<!-- Visual Texture Overlay -->
+<div class="fixed inset-0 pointer-events-none opacity-[0.03] mix-blend-overlay">
+<svg viewbox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+<filter id="noiseFilter">
+<feturbulence basefrequency="0.65" numoctaves="3" stitchtiles="stitch" type="fractalNoise"></feturbulence>
+</filter>
+<rect filter="url(#noiseFilter)" height="100%" width="100%"></rect>
+</svg>
+</div>
+</body></html>

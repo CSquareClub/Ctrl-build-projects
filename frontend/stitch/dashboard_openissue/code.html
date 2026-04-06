@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>OpenIssue - Repository Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;family=Space_Grotesk:wght@300;400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                "on-surface": "#f4f6fe",
+                "secondary-fixed-dim": "#c8bbff",
+                "secondary-container": "#49339d",
+                "surface": "#0a0e13",
+                "background": "#0a0e13",
+                "surface-container-lowest": "#000000",
+                "on-tertiary-container": "#63054a",
+                "on-tertiary-fixed-variant": "#6e1354",
+                "on-secondary-container": "#d4c9ff",
+                "inverse-surface": "#f8f9ff",
+                "primary-container": "#9396ff",
+                "surface-container": "#151a20",
+                "primary-fixed-dim": "#8387ff",
+                "error-container": "#a70138",
+                "surface-variant": "#21262e",
+                "secondary-dim": "#a28efc",
+                "on-tertiary-fixed": "#3b002b",
+                "primary-fixed": "#9396ff",
+                "outline-variant": "#44484e",
+                "on-secondary-fixed-variant": "#533ea7",
+                "error": "#ff6e84",
+                "tertiary": "#ffa5d9",
+                "secondary": "#a28efc",
+                "primary-dim": "#6063ee",
+                "tertiary-dim": "#ef81c4",
+                "on-tertiary": "#701455",
+                "outline": "#72767c",
+                "primary": "#a3a6ff",
+                "surface-tint": "#a3a6ff",
+                "on-error": "#490013",
+                "on-primary-fixed-variant": "#0e009d",
+                "error-dim": "#d73357",
+                "tertiary-fixed-dim": "#ef81c4",
+                "tertiary-fixed": "#ff8ed2",
+                "inverse-on-surface": "#51555b",
+                "surface-dim": "#0a0e13",
+                "on-primary-container": "#0a0081",
+                "on-primary": "#0f00a4",
+                "surface-bright": "#262d35",
+                "on-primary-fixed": "#000000",
+                "tertiary-container": "#ff8ed2",
+                "on-surface-variant": "#a8abb2",
+                "inverse-primary": "#494bd7",
+                "on-background": "#f4f6fe",
+                "surface-container-high": "#1b2027",
+                "secondary-fixed": "#d6cbff",
+                "on-error-container": "#ffb2b9",
+                "on-secondary-fixed": "#361c89",
+                "surface-container-low": "#0f1419",
+                "surface-container-highest": "#21262e",
+                "on-secondary": "#21006d"
+            },
+            "borderRadius": {
+                "DEFAULT": "1rem",
+                "lg": "2rem",
+                "xl": "3rem",
+                "full": "9999px"
+            },
+            "fontFamily": {
+                "headline": ["Manrope"],
+                "body": ["Inter"],
+                "label": ["Space Grotesk"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            background-color: #0a0e13;
+            color: #f4f6fe;
+            font-family: 'Inter', sans-serif;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-panel {
+            background: rgba(33, 38, 46, 0.6);
+            backdrop-filter: blur(20px);
+        }
+        .text-gradient {
+            background: linear-gradient(135deg, #a3a6ff 0%, #6063ee 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .primary-button-gradient {
+            background: linear-gradient(135deg, #a3a6ff 0%, #6063ee 100%);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface min-h-screen">
+<!-- TopNavBar from JSON -->
+<nav class="fixed top-0 w-full z-50 bg-[#0a0e13]/60 backdrop-blur-xl border-b border-white/5 shadow-[0_8px_32px_0_rgba(0,0,0,0.3)]">
+<div class="flex justify-between items-center h-16 px-8 w-full max-w-screen-2xl mx-auto font-['Manrope'] font-semibold tracking-tight">
+<div class="flex items-center gap-8">
+<span class="text-2xl font-bold tracking-tighter text-white bg-clip-text bg-gradient-to-br from-indigo-400 to-indigo-600">OpenIssue</span>
+<div class="hidden md:flex items-center gap-6">
+<a class="text-indigo-400 border-b-2 border-indigo-500 pb-1" href="#">Dashboard</a>
+<a class="text-slate-400 hover:text-white transition-colors" href="#">Intelligence</a>
+<a class="text-slate-400 hover:text-white transition-colors" href="#">Conflicts</a>
+<a class="text-slate-400 hover:text-white transition-colors" href="#">Settings</a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-3 text-slate-500 text-sm">search</span>
+<input class="bg-white/5 border-none rounded-full py-1.5 pl-10 pr-4 text-sm w-64 focus:ring-1 focus:ring-indigo-500 transition-all" placeholder="Search repositories..." type="text"/>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-2 text-slate-400 hover:bg-white/5 rounded-full transition-all duration-300 active:scale-95">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<div class="w-8 h-8 rounded-full overflow-hidden border border-white/10 ml-2">
+<img alt="User profile avatar" data-alt="professional headshot of a developer in a modern workspace with soft ambient blue lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDG3iNIayhYp5lhNrOoMFEFyZvDz-Ip6nUQNZH0qLUdDisnxryXSB3xXSHfa3p88m8z2IILl6calsNROue17SQV4Pty35Kek23tpwHeTaDh-8a_MK8NSNcGEmMrZ6pdb0onuBeczISQJY4s_KfDcF2af0OuAayPGzhBVdz-Sgse07BEsSzXrPKsFAlmdbA08vOAkU6RknO0HZR7WiPQmdRU1xaEKXdCt7Dcs4TZaoNJykZUmM1amLa8RNmQeEtn8ArEd7l_GWAIUBnO"/>
+</div>
+</div>
+</div>
+</div>
+</nav>
+<main class="pt-24 pb-16 px-8 max-w-screen-2xl mx-auto">
+<!-- Dashboard Header -->
+<header class="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
+<div class="space-y-2">
+<h1 class="font-headline font-extrabold text-5xl tracking-tight text-on-surface">Repository <span class="text-gradient">Intelligence</span></h1>
+<p class="text-on-surface-variant max-w-lg font-body">Manage and analyze your high-velocity engineering repositories with AI-driven curation.</p>
+</div>
+<div class="flex items-center gap-4">
+<button class="px-6 py-3 rounded-full bg-surface-container-highest border border-outline-variant/20 hover:bg-surface-bright transition-all flex items-center gap-2 font-label text-sm uppercase tracking-widest">
+<span class="material-symbols-outlined text-sm">filter_list</span>
+                    Filter
+                </button>
+<button class="px-8 py-3 rounded-full primary-button-gradient text-on-primary font-headline font-bold shadow-lg shadow-primary/20 active:scale-95 transition-all">
+                    + New Analysis
+                </button>
+</div>
+</header>
+<!-- Bento Grid / Repositories -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+<!-- Repository Card 1 -->
+<div class="group bg-[#111827] border border-white/10 rounded-lg p-6 flex flex-col justify-between transition-all duration-300 hover:translate-y-[-4px] hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)] hover:border-indigo-500/30">
+<div>
+<div class="flex justify-between items-start mb-4">
+<div class="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-indigo-400">code_blocks</span>
+</div>
+<div class="flex gap-2">
+<span class="bg-secondary-container/30 text-secondary text-[10px] font-label font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">TypeScript</span>
+<span class="bg-white/5 text-slate-400 text-[10px] font-label px-2 py-0.5 rounded-full uppercase tracking-wider">Public</span>
+</div>
+</div>
+<h3 class="font-headline font-bold text-xl mb-2 text-white group-hover:text-indigo-400 transition-colors">core-engine-v3</h3>
+<p class="text-on-surface-variant text-sm font-body line-clamp-2 mb-6">High-performance Rust-based execution layer for distributed cloud systems.</p>
+</div>
+<div class="flex items-center justify-between pt-6 border-t border-white/5">
+<div class="flex -space-x-2">
+<img alt="Contributor" class="w-6 h-6 rounded-full border border-[#111827]" data-alt="close up headshot of a software engineer smiling in soft focus background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB7mO9Fp0somm7xCDu2A4r14v2apmo-IzN4D0HNPg5n-8wqwMbVcQG6YZHzbgaZYpVXas3ndQ9YCl02QFiJiuZQKV9neyoAAUUpd0PeDFfX7aQimzhN2eaVnfsxUxODHiAHXnVREAoYZi4EQMN8wd3EAtBEokmkmQHM6PIo9WY-omary2kvQr5Aaph1c5oOMbOcjJSgSm4Y07Ve2vkTewKaDruxHSRkzhJ5mjotrSwFjP_WQnicV13rs5y1IUf_nkPjgaEe10JthLtC"/>
+<img alt="Contributor" class="w-6 h-6 rounded-full border border-[#111827]" data-alt="headshot of female developer with glasses in a professional studio setting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDjeuzfB5ms7sSeF3Lwli0Df4wWsfl8lmz7XwNuAOHBGwHS0DfOJkdhPDpavNzV8K_9TmWaVezhB3-Gi6eZJuFVx1dc8RljZ89PpDhFo9UllN3u0N7cLrMvJAZJIJu-8nzNHeLr0gfk5b_cc8_tfmc6aB5UdDd7rHZo2wZWLTObwhc9FhfJlxKgGlfqC6ElCmBmacfvVyCg9f3JHpUZ0SXB7PgOcDXkb6ZuqLGQE5ia4pPM5GPW8dghYI2D9i7J4mLAUFtj_A0nlBU5"/>
+<div class="w-6 h-6 rounded-full border border-[#111827] bg-surface-variant flex items-center justify-center text-[8px] font-bold text-slate-400">+12</div>
+</div>
+<button class="px-4 py-2 rounded-full bg-indigo-600/10 text-indigo-400 font-headline font-bold text-xs hover:bg-indigo-600 hover:text-white transition-all active:scale-95">
+                        Analyze
+                    </button>
+</div>
+</div>
+<!-- Repository Card 2 -->
+<div class="group bg-[#111827] border border-white/10 rounded-lg p-6 flex flex-col justify-between transition-all duration-300 hover:translate-y-[-4px] hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)] hover:border-indigo-500/30">
+<div>
+<div class="flex justify-between items-start mb-4">
+<div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary">auto_awesome</span>
+</div>
+<div class="flex gap-2">
+<span class="bg-secondary-container/30 text-secondary text-[10px] font-label font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">Python</span>
+<span class="bg-tertiary/20 text-tertiary text-[10px] font-label px-2 py-0.5 rounded-full uppercase tracking-wider">Private</span>
+</div>
+</div>
+<h3 class="font-headline font-bold text-xl mb-2 text-white group-hover:text-indigo-400 transition-colors">ai-model-orchestrator</h3>
+<p class="text-on-surface-variant text-sm font-body line-clamp-2 mb-6">Neural network scheduling and dynamic weights management for LLM clusters.</p>
+</div>
+<div class="flex items-center justify-between pt-6 border-t border-white/5">
+<div class="flex items-center text-tertiary text-xs font-label">
+<span class="relative flex h-2 w-2 mr-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-tertiary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-tertiary"></span>
+</span>
+                        AI Insight Ready
+                    </div>
+<button class="px-4 py-2 rounded-full bg-indigo-600/10 text-indigo-400 font-headline font-bold text-xs hover:bg-indigo-600 hover:text-white transition-all active:scale-95">
+                        Analyze
+                    </button>
+</div>
+</div>
+<!-- Repository Card 3 -->
+<div class="group bg-[#111827] border border-white/10 rounded-lg p-6 flex flex-col justify-between transition-all duration-300 hover:translate-y-[-4px] hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)] hover:border-indigo-500/30">
+<div>
+<div class="flex justify-between items-start mb-4">
+<div class="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center">
+<span class="material-symbols-outlined text-slate-300">layers</span>
+</div>
+<div class="flex gap-2">
+<span class="bg-secondary-container/30 text-secondary text-[10px] font-label font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">Go</span>
+<span class="bg-white/5 text-slate-400 text-[10px] font-label px-2 py-0.5 rounded-full uppercase tracking-wider">Public</span>
+</div>
+</div>
+<h3 class="font-headline font-bold text-xl mb-2 text-white group-hover:text-indigo-400 transition-colors">gateway-proxy</h3>
+<p class="text-on-surface-variant text-sm font-body line-clamp-2 mb-6">Zero-trust security gateway with automated certificate rotation.</p>
+</div>
+<div class="flex items-center justify-between pt-6 border-t border-white/5">
+<div class="text-slate-500 text-xs font-label">Updated 2h ago</div>
+<button class="px-4 py-2 rounded-full bg-indigo-600/10 text-indigo-400 font-headline font-bold text-xs hover:bg-indigo-600 hover:text-white transition-all active:scale-95">
+                        Analyze
+                    </button>
+</div>
+</div>
+<!-- Repository Card 4 -->
+<div class="group bg-[#111827] border border-white/10 rounded-lg p-6 flex flex-col justify-between transition-all duration-300 hover:translate-y-[-4px] hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)] hover:border-indigo-500/30">
+<div>
+<div class="flex justify-between items-start mb-4">
+<div class="w-10 h-10 rounded-xl bg-error/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-error">priority_high</span>
+</div>
+<div class="flex gap-2">
+<span class="bg-secondary-container/30 text-secondary text-[10px] font-label font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">JavaScript</span>
+<span class="bg-white/5 text-slate-400 text-[10px] font-label px-2 py-0.5 rounded-full uppercase tracking-wider">Archived</span>
+</div>
+</div>
+<h3 class="font-headline font-bold text-xl mb-2 text-white group-hover:text-indigo-400 transition-colors">legacy-frontend-v1</h3>
+<p class="text-on-surface-variant text-sm font-body line-clamp-2 mb-6">Previous monolithic React application before micro-frontend migration.</p>
+</div>
+<div class="flex items-center justify-between pt-6 border-t border-white/5">
+<div class="text-error text-[10px] font-label font-bold uppercase tracking-tighter">Needs Audit</div>
+<button class="px-4 py-2 rounded-full bg-indigo-600/10 text-indigo-400 font-headline font-bold text-xs hover:bg-indigo-600 hover:text-white transition-all active:scale-95">
+                        Analyze
+                    </button>
+</div>
+</div>
+<!-- Repository Card 5 -->
+<div class="group bg-[#111827] border border-white/10 rounded-lg p-6 flex flex-col justify-between transition-all duration-300 hover:translate-y-[-4px] hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)] hover:border-indigo-500/30">
+<div>
+<div class="flex justify-between items-start mb-4">
+<div class="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-indigo-400">database</span>
+</div>
+<div class="flex gap-2">
+<span class="bg-secondary-container/30 text-secondary text-[10px] font-label font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">SQL</span>
+<span class="bg-white/5 text-slate-400 text-[10px] font-label px-2 py-0.5 rounded-full uppercase tracking-wider">Public</span>
+</div>
+</div>
+<h3 class="font-headline font-bold text-xl mb-2 text-white group-hover:text-indigo-400 transition-colors">schema-registry</h3>
+<p class="text-on-surface-variant text-sm font-body line-clamp-2 mb-6">Source of truth for all event-driven architecture schemas and protobufs.</p>
+</div>
+<div class="flex items-center justify-between pt-6 border-t border-white/5">
+<div class="text-slate-500 text-xs font-label">Active analysis</div>
+<button class="px-4 py-2 rounded-full bg-indigo-600/10 text-indigo-400 font-headline font-bold text-xs hover:bg-indigo-600 hover:text-white transition-all active:scale-95">
+                        Analyze
+                    </button>
+</div>
+</div>
+<!-- Repository Card 6 -->
+<div class="group bg-[#111827] border border-white/10 rounded-lg p-6 flex flex-col justify-between transition-all duration-300 hover:translate-y-[-4px] hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)] hover:border-indigo-500/30">
+<div>
+<div class="flex justify-between items-start mb-4">
+<div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary">monitoring</span>
+</div>
+<div class="flex gap-2">
+<span class="bg-secondary-container/30 text-secondary text-[10px] font-label font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">C++</span>
+<span class="bg-white/5 text-slate-400 text-[10px] font-label px-2 py-0.5 rounded-full uppercase tracking-wider">Private</span>
+</div>
+</div>
+<h3 class="font-headline font-bold text-xl mb-2 text-white group-hover:text-indigo-400 transition-colors">telemetry-collector</h3>
+<p class="text-on-surface-variant text-sm font-body line-clamp-2 mb-6">Ultra-low latency metrics collection for global edge nodes.</p>
+</div>
+<div class="flex items-center justify-between pt-6 border-t border-white/5">
+<div class="flex -space-x-2">
+<img alt="Contributor" class="w-6 h-6 rounded-full border border-[#111827]" data-alt="headshot of a man with short hair and a beard, neutral expression, soft lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBwNayZQtRhs9B22UX0YsnRXEMFZ0H0OzqKayjSLMXNhjpYzbZES-fcINDJEsuY6uproYdHs5WIyhrWJVG_cbi_H1OsPSdUg8jfEH4xcx2iMtOYnc3cY1DGaWY2Ip6ROom7q65U7PqcJr5lRbcsb-l8_cWSEi_Jdlg3s_tf-QwpyIVm2KgQzRw4dplTJo8TqT-meWV6q6dnby_8yiUwwXpr66adhRWPap5D4IACZMnFAeGx2iIOXarzpbJaHXMWlwGMxqmE5lCEAycP"/>
+</div>
+<button class="px-4 py-2 rounded-full bg-indigo-600/10 text-indigo-400 font-headline font-bold text-xs hover:bg-indigo-600 hover:text-white transition-all active:scale-95">
+                        Analyze
+                    </button>
+</div>
+</div>
+<!-- Repository Card 7 -->
+<div class="group bg-[#111827] border border-white/10 rounded-lg p-6 flex flex-col justify-between transition-all duration-300 hover:translate-y-[-4px] hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)] hover:border-indigo-500/30">
+<div>
+<div class="flex justify-between items-start mb-4">
+<div class="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-indigo-400">cloud_queue</span>
+</div>
+<div class="flex gap-2">
+<span class="bg-secondary-container/30 text-secondary text-[10px] font-label font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">HCL</span>
+<span class="bg-white/5 text-slate-400 text-[10px] font-label px-2 py-0.5 rounded-full uppercase tracking-wider">Public</span>
+</div>
+</div>
+<h3 class="font-headline font-bold text-xl mb-2 text-white group-hover:text-indigo-400 transition-colors">infrastructure-as-code</h3>
+<p class="text-on-surface-variant text-sm font-body line-clamp-2 mb-6">Terraform modules for standardized multi-region AWS deployments.</p>
+</div>
+<div class="flex items-center justify-between pt-6 border-t border-white/5">
+<div class="text-slate-500 text-xs font-label">Active analysis</div>
+<button class="px-4 py-2 rounded-full bg-indigo-600/10 text-indigo-400 font-headline font-bold text-xs hover:bg-indigo-600 hover:text-white transition-all active:scale-95">
+                        Analyze
+                    </button>
+</div>
+</div>
+<!-- Add Repository Placeholder -->
+<div class="group border-2 border-dashed border-white/5 rounded-lg p-6 flex flex-col items-center justify-center transition-all duration-300 hover:bg-white/5 hover:border-indigo-500/50 cursor-pointer">
+<div class="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mb-4 group-hover:bg-indigo-500/10 group-hover:text-indigo-400 transition-all">
+<span class="material-symbols-outlined">add</span>
+</div>
+<span class="font-headline font-bold text-on-surface group-hover:text-indigo-400">Add Repository</span>
+<p class="text-slate-500 text-xs font-label mt-1">Import from GitHub or GitLab</p>
+</div>
+</div>
+</main>
+<!-- SideNavBar Logic Check: Suppressed for Dashboard focus (using TopNavBar) -->
+<!-- Footer Section for Atmospheric Finish -->
+<footer class="mt-20 py-12 px-8 border-t border-white/5 max-w-screen-2xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
+<div class="flex flex-col gap-2">
+<span class="font-headline font-black text-white text-lg">OpenIssue</span>
+<p class="text-slate-500 text-sm font-label">The Digital Curator for Engineering Teams</p>
+</div>
+<div class="flex gap-12 font-label text-xs uppercase tracking-widest text-slate-400">
+<a class="hover:text-primary transition-colors" href="#">Privacy</a>
+<a class="hover:text-primary transition-colors" href="#">Security</a>
+<a class="hover:text-primary transition-colors" href="#">Changelog</a>
+<a class="hover:text-primary transition-colors" href="#">Docs</a>
+</div>
+<div class="flex items-center gap-4">
+<div class="h-2 w-2 rounded-full bg-primary animate-pulse"></div>
+<span class="text-[10px] font-label text-slate-500 uppercase tracking-widest">All systems operational</span>
+</div>
+</footer>
+</body></html>

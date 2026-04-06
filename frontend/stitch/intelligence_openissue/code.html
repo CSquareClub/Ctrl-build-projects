@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Issue Intelligence | OpenIssue</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;family=Space_Grotesk:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-surface": "#f4f6fe",
+                        "secondary-fixed-dim": "#c8bbff",
+                        "secondary-container": "#49339d",
+                        "surface": "#0a0e13",
+                        "background": "#0a0e13",
+                        "surface-container-lowest": "#000000",
+                        "on-tertiary-container": "#63054a",
+                        "on-tertiary-fixed-variant": "#6e1354",
+                        "on-secondary-container": "#d4c9ff",
+                        "inverse-surface": "#f8f9ff",
+                        "primary-container": "#9396ff",
+                        "surface-container": "#151a20",
+                        "primary-fixed-dim": "#8387ff",
+                        "error-container": "#a70138",
+                        "surface-variant": "#21262e",
+                        "secondary-dim": "#a28efc",
+                        "on-tertiary-fixed": "#3b002b",
+                        "primary-fixed": "#9396ff",
+                        "outline-variant": "#44484e",
+                        "on-secondary-fixed-variant": "#533ea7",
+                        "error": "#ff6e84",
+                        "tertiary": "#ffa5d9",
+                        "secondary": "#a28efc",
+                        "primary-dim": "#6063ee",
+                        "tertiary-dim": "#ef81c4",
+                        "on-tertiary": "#701455",
+                        "outline": "#72767c",
+                        "primary": "#a3a6ff",
+                        "surface-tint": "#a3a6ff",
+                        "on-error": "#490013",
+                        "on-primary-fixed-variant": "#0e009d",
+                        "error-dim": "#d73357",
+                        "tertiary-fixed-dim": "#ef81c4",
+                        "tertiary-fixed": "#ff8ed2",
+                        "inverse-on-surface": "#51555b",
+                        "surface-dim": "#0a0e13",
+                        "on-primary-container": "#0a0081",
+                        "on-primary": "#0f00a4",
+                        "surface-bright": "#262d35",
+                        "on-primary-fixed": "#000000",
+                        "tertiary-container": "#ff8ed2",
+                        "on-surface-variant": "#a8abb2",
+                        "inverse-primary": "#494bd7",
+                        "on-background": "#f4f6fe",
+                        "surface-container-high": "#1b2027",
+                        "secondary-fixed": "#d6cbff",
+                        "on-error-container": "#ffb2b9",
+                        "on-secondary-fixed": "#361c89",
+                        "surface-container-low": "#0f1419",
+                        "surface-container-highest": "#21262e",
+                        "on-secondary": "#21006d"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Space Grotesk"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: #0a0e13;
+            color: #f4f6fe;
+            font-family: 'Inter', sans-serif;
+        }
+        .glass-panel {
+            background: rgba(33, 38, 46, 0.6);
+            backdrop-filter: blur(20px);
+        }
+    </style>
+</head>
+<body class="antialiased selection:bg-primary/30">
+<!-- TopNavBar -->
+<nav class="fixed top-0 w-full z-50 bg-[#0a0e13]/60 backdrop-blur-xl border-b border-white/5 shadow-[0_8px_32px_0_rgba(0,0,0,0.3)]">
+<div class="flex justify-between items-center h-16 px-8 w-full max-w-screen-2xl mx-auto">
+<div class="flex items-center gap-8">
+<span class="text-2xl font-bold tracking-tighter text-white bg-clip-text bg-gradient-to-br from-indigo-400 to-indigo-600 font-['Manrope']">OpenIssue</span>
+<div class="hidden md:flex items-center gap-6 font-['Manrope'] font-semibold tracking-tight">
+<a class="text-slate-400 hover:text-white transition-colors" href="#">Dashboard</a>
+<a class="text-indigo-400 border-b-2 border-indigo-500 pb-1" href="#">Intelligence</a>
+<a class="text-slate-400 hover:text-white transition-colors" href="#">Conflicts</a>
+<a class="text-slate-400 hover:text-white transition-colors" href="#">Settings</a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 text-slate-400 hover:bg-white/5 transition-all duration-300 rounded-lg active:scale-95">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="p-2 text-slate-400 hover:bg-white/5 transition-all duration-300 rounded-lg active:scale-95">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+<div class="h-8 w-8 rounded-full bg-gradient-to-tr from-indigo-500 to-primary flex items-center justify-center border border-white/10 overflow-hidden">
+<img alt="User profile avatar" data-alt="Close up portrait of a professional software engineer avatar with clean minimalist lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDSFm5ejgIJHxWZ5Kl5kvwl5YNvT4G903sa_PuZQudYl1pbSy50zJFILu75-e_VBfZc5UXomdyZsTTyxyFf8t4YFweQOkSnMBrWgnkj-iZrPDWkakuYbEJOvREilhLme1qcVz1e1oo0fzkjsyAVCTpUdEb-wUSMz6qY20wHaha7jx4ww4dHwJGTkDHz1qwW9sQKvREbmQCyVwnWaq-Quq5vSSMcTbCk4btkXTWWaLSwJ8ZgMFXxtYz3QCoIJ6Ae-ZSdk-Pg9qkHgaiv"/>
+</div>
+</div>
+</div>
+</nav>
+<main class="pt-24 pb-12 px-8 max-w-screen-2xl mx-auto min-h-screen">
+<!-- Editorial Header -->
+<header class="mb-12">
+<h1 class="font-headline font-extrabold text-5xl tracking-tight text-white mb-2">Issue Intelligence</h1>
+<p class="text-on-surface-variant max-w-2xl font-body text-lg">Harness neural analysis to classify, prioritize, and deduplicate your engineering workflow instantly.</p>
+</header>
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+<!-- LEFT COLUMN: Input Form -->
+<section class="lg:col-span-5 space-y-6">
+<div class="bg-surface-container rounded-lg p-8 shadow-2xl relative overflow-hidden">
+<div class="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
+<span class="material-symbols-outlined text-6xl" data-icon="neurology">neurology</span>
+</div>
+<div class="space-y-6">
+<div class="group">
+<label class="font-label text-xs font-bold uppercase tracking-widest text-on-surface-variant block mb-2">Title</label>
+<input class="w-full bg-surface-container-lowest border-none rounded-DEFAULT px-4 py-3 text-on-surface focus:ring-2 focus:ring-primary/40 placeholder:text-outline transition-all" placeholder="Briefly describe the core problem..." type="text"/>
+</div>
+<div>
+<label class="font-label text-xs font-bold uppercase tracking-widest text-on-surface-variant block mb-2">Description</label>
+<textarea class="w-full bg-surface-container-lowest border-none rounded-DEFAULT px-4 py-4 text-on-surface focus:ring-2 focus:ring-primary/40 placeholder:text-outline transition-all resize-none font-body" placeholder="Provide full context, reproduction steps, and technical logs..." rows="12"></textarea>
+</div>
+<button class="w-full py-4 rounded-DEFAULT bg-gradient-to-r from-primary to-primary-dim text-on-primary-fixed font-headline font-bold text-lg hover:shadow-[0_0_30px_rgba(163,166,255,0.4)] transition-all active:scale-[0.98] flex items-center justify-center gap-2">
+<span class="material-symbols-outlined" data-icon="auto_awesome" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+                            Analyze Issue
+                        </button>
+</div>
+</div>
+<div class="flex items-center gap-4 px-4 py-3 bg-tertiary/5 rounded-DEFAULT border border-tertiary/10">
+<div class="animate-pulse h-2 w-2 rounded-full bg-tertiary"></div>
+<span class="font-label text-xs text-tertiary uppercase tracking-widest font-bold">AI Curator is active</span>
+</div>
+</section>
+<!-- RIGHT COLUMN: Analysis Results -->
+<section class="lg:col-span-7 grid grid-cols-1 md:grid-cols-2 gap-6">
+<!-- Classification & Priority -->
+<div class="bg-surface-container rounded-lg p-8 flex flex-col justify-between min-h-[240px]">
+<div>
+<label class="font-label text-xs font-bold uppercase tracking-widest text-on-surface-variant block mb-4">Neural Classification</label>
+<div class="flex items-center gap-4 text-white">
+<div class="p-3 bg-error-container/20 rounded-full">
+<span class="material-symbols-outlined text-error text-3xl" data-icon="bug_report">bug_report</span>
+</div>
+<span class="font-headline font-bold text-3xl">Bug Report</span>
+</div>
+</div>
+<div class="mt-8">
+<label class="font-label text-xs font-bold uppercase tracking-widest text-on-surface-variant block mb-3">Priority Score</label>
+<div class="inline-flex items-center gap-2 px-4 py-2 bg-error-container/20 border border-error/20 rounded-full">
+<div class="h-2 w-2 rounded-full bg-error"></div>
+<span class="font-label text-sm text-error font-bold uppercase tracking-wider">High Severity</span>
+</div>
+</div>
+</div>
+<!-- Labels -->
+<div class="bg-surface-container rounded-lg p-8 min-h-[240px]">
+<label class="font-label text-xs font-bold uppercase tracking-widest text-on-surface-variant block mb-4">Suggested Labels</label>
+<div class="flex flex-wrap gap-2">
+<span class="px-4 py-1.5 bg-secondary-container/30 rounded-full text-secondary text-xs font-label font-bold uppercase tracking-wider">frontend</span>
+<span class="px-4 py-1.5 bg-secondary-container/30 rounded-full text-secondary text-xs font-label font-bold uppercase tracking-wider">regression</span>
+<span class="px-4 py-1.5 bg-secondary-container/30 rounded-full text-secondary text-xs font-label font-bold uppercase tracking-wider">auth</span>
+<span class="px-4 py-1.5 bg-secondary-container/30 rounded-full text-secondary text-xs font-label font-bold uppercase tracking-wider">api-v2</span>
+<span class="px-4 py-1.5 bg-secondary-container/30 rounded-full text-secondary text-xs font-label font-bold uppercase tracking-wider">security</span>
+</div>
+<div class="mt-6 flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-sm" data-icon="info">info</span>
+<p class="text-[10px] font-label uppercase tracking-tighter">Confidence level: 98.4%</p>
+</div>
+</div>
+<!-- Similar Issues (Full Width in subgrid) -->
+<div class="md:col-span-2 bg-surface-container rounded-lg p-8 relative overflow-hidden">
+<div class="flex justify-between items-center mb-6">
+<label class="font-label text-xs font-bold uppercase tracking-widest text-on-surface-variant block">Semantic Deduplication</label>
+<span class="text-xs text-on-surface-variant italic">3 potential duplicates found</span>
+</div>
+<div class="space-y-3">
+<!-- Issue Item 1 -->
+<div class="group bg-surface-container-lowest rounded-DEFAULT p-4 flex items-center justify-between hover:bg-surface-variant/40 transition-all cursor-pointer">
+<div class="flex items-center gap-4">
+<div class="font-label text-primary font-bold">#1024</div>
+<h4 class="font-body font-medium text-on-surface group-hover:text-primary transition-colors">Authentication failing on OAuth redirect in production</h4>
+</div>
+<div class="flex items-center gap-4">
+<div class="px-3 py-1 bg-primary/10 rounded-full border border-primary/20">
+<span class="font-label text-[10px] text-primary font-bold uppercase">94% Match</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant" data-icon="chevron_right">chevron_right</span>
+</div>
+</div>
+<!-- Issue Item 2 -->
+<div class="group bg-surface-container-lowest rounded-DEFAULT p-4 flex items-center justify-between hover:bg-surface-variant/40 transition-all cursor-pointer">
+<div class="flex items-center gap-4">
+<div class="font-label text-primary font-bold">#987</div>
+<h4 class="font-body font-medium text-on-surface group-hover:text-primary transition-colors">Intermittent session timeout for desktop users</h4>
+</div>
+<div class="flex items-center gap-4">
+<div class="px-3 py-1 bg-primary/5 rounded-full border border-primary/10">
+<span class="font-label text-[10px] text-on-surface-variant font-bold uppercase">81% Match</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant" data-icon="chevron_right">chevron_right</span>
+</div>
+</div>
+<!-- Issue Item 3 -->
+<div class="group bg-surface-container-lowest rounded-DEFAULT p-4 flex items-center justify-between hover:bg-surface-variant/40 transition-all cursor-pointer">
+<div class="flex items-center gap-4">
+<div class="font-label text-primary font-bold">#1012</div>
+<h4 class="font-body font-medium text-on-surface group-hover:text-primary transition-colors">Login button non-responsive on mobile viewport</h4>
+</div>
+<div class="flex items-center gap-4">
+<div class="px-3 py-1 bg-primary/5 rounded-full border border-primary/10">
+<span class="font-label text-[10px] text-on-surface-variant font-bold uppercase">68% Match</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant" data-icon="chevron_right">chevron_right</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Intelligence Context (Asymmetric Accent) -->
+<div class="md:col-span-2 glass-panel rounded-lg p-6 flex items-start gap-6 border border-white/5">
+<img alt="Intelligence visualization" class="w-16 h-16 rounded-lg object-cover flex-shrink-0" data-alt="Abstract neural network visualization with indigo and violet glowing data points and lines on dark background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCDndpxjT2yoSrKodUVqJYE01LttyjB50U-AkvtLr-U6H7uY1WqIFJqJ_hJCzqq-Q7x0k2lasoR8YaFC12-D4XjuBOz185aTFVpZ3w28isJHApgilfM8GdDWVB6DvTzJZ6DNgNEsLnNI-CHrCfc2LgwuWvSicRm3ZthhK-SAd5mtWRvWAEoNHerx23L9WIzEzxvrbwh9lk3D848z3sRIKHZRfSDSix3wqz6BpG9ytuniw9kFH5EJ6GO9kw6zs_SK93kDa7KxSbmm6FP"/>
+<div>
+<h5 class="font-headline font-bold text-white mb-1">Knowledge Engine Observation</h5>
+<p class="text-sm text-on-surface-variant font-body leading-relaxed">
+                            This report indicates a pattern similar to the <span class="text-primary">Q3 API Regression</span>. The curators suggest assigning this to the <span class="text-secondary font-bold">Auth-Guardians</span> team based on historical resolution times for similar #auth issues.
+                        </p>
+</div>
+</div>
+</section>
+</div>
+</main>
+<!-- Footer Meta -->
+<footer class="mt-auto px-8 py-8 border-t border-white/5 text-center">
+<div class="flex justify-center gap-8 mb-4">
+<a class="font-label text-[10px] uppercase tracking-widest text-outline hover:text-white transition-colors" href="#">Documentation</a>
+<a class="font-label text-[10px] uppercase tracking-widest text-outline hover:text-white transition-colors" href="#">Neural Config</a>
+<a class="font-label text-[10px] uppercase tracking-widest text-outline hover:text-white transition-colors" href="#">Security Audit</a>
+</div>
+<p class="font-label text-[10px] uppercase tracking-tighter text-outline-variant">© 2024 OpenIssue AI curator engine v2.4.0-stable</p>
+</footer>
+</body></html>

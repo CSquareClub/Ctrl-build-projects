@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OAuth Test - OpenIssue</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #0a0e13;
+            color: #f4f6fe;
+        }
+        .test-section {
+            background: #151a20;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            border: 1px solid #21262e;
+        }
+        button {
+            background: linear-gradient(135deg, #a3a6ff 0%, #6063ee 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            margin: 5px;
+        }
+        button:hover {
+            opacity: 0.9;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success {
+            background: #1a4d2e;
+            border: 1px solid #2d7a4f;
+        }
+        .error {
+            background: #4d1a1a;
+            border: 1px solid #7a2d2d;
+        }
+        .info {
+            background: #1a2d4d;
+            border: 1px solid #2d4f7a;
+        }
+        pre {
+            background: #0a0e13;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔐 GitHub OAuth Test</h1>
+    
+    <div class="test-section">
+        <h2>Server Status</h2>
+        <button onclick="checkBackend()">Check Backend</button>
+        <button onclick="checkFrontend()">Check Frontend</button>
+        <div id="serverStatus"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Authentication Flow</h2>
+        <button onclick="startOAuth()">Start OAuth Login</button>
+        <button onclick="checkSession()">Check Current Session</button>
+        <button onclick="clearSession()">Clear Session</button>
+        <div id="authStatus"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Session Info</h2>
+        <div id="sessionInfo"></div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8000';
+        const FRONTEND_URL = 'http://localhost:3000';
+
+        function showStatus(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+
+        async function checkBackend() {
+            try {
+                const response = await fetch(`${API_URL}/`);
+                const data = await response.json();
+                showStatus('serverStatus', `✅ Backend is running: ${data.message}`, 'success');
+            } catch (error) {
+                showStatus('serverStatus', `❌ Backend error: ${error.message}`, 'error');
+            }
+        }
+
+        async function checkFrontend() {
+            try {
+                const response = await fetch(`${FRONTEND_URL}/`);
+                if (response.ok) {
+                    showStatus('serverStatus', `✅ Frontend is running on port 3000`, 'success');
+                }
+            } catch (error) {
+                showStatus('serverStatus', `❌ Frontend error: ${error.message}`, 'error');
+            }
+        }
+
+        function startOAuth() {
+            showStatus('authStatus', '🔄 Redirecting to GitHub OAuth...', 'info');
+            window.location.href = `${API_URL}/auth/login`;
+        }
+
+        async function checkSession() {
+            const session = localStorage.getItem('openissue_session');
+            
+            if (!session) {
+                showStatus('authStatus', '❌ No session found in localStorage', 'error');
+                document.getElementById('sessionInfo').innerHTML = '<p>Not authenticated</p>';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/auth/check?session=${session}`);
+                const data = await response.json();
+                
+                if (data.authenticated) {
+                    showStatus('authStatus', '✅ Session is valid!', 'success');
+                    document.getElementById('sessionInfo').innerHTML = `
+                        <pre>${JSON.stringify(data.user, null, 2)}</pre>
+                    `;
+                } else {
+                    showStatus('authStatus', '❌ Session is invalid', 'error');
+                    document.getElementById('sessionInfo').innerHTML = '<p>Session expired or invalid</p>';
+                }
+            } catch (error) {
+                showStatus('authStatus', `❌ Error checking session: ${error.message}`, 'error');
+            }
+        }
+
+        function clearSession() {
+            localStorage.removeItem('openissue_session');
+            showStatus('authStatus', '✅ Session cleared from localStorage', 'success');
+            document.getElementById('sessionInfo').innerHTML = '<p>Session cleared</p>';
+        }
+
+        // Check if we're returning from OAuth
+        const urlParams = new URLSearchParams(window.location.search);
+        const session = urlParams.get('session');
+
+        if (session) {
+            localStorage.setItem('openissue_session', session);
+            showStatus('authStatus', '✅ OAuth callback received! Session stored.', 'success');
+            // Remove session from URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+            // Auto-check session
+            setTimeout(checkSession, 500);
+        }
+
+        // Auto-check servers on load
+        window.onload = function() {
+            checkBackend();
+            const currentSession = localStorage.getItem('openissue_session');
+            if (currentSession && !session) {
+                checkSession();
+            }
+        };
+    </script>
+</body>
+</html>

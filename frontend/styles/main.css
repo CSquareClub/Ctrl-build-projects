@@ -1,0 +1,118 @@
+/* Reset and Base Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    /* Material Design 3 Dark Theme Colors */
+    --primary: #a3a6ff;
+    --primary-container: #9396ff;
+    --primary-dim: #6063ee;
+    --secondary: #a28efc;
+    --secondary-container: #49339d;
+    --secondary-dim: #a28efc;
+    --tertiary: #ffa5d9;
+    --tertiary-dim: #ef81c4;
+    --background: #0a0e13;
+    --surface: #0a0e13;
+    --surface-container: #151a20;
+    --surface-container-low: #0f1419;
+    --surface-container-lowest: #000000;
+    --surface-container-high: #1b2027;
+    --surface-container-highest: #21262e;
+    --surface-variant: #21262e;
+    --on-primary: #0f00a4;
+    --on-primary-fixed: #000000;
+    --on-surface: #f4f6fe;
+    --on-surface-variant: #a8abb2;
+    --on-background: #f4f6fe;
+    --outline: #72767c;
+    --outline-variant: #44484e;
+    --error: #ff6e84;
+    --error-container: #a70138;
+    --error-dim: #d73357;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    background: var(--background);
+    color: var(--on-surface);
+    line-height: 1.6;
+    overflow-x: hidden;
+}
+
+/* Material Icons */
+.material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    vertical-align: middle;
+    display: inline-block;
+}
+
+/* Glass Morphism */
+.glass-card {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(88, 166, 255, 0.3);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px 0 rgba(88, 166, 255, 0.15);
+}
+
+.glass-panel {
+    background: rgba(33, 38, 46, 0.6);
+    backdrop-filter: blur(20px);
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in {
+    animation: fadeIn 0.6s ease-out;
+}
+
+@keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+.shimmer {
+    background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.05) 50%, rgba(255,255,255,0) 100%);
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite linear;
+}
+
+/* Utility Classes */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px;
+}
+
+/* Hide/Show */
+.hidden {
+    display: none !important;
+}
+
+/* Loading State */
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}

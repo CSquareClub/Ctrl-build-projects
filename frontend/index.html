@@ -1,15 +1,29 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>OpenIssue — AI-Powered Triage</title>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500&family=JetBrains+Mono&display=swap" rel="stylesheet"/>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" />
+    <title>OpenIssue - Redirecting...</title>
+    <script>
+      // Check if user is authenticated via session parameter
+      const params = new URLSearchParams(window.location.search);
+      const sessionId = params.get("session");
+
+      // Get session from localStorage if available
+      const storedSession = localStorage.getItem("session_id");
+      const targetSession = sessionId || storedSession;
+
+      if (targetSession) {
+        // Store session and redirect to dashboard
+        localStorage.setItem("session_id", targetSession);
+        window.location.href = "pages/dashboard.html?session=" + targetSession;
+      } else {
+        // No session, redirect to login
+        window.location.href = "pages/login.html";
+      }
+    </script>
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
+    <p>Redirecting to OpenIssue...</p>
   </body>
 </html>
