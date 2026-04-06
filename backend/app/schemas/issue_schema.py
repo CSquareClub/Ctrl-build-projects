@@ -1,48 +1,116 @@
-from typing import Optional, List
+from pydantic import BaseModel, Field
+from typing import List, Dict, Any, Optional
+
+class ConfidenceScores(BaseModel):
+    classification: float = Field(..., ge=0.0, le=1.0)
+    priority: float = Field(..., ge=0.0, le=1.0)
+
+class SimilarIssue(BaseModel):
+    id: Optional[str] = None
+    title: str
+    similarity: float = Field(..., ge=0.0, le=1.0)
+
+class IssueInput(BaseModel):
+    title: str = Field(..., min_length=1, max_length=200, description="The title of the GitHub issue")
+    description: str = Field(..., description="The details and markdown body of the issue")
+
+class AnalysisResponse(BaseModel):
+    label: str = Field(..., description="Classification category (e.g., bug, feature, question)")
+    priority: str = Field(..., description="Calculated priority (e.g., high, medium, low)")
+    reason: str = Field(..., description="Short explanation for label and priority")
+    similar_issues: List[SimilarIssue] = Field(default_factory=list)
+    confidence: ConfidenceScores
+
 
 class IssueSchema:
-    """Schema for validating and serializing Issue data"""
-    
-    @staticmethod
-    def validate_create(data: dict) -> dict:
-        """Validate issue creation request"""
-        if not data or not isinstance(data, dict):
-            raise ValueError("Invalid request data")
-        
-        title = data.get('title', '').strip()
-        description = data.get('description', '').strip()
-        
+    VALID_PRIORITIES = {"low", "medium", "high", "critical"}
+    VALID_STATUSES = {"open", "closed", "in_progress"}
+
+    @classmethod
+    def validate_create(cls, data: Dict[str, Any]) -> Dict[str, Any]:
+        if not isinstance(data, dict):
+            raise ValueError("Request payload must be a JSON object")
+
+        title = str(data.get("title", "")).strip()
+        description = str(data.get("description", "")).strip()
         if not title:
-            raise ValueError("Title is required")
+            raise ValueError("title is required and must be non-empty")
         if not description:
-            raise ValueError("Description is required")
-        
+            raise ValueError("description is required and must be non-empty")
+
+        priority = str(data.get("priority", "medium")).lower().strip()
+        if priority not in cls.VALID_PRIORITIES:
+            raise ValueError(
+                f"Invalid priority. Must be one of: {sorted(cls.VALID_PRIORITIES)}"
+            )
+
+        status = str(data.get("status", "open")).lower().strip()
+        if status not in cls.VALID_STATUSES:
+            raise ValueError(
+                f"Invalid status. Must be one of: {sorted(cls.VALID_STATUSES)}"
+            )
+
+        labels = data.get("labels", [])
+        if not isinstance(labels, list):
+            raise ValueError("labels must be a list")
+
         return {
-            'title': title,
-            'description': description,
-            'repository': data.get('repository', '').strip() or None,
-            'priority': data.get('priority', 'medium').lower(),
-            'status': data.get('status', 'open').lower(),
-            'labels': data.get('labels', [])
+            "title": title,
+            "description": description,
+            "repository": str(data.get("repository", "unknown")).strip() or "unknown",
+            "priority": priority,
+            "status": status,
+            "labels": labels,
         }
-    
+
+    @classmethod
+    def validate_update(cls, data: Dict[str, Any]) -> Dict[str, Any]:
+        if not isinstance(data, dict):
+            raise ValueError("Request payload must be a JSON object")
+
+        validated: Dict[str, Any] = {}
+
+        if "title" in data:
+            title = str(data.get("title", "")).strip()
+            if not title:
+                raise ValueError("title must be non-empty")
+            validated["title"] = title
+
+        if "description" in data:
+            description = str(data.get("description", "")).strip()
+            if not description:
+                raise ValueError("description must be non-empty")
+            validated["description"] = description
+
+        if "priority" in data:
+            priority = str(data.get("priority", "")).lower().strip()
+            if priority not in cls.VALID_PRIORITIES:
+                raise ValueError(
+                    f"Invalid priority. Must be one of: {sorted(cls.VALID_PRIORITIES)}"
+                )
+            validated["priority"] = priority
+
+        if "status" in data:
+            status = str(data.get("status", "")).lower().strip()
+            if status not in cls.VALID_STATUSES:
+                raise ValueError(
+                    f"Invalid status. Must be one of: {sorted(cls.VALID_STATUSES)}"
+                )
+            validated["status"] = status
+
+        if "labels" in data:
+            labels = data.get("labels")
+            if not isinstance(labels, list):
+                raise ValueError("labels must be a list")
+            validated["labels"] = labels
+
+        if "repository" in data:
+            validated["repository"] = str(data.get("repository", "")).strip() or "unknown"
+
+        return validated
+
     @staticmethod
-    def serialize_issue(issue) -> dict:
-        """Serialize issue for API response"""
-        return {
-            'id': issue.id,
-            'title': issue.title,
-            'description': issue.description,
-            'repository': issue.repository,
-            'priority': issue.priority,
-            'status': issue.status,
-            'labels': issue.labels,
-            'similarity_score': issue.similarity_score,
-            'created_at': issue.created_at.isoformat() if hasattr(issue.created_at, 'isoformat') else str(issue.created_at),
-            'updated_at': issue.updated_at.isoformat() if hasattr(issue.updated_at, 'isoformat') else str(issue.updated_at)
-        }
-    
-    @staticmethod
-    def serialize_issues(issues: List) -> List[dict]:
-        """Serialize multiple issues"""
-        return [IssueSchema.serialize_issue(issue) for issue in issues]
+    def serialize_issue(issue: Dict[str, Any]) -> Dict[str, Any]:
+        if hasattr(issue, "to_dict"):
+            return issue.to_dict()  # type: ignore[no-any-return]
+        return dict(issue)

@@ -1,164 +1,120 @@
-from flask import Blueprint, request, jsonify
-from ..models.issue_model import Issue
-from ..schemas.issue_schema import IssueSchema
-from ..services.embedding_service import EmbeddingService
-from ..services.priority_service import PriorityService
-from ..utils.text_cleaner import TextCleaner
-import uuid
+from typing import Any, Dict, List
+from uuid import uuid4
 
-analyze_bp = Blueprint('analyze', __name__, url_prefix='/api/analyze')
-embedding_service = EmbeddingService()
+import numpy as np
+from fastapi import APIRouter, HTTPException
 
-@analyze_bp.route('', methods=['POST'])
-def analyze_issue():
-    """Analyze an issue for classification and priority"""
-    try:
-        data = request.get_json()
-        
-        # Validate input
-        validated_data = IssueSchema.validate_create(data)
-        
-        # Create issue
-        issue = Issue(
-            id=str(uuid.uuid4()),
-            title=validated_data['title'],
-            description=validated_data['description'],
-            repository=validated_data['repository'],
-            priority=PriorityService.determine_priority(
-                validated_data['title'],
-                validated_data['description']
-            ),
-            status=validated_data['status'],
-            labels=validated_data['labels']
-        )
-        
-        # Generate embedding
-        combined_text = f"{issue.title} {issue.description}"
-        issue.embedding = embedding_service.generate_embedding(combined_text)
-        
-        # Clean text for analysis
-        cleaned_text = TextCleaner.clean_text(combined_text)
-        priority_indicators = PriorityService.extract_priority_indicators(combined_text)
-        
-        return jsonify({
-            'success': True,
-            'message': 'Issue analyzed successfully',
-            'issue': IssueSchema.serialize_issue(issue),
-            'analysis': {
-                'priority_indicators': priority_indicators,
-                'keywords': TextCleaner.extract_keywords(cleaned_text),
-                'normalized_title': TextCleaner.normalize_title(issue.title)
+from app.models.issue_model import Issue
+from app.schemas.issue_schema import AnalysisResponse, IssueInput, IssueSchema
+from app.services.classifier_service import triage_issue
+from app.services.embedding_service import get_embedding_service
+from app.services.vector_service import find_similar_issues
+from app.utils.issue_storage import IssueStorage
+
+router = APIRouter()
+embedding_service = get_embedding_service()
+issue_storage = IssueStorage()
+
+@router.post("/", response_model=AnalysisResponse)
+async def analyze_issue(issue: IssueInput):
+    triage_result = triage_issue(issue.title, issue.description)
+    label = triage_result["label"]
+    priority = triage_result["priority"]
+    reason = triage_result["reason"]
+    classification_confidence = triage_result["classification_confidence"]
+    priority_confidence = triage_result["priority_confidence"]
+
+    embedding = embedding_service.generate_combined_embedding(issue.title, issue.description)
+    if embedding is None or len(embedding) == 0:
+        raise HTTPException(status_code=500, detail="Failed to generate embedding")
+
+    similar_issues = find_similar_issues(
+        np.array(embedding), issue_storage.get_all_issues(), top_k=3
+    )
+
+    issue_record = Issue(
+        id=str(uuid4()),
+        title=issue.title,
+        description=issue.description,
+        repository="unknown",
+        priority=priority,
+        status="open",
+        labels=[],
+        embedding=[float(value) for value in embedding],
+    )
+    issue_storage.add_issue(issue_record.to_dict())
+
+    return {
+        "label": label,
+        "priority": priority,
+        "reason": reason,
+        "similar_issues": similar_issues,
+        "confidence": {
+            "classification": classification_confidence,
+            "priority": priority_confidence,
+        },
+    }
+
+
+@router.post("/batch")
+async def analyze_batch(data: List[Dict[str, Any]]) -> Dict[str, Any]:
+    if not data:
+        raise HTTPException(status_code=400, detail="Request body must be a non-empty list")
+
+    failed_items = []
+    analyzed_issues = []
+    known_issues = issue_storage.get_all_issues()
+
+    for idx, item in enumerate(data):
+        try:
+            validated_data = IssueSchema.validate_create(item)
+            triage_result = triage_issue(
+                validated_data["title"], validated_data["description"]
+            )
+            label = triage_result["label"]
+            priority = triage_result["priority"]
+            reason = triage_result["reason"]
+            classification_confidence = triage_result["classification_confidence"]
+            priority_confidence = triage_result["priority_confidence"]
+
+            embedding = embedding_service.generate_combined_embedding(
+                validated_data["title"], validated_data["description"]
+            )
+            if embedding is None or len(embedding) == 0:
+                raise ValueError("Failed to generate embedding")
+
+            similar_issues = find_similar_issues(np.array(embedding), known_issues, top_k=3)
+            issue = Issue(
+                id=str(uuid4()),
+                title=validated_data["title"],
+                description=validated_data["description"],
+                repository=validated_data["repository"],
+                priority=priority,
+                status=validated_data.get("status", "open"),
+                labels=validated_data.get("labels", []),
+                embedding=[float(value) for value in embedding],
+            )
+
+            serialized = IssueSchema.serialize_issue(issue)
+            issue_storage.add_issue(serialized)
+            known_issues.append(serialized)
+
+            serialized["label"] = label
+            serialized["reason"] = reason
+            serialized["similar_issues"] = similar_issues
+            serialized["confidence"] = {
+                "classification": classification_confidence,
+                "priority": priority_confidence,
             }
-        }), 200
-        
-    except ValueError as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 400
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': f'Internal server error: {str(e)}'
-        }), 500
+            analyzed_issues.append(serialized)
+        except ValueError as exc:
+            failed_items.append({"index": idx, "error": str(exc)})
 
-@analyze_bp.route('/batch', methods=['POST'])
-def analyze_batch():
-    """Analyze multiple issues at once"""
-    try:
-        data = request.get_json()
-        
-        if not isinstance(data, list):
-            return jsonify({
-                'success': False,
-                'error': 'Expected array of issues'
-            }), 400
-        
-        analyzed_issues = []
-        
-        for item in data:
-            try:
-                validated_data = IssueSchema.validate_create(item)
-                issue = Issue(
-                    id=str(uuid.uuid4()),
-                    title=validated_data['title'],
-                    description=validated_data['description'],
-                    repository=validated_data['repository'],
-                    priority=PriorityService.determine_priority(
-                        validated_data['title'],
-                        validated_data['description']
-                    )
-                )
-                analyzed_issues.append(IssueSchema.serialize_issue(issue))
-            except ValueError:
-                continue
-        
-        return jsonify({
-            'success': True,
-            'count': len(analyzed_issues),
-            'issues': analyzed_issues
-        }), 200
-        
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': f'Internal server error: {str(e)}'
-        }), 500
-
-@analyze_bp.route('/priority', methods=['POST'])
-def get_priority():
-    """Get priority classification for text"""
-    try:
-        data = request.get_json()
-        
-        if not data or 'text' not in data:
-            return jsonify({
-                'success': False,
-                'error': 'Text field is required'
-            }), 400
-        
-        text = data['text']
-        priority = PriorityService.determine_priority(text)
-        score = PriorityService.get_priority_score(text)
-        indicators = PriorityService.extract_priority_indicators(text)
-        
-        return jsonify({
-            'success': True,
-            'priority': priority,
-            'score': score,
-            'indicators': indicators
-        }), 200
-        
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': f'Internal server error: {str(e)}'
-        }), 500
-
-@analyze_bp.route('/embedding', methods=['POST'])
-def get_embedding():
-    """Get embedding representation for text"""
-    try:
-        data = request.get_json()
-        
-        if not data or 'text' not in data:
-            return jsonify({
-                'success': False,
-                'error': 'Text field is required'
-            }), 400
-        
-        text = data['text']
-        embedding = embedding_service.generate_embedding(text)
-        
-        return jsonify({
-            'success': True,
-            'text': text,
-            'embedding': embedding,
-            'dimension': len(embedding)
-        }), 200
-        
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': f'Internal server error: {str(e)}'
-        }), 500
+    return {
+        "success": True if not failed_items else "partial",
+        "total": len(data),
+        "analyzed_count": len(analyzed_issues),
+        "failed_count": len(failed_items),
+        "failed_items": failed_items,
+        "issues": analyzed_issues,
+    }
