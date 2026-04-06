@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ChatTutor — Login / Signup</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      font-family: 'DM Sans', sans-serif;
+      background: radial-gradient(circle at top, #5a4cff 12%, #1c1733 45%),
+                  linear-gradient(180deg, rgba(18,18,28,.95), rgba(12,12,18,.97));
+      color: #f4f4ff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .auth-shell {
+      width: min(540px, 100%);
+      border-radius: 24px;
+      background: rgba(12, 13, 24, 0.92);
+      border: 1px solid rgba(255,255,255,0.08);
+      box-shadow: 0 25px 80px rgba(0,0,0,0.35);
+      overflow: hidden;
+      backdrop-filter: blur(14px);
+    }
+    .auth-hero {
+      padding: 30px 32px 20px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      background: linear-gradient(180deg, rgba(255,255,255,0.04), transparent);
+    }
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .brand-icon {
+      width: 46px; height: 46px;
+      border-radius: 16px;
+      background: #726ef2;
+      display: grid;
+      place-items: center;
+      font-size: 22px;
+      box-shadow: 0 10px 30px rgba(102, 84, 248, 0.35);
+    }
+    .brand-copy {
+      display: grid;
+      gap: 4px;
+    }
+    .brand-title { font-size: 19px; font-weight: 700; }
+    .brand-note { font-size: 13px; color: #c4c2dc; line-height: 1.5; max-width: 400px; }
+
+    .invite {
+      margin-top: 16px;
+      display: grid;
+      gap: 10px;
+      color: #d8d4ff;
+    }
+    .invite h1 { font-size: 28px; line-height: 1.05; }
+    .invite p { font-size: 14px; color: #b9b5d4; }
+
+    .tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      margin: 0 32px 20px;
+      background: rgba(255,255,255,0.03);
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.08);
+      overflow: hidden;
+    }
+    .tab-button {
+      border: none;
+      padding: 14px 18px;
+      font-size: 13px;
+      cursor: pointer;
+      color: #bfc0ff;
+      background: transparent;
+      transition: all 0.18s ease;
+    }
+    .tab-button.active {
+      color: #fff;
+      background: rgba(114,110,242,0.18);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.07);
+    }
+    .card-body {
+      padding: 0 32px 32px;
+    }
+    .input-row {
+      display: grid;
+      gap: 14px;
+      margin-top: 8px;
+    }
+    label {
+      font-size: 12px;
+      color: #b0aed1;
+      letter-spacing: 0.01em;
+    }
+    input {
+      width: 100%;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.05);
+      color: #f0eff4;
+      padding: 14px 16px;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.18s ease, transform 0.18s ease;
+    }
+    input:focus {
+      border-color: rgba(114,110,242,0.9);
+      transform: translateY(-1px);
+    }
+    .hint {
+      font-size: 12px;
+      color: #8f8bc3;
+    }
+    .submit-row {
+      margin-top: 22px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .submit-btn {
+      border: none;
+      border-radius: 14px;
+      padding: 14px 22px;
+      background: linear-gradient(135deg, #7f6dff, #5a61ff);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.18s ease, opacity 0.18s ease;
+    }
+    .submit-btn:hover { transform: translateY(-1px); }
+    .message { margin-top: 14px; font-size: 13px; min-height: 18px; }
+    .message.error { color: #ff8b8b; }
+    .message.ok { color: #98ffb3; }
+    .small-note {
+      margin-top: 18px;
+      font-size: 12px;
+      color: #9e98c9;
+      line-height: 1.6;
+    }
+    .hidden { display: none; }
+    @media (max-width: 520px) {
+      .auth-shell { border-radius: 20px; }
+      .auth-hero, .card-body { padding-left: 24px; padding-right: 24px; }
+      .tabs { margin: 0 24px 20px; }
+      .submit-row { flex-direction: column; align-items: stretch; }
+    }
+  </style>
+</head>
+<body>
+  <div class="auth-shell">
+    <div class="auth-hero">
+      <div class="brand">
+        <div class="brand-icon">✦</div>
+        <div class="brand-copy">
+          <div class="brand-title">ChatTutor Access</div>
+          <div class="brand-note">Create an account with your Gmail to save your study sessions, questions, and progress.</div>
+        </div>
+      </div>
+      <div class="invite">
+        <h1>Fast, clear login for study help.</h1>
+        <p>Choose sign in or create a new account below. Your username and Gmail stay private and secure.</p>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-button active" data-tab="login">Sign in</button>
+      <button class="tab-button" data-tab="signup">Create account</button>
+    </div>
+
+    <div class="card-body">
+      <div id="form-message" class="message"></div>
+
+      <form id="login-form">
+        <div class="input-row">
+          <label for="login-email">Gmail address</label>
+          <input id="login-email" type="email" placeholder="you@gmail.com" required>
+        </div>
+        <div class="input-row">
+          <label for="login-password">Password</label>
+          <input id="login-password" type="password" placeholder="Enter your password" required>
+        </div>
+        <div class="submit-row">
+          <button type="submit" class="submit-btn">Sign in</button>
+          <div class="hint">Need an account? Tap Create account.</div>
+        </div>
+      </form>
+
+      <form id="signup-form" class="hidden">
+        <div class="input-row">
+          <label for="signup-username">Username</label>
+          <input id="signup-username" type="text" placeholder="Pick a display name" required>
+        </div>
+        <div class="input-row">
+          <label for="signup-email">Gmail address</label>
+          <input id="signup-email" type="email" placeholder="you@gmail.com" required>
+        </div>
+        <div class="input-row">
+          <label for="signup-password">Password</label>
+          <input id="signup-password" type="password" placeholder="Choose a secure password" required>
+        </div>
+        <div class="submit-row">
+          <button type="submit" class="submit-btn">Create account</button>
+          <div class="hint">We store your username, Gmail, and password securely.</div>
+        </div>
+      </form>
+
+      <div class="small-note">This page uses the same ChatTutor database system, so your user information connects directly to the app.</div>
+    </div>
+  </div>
+
+  <script>
+    const tabs = document.querySelectorAll('.tab-button');
+    const loginForm = document.getElementById('login-form');
+    const signupForm = document.getElementById('signup-form');
+    const message = document.getElementById('form-message');
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        tabs.forEach(btn => btn.classList.toggle('active', btn === tab));
+        const showSignup = tab.dataset.tab === 'signup';
+        signupForm.classList.toggle('hidden', !showSignup);
+        loginForm.classList.toggle('hidden', showSignup);
+        message.textContent = '';
+        message.className = 'message';
+      });
+    });
+
+    loginForm.addEventListener('submit', async event => {
+      event.preventDefault();
+      setMessage('Signing in...', '');
+      const email = document.getElementById('login-email').value.trim();
+      const password = document.getElementById('login-password').value;
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        window.location.href = '/';
+      } else {
+        setMessage(data.error || 'Login failed. Please try again.', 'error');
+      }
+    });
+
+    signupForm.addEventListener('submit', async event => {
+      event.preventDefault();
+      setMessage('Creating account...', '');
+      const username = document.getElementById('signup-username').value.trim();
+      const email = document.getElementById('signup-email').value.trim();
+      const password = document.getElementById('signup-password').value;
+      const res = await fetch('/api/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, email, password })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        window.location.href = '/';
+      } else {
+        setMessage(data.error || 'Signup failed. Please try again.', 'error');
+      }
+    });
+
+    function setMessage(text, type) {
+      message.textContent = text;
+      message.className = type ? `message ${type}` : 'message';
+    }
+  </script>
+</body>
+</html>
