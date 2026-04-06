@@ -1,0 +1,31 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;700;800&family=Space+Grotesk:wght@500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  background-color: #10141a;
+  color: #dfe2eb;
+  font-family: 'Inter', sans-serif;
+}
+
+.font-mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.terminal-trace {
+  border-left: 2px solid #58a6ff;
+}
+
+.glass {
+  background: rgba(49, 53, 60, 0.7);
+  backdrop-filter: blur(20px);
+}
+
+.material-symbols-outlined {
+  font-size: 20px;
+  vertical-align: middle;
+  font-variation-settings: 'wght' 400, 'FILL' 0;
+}
