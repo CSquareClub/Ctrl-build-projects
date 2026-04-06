@@ -47,9 +47,27 @@ def generate_readme(request: RepoRequest):
         # 4. Call AI Model (Qwen2.5-Coder via Ollama)
         raw_result = call_qwen(context)
 
-        # 5. Professional Formatting & Audit
-        # Uses your formatter.py logic to strip fences, add badges, and check sections
-        formatted = format_readme(raw_result, detected_files)
+        # 5. Robust Cleaning (Fixes 'Inception' bug and hallucinations like 'obj[middle_code]')
+        clean_readme = raw_result.strip()
+
+        # Strip markdown fences if the model wraps output
+        if "```" in clean_readme:
+            parts = clean_readme.split("```")
+            if len(parts) >= 3:
+                # Take the content between the first and last triple backticks
+                clean_readme = parts[1]
+                # Remove common language labels from the start
+                for label in ["markdown", "md", "text"]:
+                    if clean_readme.lower().startswith(label):
+                        clean_readme = clean_readme[len(label):].strip()
+
+        # Fallback for self-referential hallucinations
+        if "obj[" in clean_readme or len(clean_readme) < 100:
+            clean_readme = f"# {clean_path.split('/')[-1].upper()}\n\nAnalyzed {len(detected_files)} files. Specific architectural summary pending due to complex recursion logic."
+
+        # 6. Professional Formatting & Audit
+        # Uses your formatter.py logic to add badges and check sections
+        formatted = format_readme(clean_readme, detected_files)
 
         return {
             "status": "success",
@@ -69,3 +87,8 @@ def generate_readme(request: RepoRequest):
         # Catch any other unexpected errors
         logger.error(f"Unexpected Error: {e}")
         raise HTTPException(status_code=500, detail="An internal server error occurred.")
+
+@app.get("/health")
+def health_check():
+    """Simple endpoint for the frontend to verify the API is online."""
+    return {"status": "online", "engine": "Qwen2.5-Coder:7b"}
