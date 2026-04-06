@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { CircleDot, CheckCircle2 } from 'lucide-react';
+import { CircleDot, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 
-export default function IssuesCard({ issues }) {
+export default function IssuesCard({ issues, error, loading }) {
   const [filter, setFilter] = useState('open');
 
   const list = issues || [];
@@ -12,7 +12,7 @@ export default function IssuesCard({ issues }) {
   return (
     <div className="bg-github-bg border border-github-border rounded-lg p-5 flex flex-col h-full overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 flex-shrink-0">
         <h2 className="text-sm font-semibold text-white flex items-center gap-2">
           <CircleDot size={15} className="text-yellow-400" />
           Issues
@@ -45,7 +45,17 @@ export default function IssuesCard({ issues }) {
 
       {/* List */}
       <div className="flex-1 min-h-0 overflow-y-auto space-y-2 pr-1">
-        {filtered.length > 0 ? (
+        {loading ? (
+          <div className="flex items-center gap-2 text-github-muted text-xs pt-2">
+            <Loader2 size={13} className="animate-spin" />
+            Loading issues...
+          </div>
+        ) : error ? (
+          <div className="flex items-start gap-2 text-red-400 text-xs pt-2">
+            <AlertCircle size={13} className="flex-shrink-0 mt-0.5" />
+            {error}
+          </div>
+        ) : filtered.length > 0 ? (
           filtered.map((issue) => (
             <div
               key={issue.id}
@@ -70,7 +80,7 @@ export default function IssuesCard({ issues }) {
             </div>
           ))
         ) : (
-          <p className="text-github-muted text-xs">No {filter} issues</p>
+          <p className="text-github-muted text-xs pt-2">No {filter} issues</p>
         )}
       </div>
     </div>

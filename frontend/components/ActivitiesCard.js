@@ -1,16 +1,26 @@
 import React from 'react';
-import { GitCommit, User, Clock } from 'lucide-react';
+import { GitCommit, User, Clock, AlertCircle, Loader2 } from 'lucide-react';
 
-export default function ActivitiesCard({ commits }) {
+export default function ActivitiesCard({ commits, error, loading }) {
   return (
     <div className="bg-github-bg border border-github-border rounded-lg p-5 flex flex-col h-full overflow-hidden">
-      <h2 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+      <h2 className="text-sm font-semibold text-white mb-4 flex items-center gap-2 flex-shrink-0">
         <GitCommit size={15} className="text-blue-400" />
         Commit History
       </h2>
 
       <div className="flex-1 min-h-0 overflow-y-auto space-y-3 pr-1">
-        {commits && commits.length > 0 ? (
+        {loading ? (
+          <div className="flex items-center gap-2 text-github-muted text-xs pt-2">
+            <Loader2 size={13} className="animate-spin" />
+            Loading commits...
+          </div>
+        ) : error ? (
+          <div className="flex items-start gap-2 text-red-400 text-xs pt-2">
+            <AlertCircle size={13} className="flex-shrink-0 mt-0.5" />
+            {error}
+          </div>
+        ) : commits && commits.length > 0 ? (
           commits.map((commit) => (
             <div
               key={commit.sha}
@@ -38,7 +48,7 @@ export default function ActivitiesCard({ commits }) {
             </div>
           ))
         ) : (
-          <p className="text-github-muted text-xs">No commits found</p>
+          <p className="text-github-muted text-xs pt-2">No commits found</p>
         )}
       </div>
     </div>

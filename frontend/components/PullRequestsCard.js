@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { GitPullRequest, GitMerge } from 'lucide-react';
+import { GitPullRequest, GitMerge, AlertCircle, Loader2 } from 'lucide-react';
 
-export default function PullRequestsCard({ pullRequests }) {
+export default function PullRequestsCard({ pullRequests, error, loading }) {
   const [filter, setFilter] = useState('open');
 
   const list = pullRequests || [];
@@ -12,7 +12,7 @@ export default function PullRequestsCard({ pullRequests }) {
   return (
     <div className="bg-github-bg border border-github-border rounded-lg p-5 flex flex-col h-full overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 flex-shrink-0">
         <h2 className="text-sm font-semibold text-white flex items-center gap-2">
           <GitPullRequest size={15} className="text-purple-400" />
           Pull Requests
@@ -45,7 +45,17 @@ export default function PullRequestsCard({ pullRequests }) {
 
       {/* List */}
       <div className="flex-1 min-h-0 overflow-y-auto space-y-2 pr-1">
-        {filtered.length > 0 ? (
+        {loading ? (
+          <div className="flex items-center gap-2 text-github-muted text-xs pt-2">
+            <Loader2 size={13} className="animate-spin" />
+            Loading pull requests...
+          </div>
+        ) : error ? (
+          <div className="flex items-start gap-2 text-red-400 text-xs pt-2">
+            <AlertCircle size={13} className="flex-shrink-0 mt-0.5" />
+            {error}
+          </div>
+        ) : filtered.length > 0 ? (
           filtered.map((pr) => (
             <div
               key={pr.id}
@@ -70,7 +80,7 @@ export default function PullRequestsCard({ pullRequests }) {
             </div>
           ))
         ) : (
-          <p className="text-github-muted text-xs">No {filter} pull requests</p>
+          <p className="text-github-muted text-xs pt-2">No {filter} pull requests</p>
         )}
       </div>
     </div>
