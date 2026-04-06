@@ -167,5 +167,6 @@ class GitHubService:
 
 
 def get_github_service(access_token: Optional[str] = None) -> GitHubService:
-    """Create a GitHub service instance"""
-    return GitHubService(access_token=access_token)
+    """Create a GitHub service instance with env fallback"""
+    token = access_token or os.getenv("GITHUB_TOKEN", "").strip() or None
+    return GitHubService(access_token=token)
