@@ -1,18 +1,12 @@
-import React from 'react';
-
-export default function StatsCard({ title, count, icon: Icon, iconColor = 'text-blue-400' }) {
+export default function StatsCard({ title, count, icon: Icon }) {
   return (
-    <div className="bg-github-bg border border-github-border rounded-lg p-5 github-hover cursor-pointer">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-github-muted text-xs font-medium mb-1 uppercase tracking-wide">
-            {title}
-          </h3>
-          <div className="text-2xl font-bold text-white">
-            {typeof count === 'number' ? count.toLocaleString() : count}
-          </div>
-        </div>
-        {Icon && <Icon size={22} className={iconColor} />}
+    <div className="border border-terminal-border rounded bg-terminal-surface p-4 terminal-hover cursor-pointer">
+      <div className="text-terminal-muted text-xs uppercase tracking-widest mb-2 flex items-center gap-1.5">
+        {Icon && <Icon size={11} />}
+        {title}
+      </div>
+      <div className="text-terminal-bright text-2xl font-bold glow">
+        {typeof count === 'number' ? count.toLocaleString() : count}
       </div>
     </div>
   );

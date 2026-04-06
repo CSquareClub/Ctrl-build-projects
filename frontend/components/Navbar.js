@@ -1,19 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { BookMarked, Star, Users, Bell, Settings, GitBranch, KeyRound, Eye, EyeOff, Check, X } from 'lucide-react';
 
 export default function Navbar({ onTokenChange }) {
   const menuItems = [
-    { icon: BookMarked, label: 'Repositories' },
-    { icon: Star, label: 'Starred' },
-    { icon: Users, label: 'Followers' },
-    { icon: Bell, label: 'Notifications' },
-    { icon: Settings, label: 'Settings' },
+    { icon: BookMarked, label: 'repositories' },
+    { icon: Star,       label: 'starred' },
+    { icon: Users,      label: 'followers' },
+    { icon: Bell,       label: 'notifications' },
+    { icon: Settings,   label: 'settings' },
   ];
 
-  const [token, setToken] = useState('');
+  const [token, setToken]         = useState('');
   const [savedToken, setSavedToken] = useState('');
   const [showToken, setShowToken] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [saved, setSaved]         = useState(false);
 
   useEffect(() => {
     const stored = localStorage.getItem('gh_token') || '';
@@ -38,105 +38,97 @@ export default function Navbar({ onTokenChange }) {
     if (onTokenChange) onTokenChange('');
   };
 
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter') handleSave();
-  };
-
   return (
-    <aside className="w-64 bg-github-bg border-r border-github-border flex flex-col h-screen fixed left-0 top-0">
+    <aside className="w-64 bg-terminal-bg border-r border-terminal-border flex flex-col h-screen fixed left-0 top-0">
       {/* Logo */}
-      <div className="p-6 border-b border-github-border flex items-center gap-2">
-        <GitBranch size={20} className="text-blue-400" />
-        <h1 className="text-xl font-bold text-white">Synapse</h1>
+      <div className="p-5 border-b border-terminal-border">
+        <div className="flex items-center gap-2">
+          <GitBranch size={16} className="text-terminal-text" />
+          <span className="text-terminal-bright font-bold text-base tracking-widest uppercase cursor-blink">
+            Synapse
+          </span>
+        </div>
+        <div className="text-terminal-muted text-xs mt-1">~/github-viewer</div>
       </div>
 
-      {/* Navigation Menu */}
-      <nav className="flex-1 overflow-y-auto p-4 space-y-1">
+      {/* Nav */}
+      <nav className="flex-1 overflow-y-auto p-3 space-y-0.5">
         {menuItems.map((item, index) => {
           const Icon = item.icon;
           return (
             <a
               key={index}
               href="#"
-              className="flex items-center gap-3 px-4 py-3 rounded-lg text-github-text hover:bg-github-border hover:text-white transition"
+              className="flex items-center gap-3 px-3 py-2.5 rounded text-terminal-muted hover:text-terminal-bright hover:bg-terminal-dim transition group"
             >
-              <Icon size={16} className="flex-shrink-0" />
-              <span className="font-medium">{item.label}</span>
+              <span className="text-terminal-muted group-hover:text-terminal-text">
+                <Icon size={13} className="flex-shrink-0" />
+              </span>
+              <span className="text-xs">
+                <span className="text-terminal-muted">~/</span>{item.label}
+              </span>
             </a>
           );
         })}
       </nav>
 
-      {/* GitHub Token Section */}
-      <div className="px-4 pb-3 border-t border-github-border pt-4">
+      {/* Token Section */}
+      <div className="px-3 pb-3 border-t border-terminal-border pt-3">
         <div className="flex items-center gap-1.5 mb-2">
-          <KeyRound size={13} className="text-github-muted" />
-          <span className="text-xs text-github-muted uppercase tracking-wide">GitHub Token</span>
+          <KeyRound size={11} className="text-terminal-muted" />
+          <span className="text-xs text-terminal-muted uppercase tracking-widest">auth_token</span>
           {savedToken && (
-            <span className="ml-auto text-xs text-green-400 flex items-center gap-0.5">
-              <Check size={11} /> Active
+            <span className="ml-auto text-xs text-terminal-bright flex items-center gap-0.5">
+              <Check size={10} /> active
             </span>
           )}
         </div>
-
         <div className="relative">
           <input
             type={showToken ? 'text' : 'password'}
             value={token}
             onChange={(e) => setToken(e.target.value)}
-            onKeyDown={handleKeyDown}
+            onKeyDown={(e) => e.key === 'Enter' && handleSave()}
             placeholder="ghp_xxxxxxxxxxxx"
-            className="w-full bg-[#161b22] border border-github-border text-white text-xs px-2.5 py-2 pr-8 rounded-md focus:outline-none focus:border-blue-500 placeholder-github-muted font-mono"
+            className="w-full bg-terminal-surface border border-terminal-border text-terminal-text text-xs px-2.5 py-1.5 pr-8 rounded focus:outline-none focus:border-terminal-text placeholder-terminal-muted font-mono"
           />
           <button
             type="button"
             onClick={() => setShowToken((v) => !v)}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-github-muted hover:text-white transition"
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-terminal-muted hover:text-terminal-text transition"
           >
-            {showToken ? <EyeOff size={13} /> : <Eye size={13} />}
+            {showToken ? <EyeOff size={11} /> : <Eye size={11} />}
           </button>
         </div>
-
-        <div className="flex gap-2 mt-2">
+        <div className="flex gap-2 mt-1.5">
           <button
             onClick={handleSave}
-            className={`flex-1 text-xs py-1.5 rounded-md font-medium transition ${
+            className={`flex-1 text-xs py-1 rounded font-mono transition border ${
               saved
-                ? 'bg-green-700 text-white'
-                : 'bg-blue-600 hover:bg-blue-700 text-white'
+                ? 'border-terminal-text text-terminal-bright'
+                : 'border-terminal-border text-terminal-muted hover:border-terminal-text hover:text-terminal-text'
             }`}
           >
-            {saved ? 'Saved!' : 'Save'}
+            {saved ? '[ saved ]' : '[ save ]'}
           </button>
           {savedToken && (
             <button
               onClick={handleClear}
-              className="px-2.5 py-1.5 rounded-md bg-github-border hover:bg-red-800 text-github-muted hover:text-white transition"
+              className="px-2 py-1 rounded border border-terminal-border text-terminal-muted hover:border-terminal-red hover:text-terminal-red transition"
             >
-              <X size={13} />
+              <X size={11} />
             </button>
           )}
         </div>
-
-        <p className="text-github-muted text-xs mt-2 leading-relaxed">
-          Needed for 5,000 req/hr.{' '}
-          <a
-            href="https://github.com/settings/tokens"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-400 hover:underline"
-          >
-            Generate token
+        <p className="text-terminal-muted text-xs mt-2 leading-relaxed">
+          5k req/hr with token.{' '}
+          <a href="https://github.com/settings/tokens" target="_blank" rel="noopener noreferrer"
+            className="text-terminal-text hover:text-terminal-bright underline">
+            generate
           </a>
         </p>
       </div>
 
-      {/* Footer Section */}
-      <div className="p-4 border-t border-github-border">
-        <button className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded transition font-medium text-sm">
-          Sign Out
-        </button>
-      </div>
     </aside>
   );
 }

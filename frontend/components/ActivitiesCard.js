@@ -1,54 +1,50 @@
-import React from 'react';
-import { GitCommit, User, Clock, AlertCircle, Loader2 } from 'lucide-react';
+import { User, Clock, AlertCircle, Loader2 } from 'lucide-react';
 
 export default function ActivitiesCard({ commits, error, loading }) {
   return (
-    <div className="bg-github-bg border border-github-border rounded-lg p-5 flex flex-col h-full overflow-hidden">
-      <h2 className="text-sm font-semibold text-white mb-4 flex items-center gap-2 flex-shrink-0">
-        <GitCommit size={15} className="text-blue-400" />
-        Commit History
-      </h2>
+    <div className="border border-terminal-border rounded bg-terminal-surface flex flex-col h-full overflow-hidden terminal-hover">
+      {/* title bar */}
+      <div className="flex items-center gap-2 px-4 py-2.5 border-b border-terminal-border flex-shrink-0">
+        <span className="text-terminal-bright text-xs">$</span>
+        <span className="text-terminal-text text-xs">git log <span className="text-terminal-muted">--oneline</span></span>
+      </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto space-y-3 pr-1">
+      <div className="flex-1 min-h-0 overflow-y-auto px-3 py-2 space-y-0">
         {loading ? (
-          <div className="flex items-center gap-2 text-github-muted text-xs pt-2">
-            <Loader2 size={13} className="animate-spin" />
-            Loading commits...
+          <div className="flex items-center gap-2 text-terminal-muted text-xs pt-3">
+            <Loader2 size={12} className="animate-spin" />
+            fetching commits...
           </div>
         ) : error ? (
-          <div className="flex items-start gap-2 text-red-400 text-xs pt-2">
-            <AlertCircle size={13} className="flex-shrink-0 mt-0.5" />
+          <div className="flex items-start gap-2 text-terminal-red text-xs pt-3">
+            <AlertCircle size={12} className="flex-shrink-0 mt-0.5" />
             {error}
           </div>
         ) : commits && commits.length > 0 ? (
           commits.map((commit) => (
-            <div
-              key={commit.sha}
-              className="flex items-start gap-2.5 pb-3 border-b border-github-border last:border-b-0"
-            >
-              <GitCommit size={13} className="text-blue-400 flex-shrink-0 mt-0.5" />
-              <div className="flex-1 min-w-0">
-                <p className="text-white text-xs font-medium leading-snug line-clamp-2">
-                  {commit.message}
-                </p>
-                <div className="flex items-center gap-3 mt-1.5">
-                  <span className="flex items-center gap-1 text-github-muted text-xs">
-                    <User size={10} />
-                    {commit.author}
-                  </span>
-                  <span className="flex items-center gap-1 text-github-muted text-xs">
-                    <Clock size={10} />
-                    {commit.timestamp}
-                  </span>
+            <div key={commit.sha}
+              className="py-2.5 border-b border-terminal-border last:border-b-0 group">
+              <div className="flex items-start gap-2">
+                <span className="text-terminal-muted text-xs mt-0.5 flex-shrink-0">{'>'}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <code className="text-terminal-bright text-xs font-bold">{commit.sha}</code>
+                  </div>
+                  <p className="text-terminal-text text-xs leading-snug line-clamp-2">{commit.message}</p>
+                  <div className="flex items-center gap-3 mt-1">
+                    <span className="flex items-center gap-1 text-terminal-muted text-xs">
+                      <User size={9} />{commit.author}
+                    </span>
+                    <span className="flex items-center gap-1 text-terminal-muted text-xs">
+                      <Clock size={9} />{commit.timestamp}
+                    </span>
+                  </div>
                 </div>
-                <span className="font-mono text-xs text-blue-400 mt-0.5 block">
-                  {commit.sha}
-                </span>
               </div>
             </div>
           ))
         ) : (
-          <p className="text-github-muted text-xs pt-2">No commits found</p>
+          <p className="text-terminal-muted text-xs pt-3">// no commits found</p>
         )}
       </div>
     </div>

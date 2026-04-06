@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -11,43 +13,46 @@
 html,
 body {
   background-color: #0d1117;
-  color: #c9d1d9;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  color: #22c55e;
+  font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* GitHub-like styling */
-.github-border {
-  border-color: #30363d;
+/* Terminal card hover */
+.terminal-hover {
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.terminal-hover:hover {
+  border-color: #22c55e;
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.15);
 }
 
-.github-hover {
-  transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out;
+/* Scrollbar — green terminal style */
+::-webkit-scrollbar        { width: 6px; height: 6px; }
+::-webkit-scrollbar-track  { background: #000; }
+::-webkit-scrollbar-thumb  { background: #1a3320; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #22c55e; }
+
+/* Blinking cursor */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+.cursor-blink::after {
+  content: '▊';
+  margin-left: 2px;
+  animation: blink 1.1s step-end infinite;
+  color: #22c55e;
 }
 
-.github-hover:hover {
-  background-color: #161b22;
-  border-color: #58a6ff;
+/* CRT subtle glow on text */
+.glow {
+  text-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
 }
 
-/* Scrollbar styling */
-::-webkit-scrollbar {
-  width: 12px;
-  height: 12px;
-}
-
-::-webkit-scrollbar-track {
-  background: #0d1117;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #30363d;
-  border-radius: 6px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #484f58;
+/* Terminal selection */
+::selection {
+  background: #22c55e;
+  color: #000;
 }

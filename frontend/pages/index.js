@@ -80,6 +80,13 @@ export default function Home() {
     setError(null);
     setRepoData(null);
     setRepoOwner(null);
+    // clear stale data immediately so old repo's data doesn't linger
+    setCommitsData([]);
+    setPullRequestsData([]);
+    setIssuesData([]);
+    setCommitsError(null);
+    setPrsError(null);
+    setIssuesError(null);
     try {
       const parsed = parseRepoLink(input);
       if (!parsed) throw new Error('Invalid format. Use "owner/repo" or full GitHub URL');
@@ -125,15 +132,21 @@ export default function Home() {
     setIssuesError(null);
 
     const headers = authHeaders();
-
     const backendIssuesUrl = buildIssueListUrl(process.env.NEXT_PUBLIC_API_BASE_URL, owner, repo);
 
-    const [commitsRes, prsRes, backendIssuesRes] = await Promise.all([
-      fetch(`https://api.github.com/repos/${owner}/${repo}/commits?per_page=25`, { headers }),
-      fetch(`https://api.github.com/repos/${owner}/${repo}/pulls?state=all&per_page=30`, { headers }),
+    const [
+      commitsRes,
+      prsOpenRes,
+      prsClosedRes,
+      backendIssuesRes,
+    ] = await Promise.all([
+      fetch(`https://api.github.com/repos/${owner}/${repo}/commits?per_page=30`, { headers }),
+      fetch(`https://api.github.com/repos/${owner}/${repo}/pulls?state=open&per_page=30`, { headers }),
+      fetch(`https://api.github.com/repos/${owner}/${repo}/pulls?state=closed&per_page=30`, { headers }),
       fetch(backendIssuesUrl, { headers }),
     ]);
 
+    // Commits
     if (commitsRes.ok) {
       const json = await commitsRes.json();
       setCommitsData(
@@ -149,10 +162,13 @@ export default function Home() {
       setCommitsError(await parseApiError(commitsRes));
     }
 
-    if (prsRes.ok) {
-      const json = await prsRes.json();
+    // Pull Requests — merge open + closed
+    const prsOk = prsOpenRes.ok || prsClosedRes.ok;
+    if (prsOk) {
+      const openPRs   = prsOpenRes.ok   ? await prsOpenRes.json()   : [];
+      const closedPRs = prsClosedRes.ok ? await prsClosedRes.json() : [];
       setPullRequestsData(
-        json.map((pr) => ({
+        [...openPRs, ...closedPRs].map((pr) => ({
           id: pr.id,
           title: pr.title,
           state: pr.state,
@@ -160,9 +176,11 @@ export default function Home() {
           createdAt: timeAgo(pr.created_at),
         }))
       );
+      if (!prsOpenRes.ok)   setPrsError(await parseApiError(prsOpenRes));
+      if (!prsClosedRes.ok) setPrsError(await parseApiError(prsClosedRes));
     } else {
       setPullRequestsData([]);
-      setPrsError(await parseApiError(prsRes));
+      setPrsError(await parseApiError(prsOpenRes));
     }
 
     if (backendIssuesRes.ok) {
@@ -205,26 +223,26 @@ export default function Home() {
       {/* Search button — top right */}
       <button
         onClick={() => setShowSearch(true)}
-        className="fixed top-4 right-4 z-40 bg-[#161b22] hover:bg-github-border border border-github-border text-github-text hover:text-white p-2.5 rounded-lg transition shadow-lg"
+        className="fixed top-4 right-4 z-40 bg-terminal-surface border border-terminal-border text-terminal-muted hover:border-terminal-text hover:text-terminal-bright p-2.5 rounded transition font-mono"
         title="Search repository (Ctrl+K)"
       >
-        <Search size={18} />
+        <Search size={16} />
       </button>
 
-      <main className="ml-64 bg-github-bg h-screen overflow-hidden flex flex-col p-8">
+      <main className="ml-64 bg-terminal-bg h-screen overflow-hidden flex flex-col p-6">
         <div className="flex flex-col flex-1 min-h-0 max-w-7xl w-full">
 
           {error && (
-            <div className="bg-red-900 bg-opacity-20 border border-red-700 text-red-300 px-4 py-3 rounded-lg mb-4 text-sm flex-shrink-0">
-              {error}
+            <div className="border border-terminal-red text-terminal-red px-4 py-2.5 rounded mb-4 text-xs flex-shrink-0 font-mono">
+              <span className="text-terminal-muted mr-2">error:</span>{error}
             </div>
           )}
 
           {loading && (
             <div className="flex items-center justify-center flex-1">
-              <div className="text-center">
-                <div className="animate-spin border-4 border-github-border border-t-blue-500 rounded-full w-10 h-10 mx-auto mb-4" />
-                <p className="text-github-muted text-sm">Loading repository...</p>
+              <div className="text-center font-mono">
+                <div className="text-terminal-bright text-sm mb-2 cursor-blink">fetching repository</div>
+                <div className="text-terminal-muted text-xs">please wait...</div>
               </div>
             </div>
           )}
@@ -235,21 +253,24 @@ export default function Home() {
                 <UserProfile user={repoOwner} />
               </div>
 
-              <div className="mb-4 flex-shrink-0">
-                <h2 className="text-lg font-bold text-white">{repoData.full_name}</h2>
+              <div className="mb-3 flex-shrink-0 font-mono">
+                <div className="flex items-center gap-2">
+                  <span className="text-terminal-muted text-xs">repo</span>
+                  <span className="text-terminal-bright text-sm font-bold glow">{repoData.full_name}</span>
+                </div>
                 {repoData.description && (
-                  <p className="text-github-muted text-sm mt-1">{repoData.description}</p>
+                  <p className="text-terminal-muted text-xs mt-0.5 italic">// {repoData.description}</p>
                 )}
               </div>
 
-              <div className="grid grid-cols-4 gap-4 mb-4 flex-shrink-0">
-                <StatsCard title="Stars" count={repoData.stargazers_count} icon={Star} iconColor="text-yellow-400" />
-                <StatsCard title="Forks" count={repoData.forks_count} icon={GitFork} iconColor="text-blue-400" />
-                <StatsCard title="Watchers" count={repoData.watchers_count} icon={Eye} iconColor="text-green-400" />
-                <StatsCard title="Open Issues" count={repoData.open_issues_count} icon={CircleDot} iconColor="text-orange-400" />
+              <div className="grid grid-cols-4 gap-3 mb-4 flex-shrink-0">
+                <StatsCard title="stars"       count={repoData.stargazers_count} icon={Star}      />
+                <StatsCard title="forks"       count={repoData.forks_count}      icon={GitFork}   />
+                <StatsCard title="watchers"    count={repoData.watchers_count}   icon={Eye}       />
+                <StatsCard title="open_issues" count={repoData.open_issues_count} icon={CircleDot} />
               </div>
 
-              <div className="grid grid-cols-3 gap-5 flex-1 min-h-0 overflow-hidden">
+              <div className="grid grid-cols-3 gap-4 flex-1 min-h-0 overflow-hidden">
                 <ActivitiesCard commits={commitsData} error={commitsError} loading={extrasLoading} />
                 <PullRequestsCard pullRequests={pullRequestsData} error={prsError} loading={extrasLoading} />
                 <IssuesCard issues={issuesData} error={issuesError} loading={extrasLoading} />
@@ -259,12 +280,12 @@ export default function Home() {
 
           {!loading && !repoOwner && !error && (
             <div className="flex items-center justify-center flex-1">
-              <div className="text-center">
-                <Search size={36} className="text-github-muted mx-auto mb-3" />
-                <p className="text-white font-medium mb-1">Search a GitHub repository</p>
-                <p className="text-github-muted text-sm">
-                  Press <kbd className="px-1.5 py-0.5 rounded border border-github-border font-mono text-xs">Ctrl+K</kbd> or click the search icon
-                </p>
+              <div className="text-center font-mono">
+                <div className="text-terminal-bright text-lg mb-2 cursor-blink glow">synapse</div>
+                <div className="text-terminal-muted text-xs mb-4">github repository viewer</div>
+                <div className="text-terminal-text text-xs border border-terminal-border rounded px-4 py-2.5 inline-block">
+                  press <span className="text-terminal-bright">Ctrl+K</span> to search a repository
+                </div>
               </div>
             </div>
           )}
