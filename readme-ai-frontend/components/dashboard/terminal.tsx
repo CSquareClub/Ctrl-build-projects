@@ -31,7 +31,7 @@ const logs = {
   ],
   generating: [
     { text: "→ Initializing AI model...", type: "info", delay: 0 },
-    { text: "✓ Model loaded: GPT-4-turbo", type: "success", delay: 600 },
+    { text: "✓ Model loaded: Qwen2.5-Coder", type: "success", delay: 600 },
     { text: "→ Generating README sections...", type: "info", delay: 1000 },
     { text: "  [████████░░░░░░░░] 50% - Features", type: "progress", delay: 1500 },
     { text: "  [████████████░░░░] 75% - Installation", type: "progress", delay: 2200 },
