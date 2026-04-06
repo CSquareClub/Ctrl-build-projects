@@ -7,6 +7,17 @@ const API_BASE_URL = 'http://localhost:8001'; // Backend API URL
 
 class DashboardLinkedRepos {
     constructor() {
+        // Get session from URL or localStorage
+        const params = new URLSearchParams(window.location.search);
+        const sessionId = params.get('session');
+        
+        if (sessionId) {
+            localStorage.setItem('session_id', sessionId);
+            // Clean up URL to remove session parameter
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+        
+        this.sessionId = localStorage.getItem('session_id');
         this.userId = localStorage.getItem('user_id') || this.generateUserId();
         this.linkedRepos = [];
         this.init();
@@ -24,6 +35,42 @@ class DashboardLinkedRepos {
     }
 
     async loadLinkedRepositories() {
+        // Add dummy repositories for testing
+        const dummyRepos = [
+            {
+                id: 'dummy-1',
+                name: 'react-dashboard-app',
+                url: 'https://github.com/example/react-dashboard-app',
+                is_private: false,
+                stars: 245,
+                last_updated: new Date(Date.now() - 3600000 * 5).toISOString() // 5 hours ago
+            },
+            {
+                id: 'dummy-2',
+                name: 'nodejs-api-server',
+                url: 'https://github.com/example/nodejs-api-server',
+                is_private: true,
+                stars: 89,
+                last_updated: new Date(Date.now() - 86400000 * 2).toISOString() // 2 days ago
+            },
+            {
+                id: 'dummy-3',
+                name: 'python-ml-toolkit',
+                url: 'https://github.com/example/python-ml-toolkit',
+                is_private: false,
+                stars: 1523,
+                last_updated: new Date(Date.now() - 3600000 * 12).toISOString() // 12 hours ago
+            },
+            {
+                id: 'dummy-4',
+                name: 'vue-ecommerce-platform',
+                url: 'https://github.com/example/vue-ecommerce-platform',
+                is_private: true,
+                stars: 67,
+                last_updated: new Date(Date.now() - 86400000).toISOString() // 1 day ago
+            }
+        ];
+
         try {
             const response = await fetch(
                 `${API_BASE_URL}/auth/github/linked-repos?user_id=${this.userId}`,
@@ -31,15 +78,20 @@ class DashboardLinkedRepos {
             );
 
             if (!response.ok) {
-                // User hasn't connected GitHub yet, show empty state
-                this.showEmptyState();
+                // User hasn't connected GitHub yet, use dummy repos
+                console.log('Using dummy repositories for testing');
+                this.linkedRepos = dummyRepos;
+                this.renderLinkedRepositories();
                 return;
             }
 
             const data = await response.json();
 
             if (data.count === 0) {
-                this.showEmptyState();
+                // No real repos, use dummy repos
+                console.log('No real repos found, using dummy repositories');
+                this.linkedRepos = dummyRepos;
+                this.renderLinkedRepositories();
                 return;
             }
 
@@ -47,8 +99,10 @@ class DashboardLinkedRepos {
             this.renderLinkedRepositories();
 
         } catch (error) {
-            console.error('Failed to load linked repositories:', error);
-            this.showEmptyState();
+            console.error('Failed to load linked repositories, using dummy data:', error);
+            // On error, show dummy repos instead of empty state
+            this.linkedRepos = dummyRepos;
+            this.renderLinkedRepositories();
         }
     }
 
@@ -101,13 +155,54 @@ class DashboardLinkedRepos {
                     </span>
                     <span>${lastUpdated}</span>
                 </div>
-                <a href="${repo.url}" target="_blank" rel="noopener noreferrer" class="px-4 py-2 rounded-full bg-indigo-600/10 text-indigo-400 font-headline font-bold text-xs hover:bg-indigo-600 hover:text-white transition-all active:scale-95">
-                    View
-                </a>
+                <div class="flex gap-2">
+                    <button class="use-repo-btn px-3 py-2 rounded-full bg-green-600/10 text-green-400 font-headline font-bold text-xs hover:bg-green-600 hover:text-white transition-all active:scale-95" data-repo='${JSON.stringify(repo)}'>
+                        USE
+                    </button>
+                    <a href="${repo.url}" target="_blank" rel="noopener noreferrer" class="px-4 py-2 rounded-full bg-indigo-600/10 text-indigo-400 font-headline font-bold text-xs hover:bg-indigo-600 hover:text-white transition-all active:scale-95">
+                        View
+                    </a>
+                </div>
             </div>
         `;
 
+        // Add click handler to USE button
+        const useBtn = div.querySelector('.use-repo-btn');
+        useBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.selectRepository(repo);
+        });
+
         return div;
+    }
+
+    selectRepository(repo) {
+        // Store selected repository in localStorage
+        localStorage.setItem('selected_repo', JSON.stringify(repo));
+        localStorage.setItem('selected_repo_id', repo.id || repo.name);
+        
+        // Show feedback
+        this.showRepoSelected(repo.name);
+        
+        // Navigate to home page after a short delay
+        setTimeout(() => {
+            window.location.href = 'home.html';
+        }, 800);
+    }
+
+    showRepoSelected(repoName) {
+        // Create a toast notification
+        const toast = document.createElement('div');
+        toast.className = 'fixed bottom-6 right-6 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3 animate-pulse z-50';
+        toast.innerHTML = `
+            <span class="material-symbols-outlined">check_circle</span>
+            <span class="font-label font-bold">Repository selected: ${repoName}</span>
+        `;
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.remove();
+        }, 2000);
     }
 
     showEmptyState() {
