@@ -1,64 +1,73 @@
-import React from 'react';
+import { Link, useLocation } from "react-router-dom";
 
 export default function SideNavBar() {
+  const location = useLocation();
+  const isActive = (path) => location.pathname === path;
+
   return (
-    <aside className="bg-slate-900 dark:bg-[#181c22] fixed left-0 top-14 h-[calc(100vh-56px)] w-60 flex flex-col py-4 gap-2 border-none">
-      <div className="px-6 py-2 mb-4">
-        <p className="font-mono uppercase text-[10px] tracking-tighter text-slate-500">
-          Navigation
-        </p>
-        <p className="font-mono uppercase text-xs tracking-tighter text-blue-400">
-          Management
-        </p>
+    <aside className="fixed left-0 top-[52px] h-[calc(100vh-52px)] w-[220px] flex flex-col py-8 px-4 bg-[#0b0e14] border-r border-white/5 z-40 hidden md:flex">
+      <div className="mb-8 px-2">
+        <div className="flex items-center gap-3 mb-1">
+          <div className="w-8 h-8 rounded bg-surface-container-high flex items-center justify-center">
+            <span className="material-symbols-outlined text-violet-500">terminal</span>
+          </div>
+          <div>
+            <p className="text-white font-bold text-sm tracking-tight">Workspace</p>
+            <p className="text-[10px] text-slate-500 uppercase tracking-widest font-mono">Engineering</p>
+          </div>
+        </div>
       </div>
 
-      <a
-        className="flex items-center gap-3 px-6 py-3 text-slate-400 dark:text-slate-500 hover:bg-slate-800 dark:hover:bg-[#262a31] hover:text-slate-200 transition-all"
-        href="#"
-      >
-        <span className="material-symbols-outlined">dashboard</span>
-        <span className="font-mono uppercase text-xs tracking-tighter">Dashboard</span>
-      </a>
-
-      <a
-        className="flex items-center gap-3 px-6 py-3 text-slate-400 dark:text-slate-500 hover:bg-slate-800 dark:hover:bg-[#262a31] hover:text-slate-200 transition-all"
-        href="#"
-      >
-        <span className="material-symbols-outlined">list_alt</span>
-        <span className="font-mono uppercase text-xs tracking-tighter">Issues</span>
-      </a>
-
-      <a
-        className="flex items-center gap-3 px-6 py-3 text-blue-400 dark:text-[#58a6ff] border-l-2 border-blue-400 bg-blue-400/5 translate-x-1"
-        href="#"
-      >
-        <span className="material-symbols-outlined">rule</span>
-        <span className="font-mono uppercase text-xs tracking-tighter">Triage</span>
-      </a>
-
-      <a
-        className="flex items-center gap-3 px-6 py-3 text-slate-400 dark:text-slate-500 hover:bg-slate-800 dark:hover:bg-[#262a31] hover:text-slate-200 transition-all"
-        href="#"
-      >
-        <span className="material-symbols-outlined">label</span>
-        <span className="font-mono uppercase text-xs tracking-tighter">Labels</span>
-      </a>
-
-      <a
-        className="flex items-center gap-3 px-6 py-3 text-slate-400 dark:text-slate-500 hover:bg-slate-800 dark:hover:bg-[#262a31] hover:text-slate-200 transition-all"
-        href="#"
-      >
-        <span className="material-symbols-outlined">settings</span>
-        <span className="font-mono uppercase text-xs tracking-tighter">Settings</span>
-      </a>
-
-      <div className="mt-auto border-t border-outline-variant/10 pt-4">
-        <a
-          className="flex items-center gap-3 px-6 py-3 text-slate-400 hover:text-slate-200"
-          href="#"
+      <div className="flex flex-col gap-1 flex-1">
+        <Link
+          to="/dashboard"
+          className={`flex items-center gap-3 px-3 py-2 rounded-md transition-transform duration-150 ease-in-out ${
+            isActive("/dashboard")
+              ? "text-white bg-violet-500/10"
+              : "text-slate-500 hover:text-violet-400 hover:bg-white/5"
+          }`}
         >
-          <span className="material-symbols-outlined">keyboard_double_arrow_left</span>
-          <span className="font-mono uppercase text-xs tracking-tighter">Collapse</span>
+          <span className="material-symbols-outlined">dashboard</span>
+          <span className="font-mono text-xs uppercase tracking-widest">Dashboard</span>
+        </Link>
+
+        <Link
+          to="/triage"
+          className={`flex items-center gap-3 px-3 py-2 rounded-md transition-transform duration-150 ease-in-out ${
+            isActive("/triage")
+              ? "text-white bg-violet-500/10"
+              : "text-slate-500 hover:text-violet-400 hover:bg-white/5"
+          }`}
+        >
+          <span className="material-symbols-outlined">rule</span>
+          <span className="font-mono text-xs uppercase tracking-widest">Triage</span>
+        </Link>
+
+        <div className="mt-6">
+          <Link
+            to="/"
+            className="block w-full py-2 px-3 bg-primary-container text-white text-xs font-mono uppercase tracking-widest rounded-md hover:shadow-[0_0_15px_rgba(124,58,237,0.4)] transition-all text-center"
+          >
+            New Issue
+          </Link>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-1 border-t border-white/5 pt-4">
+        <Link
+          to="/settings"
+          className="flex items-center gap-3 px-3 py-2 text-slate-500 hover:text-violet-400 hover:bg-white/5 transition-transform duration-150 ease-in-out"
+        >
+          <span className="material-symbols-outlined">settings</span>
+          <span className="font-mono text-xs uppercase tracking-widest">Settings</span>
+        </Link>
+
+        <a
+          href="#"
+          className="flex items-center gap-3 px-3 py-2 text-slate-500 hover:text-violet-400 hover:bg-white/5 transition-transform duration-150 ease-in-out"
+        >
+          <span className="material-symbols-outlined">description</span>
+          <span className="font-mono text-xs uppercase tracking-widest">Docs</span>
         </a>
       </div>
     </aside>
