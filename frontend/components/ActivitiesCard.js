@@ -9,7 +9,7 @@ export default function ActivitiesCard({ commits }) {
         Commit History
       </h2>
 
-      <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+      <div className="flex-1 min-h-0 overflow-y-auto space-y-3 pr-1">
         {commits && commits.length > 0 ? (
           commits.map((commit) => (
             <div
