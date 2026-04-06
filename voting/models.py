@@ -1,3 +1,4 @@
+import hashlib
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
@@ -79,35 +80,17 @@ class Candidate(models.Model):
 
 
 class Vote(models.Model):
-    """
-    One vote = one user + one election + one candidate.
+    election = models.ForeignKey(Election, on_delete=models.CASCADE, related_name='votes')
 
-    Security notes:
-    - unique_together on (voter, election) prevents double voting at DB level
-    - This is the REAL enforcement — backend, not frontend
-    - voter_ip is stored for audit trail purposes
-    """
-    voter = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        related_name='votes'
-    )
-    election = models.ForeignKey(
-        Election,
-        on_delete=models.CASCADE,
-        related_name='votes'
-    )
-    candidate = models.ForeignKey(
-        Candidate,
-        on_delete=models.CASCADE,
-        related_name='votes'
-    )
+    encrypted_vote = models.CharField(max_length=255)
+
+    voter_hash = models.CharField(max_length=64)
+
     voter_ip = models.GenericIPAddressField(null=True, blank=True)
     voted_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        # DATABASE-LEVEL constraint: one vote per user per election
-        unique_together = ['voter', 'election']
+        unique_together = ['election', 'voter_hash']
 
     def __str__(self):
-        return f"{self.voter.username} → {self.candidate.name} in {self.election.title}"
+        return f"Encrypted vote in {self.election.title}"

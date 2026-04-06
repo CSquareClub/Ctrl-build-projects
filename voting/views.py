@@ -12,6 +12,8 @@ from rest_framework import status
 
 from .models import Election, Candidate, Vote
 from .serializers import ElectionSerializer, ElectionListSerializer, VoteSerializer
+import hashlib
+from .utils.encryption import encrypt_vote, decrypt_vote
 
 
 # ─────────────────────────────────────────────
@@ -60,49 +62,92 @@ def election_detail(request, election_id):
 
 
 @login_required
+
+def hash_identity(identity):
+    return hashlib.sha256(identity.encode()).hexdigest()
+
 def cast_vote(request, election_id):
     """Handle vote form submission from the frontend."""
-    if request.method != 'POST':
+
+    if request.method != "POST":
         return redirect('election_detail', election_id=election_id)
 
     election = get_object_or_404(Election, id=election_id)
 
-    # Rule 1: Election must be active
+    # 🚫 Election must be active
     if not election.is_active:
         messages.error(request, f"This election is {election.status}. Voting is not allowed.")
         return redirect('election_detail', election_id=election_id)
 
-    # Rule 2: No double voting
-    if Vote.objects.filter(voter=request.user, election=election).exists():
-        messages.error(request, "You have already voted in this election.")
+    # 🧾 Get ID (Aadhaar/College ID)
+    identity = request.POST.get("aadhaar")
+
+    if not identity:
+        messages.error(request, "ID is required")
         return redirect('election_detail', election_id=election_id)
 
-    candidate_id = request.POST.get('candidate_id')
+    # 🔐 Hash identity
+    voter_hash = hash_identity(identity)
+
+    # 🚫 Prevent duplicate voting
+    if Vote.objects.filter(election=election, voter_hash=voter_hash).exists():
+        messages.error(request, "You have already voted with this ID")
+        return redirect('election_detail', election_id=election_id)
+
+    # 🗳 Get candidate
+    candidate_id = request.POST.get("candidate_id")
+    if not candidate_id:
+        messages.error(request, "Please select a candidate")
+        return redirect('election_detail', election_id=election_id)
+
     candidate = get_object_or_404(Candidate, id=candidate_id, election=election)
 
-    # Get voter IP
+    # 🌐 Get IP
     ip = request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', ''))
     if ',' in ip:
         ip = ip.split(',')[0].strip()
 
+    # 🔐 Encrypt vote
+    encrypted = encrypt_vote(candidate.id)
+
+    # 💾 Save vote
     Vote.objects.create(
-        voter=request.user,
         election=election,
-        candidate=candidate,
-        voter_ip=ip,
+        encrypted_vote=encrypted,
+        voter_hash=voter_hash,
+        voter_ip=ip
     )
 
-    messages.success(request, f"✅ Your vote for {candidate.name} has been recorded!")
-    return redirect('election_detail', election_id=election_id)
+    messages.success(request, "Your vote has been securely recorded!")
+    return redirect('election_detail', election_id=election_id))
 
 
 def results_view(request, election_id):
-    """Public results page for any election."""
     election = get_object_or_404(Election, id=election_id)
+
+    # 🚫 BLOCK RESULTS
+    if election.status != 'ended':
+        return render(request, 'voting/results.html', {
+            'election': election,
+            'candidates': [],
+            'message': "Results are locked until election ends"
+        })
+
+    votes = election.votes.all()
+    vote_count = {}
+
+    for vote in votes:
+        candidate_id = decrypt_vote(vote.encrypted_vote)
+        vote_count[candidate_id] = vote_count.get(candidate_id, 0) + 1
+
     candidates = election.candidates.all()
+
+    for c in candidates:
+        c.decrypted_votes = vote_count.get(c.id, 0)
+
     return render(request, 'voting/results.html', {
         'election': election,
-        'candidates': candidates,
+        'candidates': candidates
     })
 
 
@@ -263,3 +308,4 @@ def api_results(request, election_id):
         'total_votes': election.total_votes,
         'results': results,
     })
+

@@ -4,9 +4,14 @@
 {% block content %}
 <div class="page-header">
     <a href="{% url 'home' %}" class="back-link">← All Elections</a>
-    <div class="election-status-badge status-{{ election.status }}">{{ election.status|upper }}</div>
+
+    <div class="election-status-badge status-{{ election.status }}">
+        {{ election.status|upper }}
+    </div>
+
     <h1 class="page-title">{{ election.title }}</h1>
     <p class="page-subtitle">{{ election.description }}</p>
+
     <div class="election-timing">
         <span>Start: {{ election.start_time|date:"M d, Y H:i" }} UTC</span>
         <span>End: {{ election.end_time|date:"M d, Y H:i" }} UTC</span>
@@ -14,77 +19,133 @@
     </div>
 </div>
 
+
 {% if election.status == 'active' and not user_vote %}
-    <!-- VOTING FORM -->
-    <div class="vote-section">
-        <h2 class="section-title">Choose Your Candidate</h2>
-        <form method="POST" action="{% url 'cast_vote' election.id %}" id="voteForm">
-            {% csrf_token %}
-            <div class="candidates-grid">
-                {% for candidate in candidates %}
-                <label class="candidate-card" for="candidate_{{ candidate.id }}">
-                    <input
-                        type="radio"
-                        name="candidate_id"
-                        id="candidate_{{ candidate.id }}"
-                        value="{{ candidate.id }}"
-                        class="candidate-radio"
-                    >
-                    <div class="candidate-inner">
-                        <div class="candidate-avatar">{{ candidate.name|slice:":1" }}</div>
-                        <div class="candidate-info">
-                            <h3 class="candidate-name">{{ candidate.name }}</h3>
-                            <p class="candidate-desc">{{ candidate.description }}</p>
-                        </div>
-                        <div class="candidate-check">✓</div>
+
+<!-- ===================== VOTING FORM ===================== -->
+<div class="vote-section">
+    <h2 class="section-title">Secure Voting Panel</h2>
+
+    <form method="POST" action="{% url 'cast_vote' election.id %}" id="voteForm">
+        {% csrf_token %}
+
+        <!-- 🧾 ID INPUT -->
+        <div style="margin-bottom: 25px;">
+            <label style="color:#ccc; font-size:14px;">
+                Enter your ID (Aadhaar / College ID)
+            </label>
+
+            <input
+                type="text"
+                name="aadhaar"
+                placeholder="Enter your ID"
+                required
+                style="width:100%; padding:12px; border-radius:6px; border:1px solid #333; margin-top:6px;"
+            >
+        </div>
+
+        <!-- 🗳 CANDIDATES -->
+        <div class="candidates-grid">
+            {% for candidate in candidates %}
+            <label class="candidate-card" for="candidate_{{ candidate.id }}">
+                <input
+                    type="radio"
+                    name="candidate_id"
+                    id="candidate_{{ candidate.id }}"
+                    value="{{ candidate.id }}"
+                    class="candidate-radio"
+                >
+
+                <div class="candidate-inner">
+                    <div class="candidate-avatar">
+                        {{ candidate.name|slice:":1" }}
                     </div>
-                </label>
-                {% endfor %}
-            </div>
-            <div class="vote-submit">
-                <button type="submit" class="btn btn-primary btn-large" id="submitBtn" disabled>
-                    🗳 Submit Vote
-                </button>
-                <p class="vote-warning">⚠ Your vote is permanent and cannot be changed.</p>
-            </div>
-        </form>
-    </div>
+
+                    <div class="candidate-info">
+                        <h3 class="candidate-name">{{ candidate.name }}</h3>
+                        <p class="candidate-desc">{{ candidate.description }}</p>
+                    </div>
+
+                    <div class="candidate-check">✓</div>
+                </div>
+            </label>
+            {% endfor %}
+        </div>
+
+        <!-- SUBMIT -->
+        <div class="vote-submit">
+            <button type="submit" class="btn btn-primary btn-large" id="submitBtn" disabled>
+                🔐 Submit Secure Vote
+            </button>
+
+            <p class="vote-warning">
+                ⚠ Your vote is encrypted and cannot be changed.
+            </p>
+        </div>
+    </form>
+</div>
+
 
 {% elif user_vote %}
-    <!-- ALREADY VOTED -->
-    <div class="voted-confirmation">
-        <div class="voted-icon">✅</div>
-        <h2>Vote Recorded!</h2>
-        <p>You voted for <strong>{{ user_vote.candidate.name }}</strong></p>
-        <p class="voted-time">Cast at {{ user_vote.voted_at|date:"M d, Y H:i" }} UTC</p>
-        <a href="{% url 'results' election.id %}" class="btn btn-primary">View Live Results →</a>
-    </div>
 
-{% elif election.status == 'upcoming' %}
-    <div class="info-box">
-        <p>🔵 This election hasn't started yet. Check back at {{ election.start_time|date:"M d, Y H:i" }} UTC.</p>
-    </div>
+<!-- ===================== ALREADY VOTED ===================== -->
+<div class="voted-confirmation">
+    <div class="voted-icon">✅</div>
 
-{% elif election.status == 'ended' %}
-    <div class="info-box info-box--ended">
-        <p>⚫ This election has ended.</p>
-        <a href="{% url 'results' election.id %}" class="btn btn-primary">View Final Results →</a>
-    </div>
-{% endif %}
+    <h2>Vote Recorded Securely!</h2>
 
-<!-- LIVE RESULTS PREVIEW -->
-<div class="results-preview">
-    <h2 class="section-title">Current Standing</h2>
-    <div class="results-list" id="liveResults">
-        {% for candidate in candidates %}
-        <div class="result-row">
-            <span class="result-name">{{ candidate.name }}</span>
-            <div class="result-bar-wrap">
-                <div class="result-bar" style="width: {{ candidate.vote_percentage }}%"></div>
-            </div>
-            <span class="result-stat">{{ candidate.vote_count }} votes ({{ candidate.vote_percentage }}%)</span>
-        </div>
-        {% endfor %}
+    <p>Your vote has been encrypted and stored.</p>
+
+    <p class="voted-time">
+        Cast at {{ user_vote.voted_at|date:"M d, Y H:i" }} UTC
+    </p>
+
+    <div style="margin-top: 15px;">
+        <span style="color:#0f0;">🔐 Your vote is hidden until results are unlocked</span>
     </div>
 </div>
+
+
+{% elif election.status == 'upcoming' %}
+
+<!-- ===================== UPCOMING ===================== -->
+<div class="info-box">
+    🔵 This election hasn't started yet.<br>
+    Starts at {{ election.start_time|date:"M d, Y H:i" }} UTC
+</div>
+
+
+{% elif election.status == 'ended' %}
+
+<!-- ===================== ENDED ===================== -->
+<div class="info-box">
+    ⚫ This election has ended.<br>
+
+    <a href="{% url 'results' election.id %}" class="btn btn-primary" style="margin-top:10px;">
+        View Final Results →
+    </a>
+</div>
+
+{% endif %}
+
+
+<!-- ===================== RESULTS STATUS ===================== -->
+<div class="results-preview">
+    <h2 class="section-title">Results Status</h2>
+
+    {% if election.status != 'ended' %}
+        <div class="info-box">
+            🔒 Results are encrypted and hidden until the election ends.
+        </div>
+    {% else %}
+        <div class="info-box">
+            ✅ Election completed. Results are now available.
+
+            <a href="{% url 'results' election.id %}" class="btn btn-primary" style="margin-left:10px;">
+                View Results
+            </a>
+        </div>
+    {% endif %}
+</div>
+
 {% endblock %}

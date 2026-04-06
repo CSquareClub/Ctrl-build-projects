@@ -7,52 +7,60 @@
     <div class="election-status-badge status-{{ election.status }}">{{ election.status|upper }}</div>
     <h1 class="page-title">{{ election.title }}</h1>
     <p class="page-subtitle">{{ election.description }}</p>
+
     <div class="election-timing">
         <span>Total Votes Cast: <strong>{{ election.total_votes }}</strong></span>
         <span>End: {{ election.end_time|date:"M d, Y H:i" }} UTC</span>
     </div>
 </div>
 
-<div class="results-full">
-    <h2 class="section-title">
-        {% if election.status == 'ended' %}Final Results{% else %}Live Results{% endif %}
-    </h2>
+<!-- 🔒 LOCK RESULTS -->
+{% if election.status != 'ended' %}
 
-    {% if election.total_votes == 0 %}
-        <div class="empty-state">No votes have been cast yet.</div>
-    {% else %}
+<div class="info-box">
+    🔒 Results are encrypted and locked until the election ends.
+</div>
+
+{% else %}
+
+<div class="results-full">
+    <h2 class="section-title">Final Results</h2>
+
+    {% if candidates %}
         {% for candidate in candidates %}
         <div class="result-row result-row--full {% if forloop.first %}result-row--winner{% endif %}">
+            
             <div class="result-rank">
                 {% if forloop.first %}🥇{% elif forloop.counter == 2 %}🥈{% elif forloop.counter == 3 %}🥉{% else %}#{{ forloop.counter }}{% endif %}
             </div>
+
             <div class="result-info">
                 <span class="result-name">{{ candidate.name }}</span>
                 <p class="result-desc">{{ candidate.description }}</p>
             </div>
+
             <div class="result-bar-wrap">
-                <div class="result-bar result-bar--animated" style="--pct: {{ candidate.vote_percentage }}%; width: {{ candidate.vote_percentage }}%"></div>
+                <div class="result-bar" style="width: {{ candidate.decrypted_votes|default:0 }}%"></div>
             </div>
+
             <div class="result-stat-block">
-                <span class="result-votes">{{ candidate.vote_count }}</span>
-                <span class="result-pct">{{ candidate.vote_percentage }}%</span>
+                <span class="result-votes">{{ candidate.decrypted_votes|default:0 }}</span>
+                <span class="result-pct">votes</span>
             </div>
+
         </div>
         {% endfor %}
+    {% else %}
+        <div class="empty-state">No votes found.</div>
     {% endif %}
 </div>
 
-{% if election.status == 'active' %}
-<div class="info-box">
-    <p>🔴 This election is still live. Results update in real time.</p>
-    <a href="{% url 'election_detail' election.id %}" class="btn btn-primary">Vote Now →</a>
-</div>
 {% endif %}
 
-<!-- API Reference box -->
 <div class="api-box">
     <h3>📡 API Access</h3>
     <code>GET /api/elections/{{ election.id }}/results/</code>
-    <p>Returns live JSON results for this election.</p>
+    <p>Returns results only after election ends.</p>
 </div>
+
 {% endblock %}
