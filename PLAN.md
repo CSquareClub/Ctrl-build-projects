@@ -1,5 +1,58 @@
 # PLAN.md
 
+## Execution Update (2026-04-06): Wave 0 backend foundation
+
+Current goal:
+
+- establish a clean FastAPI backend foundation on `chore/w1-backend-foundation`
+
+Exact scope:
+
+- scaffold `services/api` with app bootstrap, route wiring, and health endpoint
+- define explicit config/env loading path
+- create stable module boundaries for `schemas`, `core`, `github`, `embeddings`, `vectorstore`, and `triage`
+- add lightweight backend run documentation for follow-on branches
+
+Files/components likely affected:
+
+- `services/api/app/main.py`
+- `services/api/app/core/*`
+- `services/api/app/api/*`
+- `services/api/app/schemas/*`
+- `services/api/app/github/*`
+- `services/api/app/embeddings/*`
+- `services/api/app/vectorstore/*`
+- `services/api/app/triage/*`
+- `services/api/.env.example`
+- `services/api/requirements.txt`
+- `services/api/README.md`
+
+Sequencing:
+
+1. create backend directory structure and package markers
+2. implement settings/config and app bootstrap
+3. wire API router and health route
+4. add boundary interfaces/stubs for future ingestion, embeddings, vectorstore, and triage logic
+5. validate import/startup/health behavior with local commands
+
+Validation strategy:
+
+- run Python bytecode compile for backend package
+- run FastAPI app startup command if dependencies are available
+- call health route via local HTTP request
+
+Risks / open questions:
+
+- local environment may not have FastAPI dependencies installed yet
+- avoid overcommitting to long-term interfaces before Wave 1/2 implementation details settle
+
+Explicitly out of scope:
+
+- real GitHub ingestion implementation
+- real embedding generation/indexing
+- triage heuristic logic and scoring internals
+- deployment/infra automation
+
 ## Project
 
 OpenIssue
