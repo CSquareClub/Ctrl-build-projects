@@ -237,16 +237,16 @@ export default function Home() {
         <Search size={18} />
       </button>
 
-      <main className="ml-64 bg-github-bg min-h-screen p-8">
-        <div className="max-w-7xl">
+      <main className="ml-64 bg-github-bg h-screen overflow-hidden flex flex-col p-8">
+        <div className="flex flex-col flex-1 min-h-0 max-w-7xl w-full">
           {error && (
-            <div className="bg-red-900 bg-opacity-20 border border-red-700 text-red-300 px-4 py-3 rounded-lg mb-6 text-sm">
+            <div className="bg-red-900 bg-opacity-20 border border-red-700 text-red-300 px-4 py-3 rounded-lg mb-4 text-sm flex-shrink-0">
               {error}
             </div>
           )}
 
           {loading && (
-            <div className="flex items-center justify-center py-20">
+            <div className="flex items-center justify-center flex-1">
               <div className="text-center">
                 <div className="animate-spin border-4 border-github-border border-t-blue-500 rounded-full w-10 h-10 mx-auto mb-4" />
                 <p className="text-github-muted text-sm">Loading repository...</p>
@@ -257,28 +257,28 @@ export default function Home() {
           {!loading && repoOwner && repoData && (
             <>
               {/* Owner Profile */}
-              <UserProfile user={repoOwner} />
+              <div className="flex-shrink-0">
+                <UserProfile user={repoOwner} />
+              </div>
 
               {/* Repo name + description */}
-              <div className="mb-5">
-                <h2 className="text-lg font-bold text-white">
-                  {repoData.full_name}
-                </h2>
+              <div className="mb-4 flex-shrink-0">
+                <h2 className="text-lg font-bold text-white">{repoData.full_name}</h2>
                 {repoData.description && (
                   <p className="text-github-muted text-sm mt-1">{repoData.description}</p>
                 )}
               </div>
 
               {/* Stats Row */}
-              <div className="grid grid-cols-4 gap-4 mb-6">
+              <div className="grid grid-cols-4 gap-4 mb-4 flex-shrink-0">
                 <StatsCard title="Stars" count={repoData.stargazers_count} icon={Star} iconColor="text-yellow-400" />
                 <StatsCard title="Forks" count={repoData.forks_count} icon={GitFork} iconColor="text-blue-400" />
                 <StatsCard title="Watchers" count={repoData.watchers_count} icon={Eye} iconColor="text-green-400" />
                 <StatsCard title="Open Issues" count={repoData.open_issues_count} icon={CircleDot} iconColor="text-orange-400" />
               </div>
 
-              {/* Content Row: Commits | PRs | Issues */}
-              <div className="grid grid-cols-3 gap-5" style={{ minHeight: '480px' }}>
+              {/* Content Row: Commits | PRs | Issues — fills remaining height */}
+              <div className="grid grid-cols-3 gap-5 flex-1 min-h-0">
                 <ActivitiesCard commits={commitsData} />
                 <PullRequestsCard pullRequests={pullRequestsData} />
                 <IssuesCard issues={issuesData} />
@@ -287,7 +287,7 @@ export default function Home() {
           )}
 
           {!loading && !repoOwner && !error && (
-            <div className="flex items-center justify-center py-20">
+            <div className="flex items-center justify-center flex-1">
               <div className="text-center">
                 <Search size={32} className="text-github-muted mx-auto mb-3" />
                 <p className="text-github-muted text-sm">
