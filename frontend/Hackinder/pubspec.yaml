@@ -1,0 +1,41 @@
+name: hackinder
+description: "Tinder-style hackathon team matching app."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.10.4
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # HTTP calls to Spring Boot
+  http: ^1.2.1
+
+  # Supabase auth + DB
+  supabase_flutter: ^2.3.4
+
+  # Tinder swipe cards
+  flutter_card_swiper: ^6.0.0
+
+  # Icons and UI
+  cupertino_icons: ^1.0.8
+  google_fonts: ^6.2.1
+
+  # State management
+  provider: ^6.1.2
+
+  # Loading animations
+  shimmer: ^3.0.0
+
+  # Url launcher
+  url_launcher: ^6.3.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
