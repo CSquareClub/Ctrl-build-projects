@@ -17,10 +17,12 @@ class IssueInput(BaseModel):
 
 class AnalysisResponse(BaseModel):
     """Response from issue analysis"""
-    classification: str = Field(..., description="Classification category: bug, feature, docs, question")
+    label: str = Field(..., description="Classification category: bug, feature, docs, question")
     priority: str = Field(..., description="Priority level: low, medium, high, critical")
+    reason: str = Field(default="", description="Reason for classification")
     labels: List[str] = Field(default_factory=list, description="Suggested labels")
-    similar_issues: List[SimilarIssue] = Field(default_factory=list, description="Similar issues found")
+    similar_issues: List[Any] = Field(default_factory=list, description="Similar issues found")
+    confidence: Dict[str, Any] = Field(default_factory=dict, description="Confidence scores")
 
 
 class ConflictInput(BaseModel):
