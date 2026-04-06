@@ -1,25 +1,38 @@
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional
 
-class ConfidenceScores(BaseModel):
-    classification: float = Field(..., ge=0.0, le=1.0)
-    priority: float = Field(..., ge=0.0, le=1.0)
 
 class SimilarIssue(BaseModel):
+    """A similar issue found in the database"""
     id: Optional[str] = None
     title: str
-    similarity: float = Field(..., ge=0.0, le=1.0)
+    score: float = Field(..., ge=0.0, le=1.0, description="Similarity score")
+
 
 class IssueInput(BaseModel):
+    """Input for issue analysis"""
     title: str = Field(..., min_length=1, max_length=200, description="The title of the GitHub issue")
     description: str = Field(..., description="The details and markdown body of the issue")
 
+
 class AnalysisResponse(BaseModel):
-    label: str = Field(..., description="Classification category (e.g., bug, feature, question)")
-    priority: str = Field(..., description="Calculated priority (e.g., high, medium, low)")
-    reason: str = Field(..., description="Short explanation for label and priority")
-    similar_issues: List[SimilarIssue] = Field(default_factory=list)
-    confidence: ConfidenceScores
+    """Response from issue analysis"""
+    classification: str = Field(..., description="Classification category: bug, feature, docs, question")
+    priority: str = Field(..., description="Priority level: low, medium, high, critical")
+    labels: List[str] = Field(default_factory=list, description="Suggested labels")
+    similar_issues: List[SimilarIssue] = Field(default_factory=list, description="Similar issues found")
+
+
+class ConflictInput(BaseModel):
+    """Input for conflict detection"""
+    code_a: str = Field(..., description="First code snippet")
+    code_b: str = Field(..., description="Second code snippet")
+
+
+class ConflictResponse(BaseModel):
+    """Response from conflict detection"""
+    conflicts: List[str] = Field(default_factory=list, description="List of conflicts")
+    summary: str = Field(..., description="Summary of differences")
 
 
 class IssueSchema:
