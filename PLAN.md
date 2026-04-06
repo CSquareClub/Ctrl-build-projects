@@ -1,5 +1,52 @@
 # PLAN.md
 
+## Execution Update (2026-04-06): Wave 2 MiniLM primary correction
+
+Current goal:
+
+- make `sentence-transformers/all-MiniLM-L6-v2` the real primary embedding path and confirm no deterministic hash embedding path powers retrieval
+
+Exact scope:
+
+- switch default provider selection to MiniLM (`minilm-l6`)
+- keep provider abstraction stable for downstream indexing/retrieval
+- make embedding normalization and truncation behavior explicit in provider metadata/docs
+- verify repeated encoding stability through real model inference
+- inspect codebase for deterministic hashing/vector stand-ins and ensure they are not in the main path
+
+Files/components likely affected:
+
+- `services/api/app/core/settings.py`
+- `services/api/app/embeddings/contracts.py`
+- `services/api/app/embeddings/providers.py`
+- `services/api/app/embeddings/service.py`
+- `services/api/.env.example`
+- `services/api/README.md`
+
+Sequencing:
+
+1. inspect embedding and vector paths for deterministic/hash behavior
+2. update provider defaults to MiniLM primary
+3. surface normalization/truncation policy in provider metadata/docs
+4. validate model output dimensions and repeat-call stability
+
+Validation strategy:
+
+- compile backend package
+- run embedding smoke script for `embed_one` and `embed_many`
+- verify MiniLM vectors are 384-dimensional and stable across repeated calls
+
+Risks / open questions:
+
+- first-run model download latency from Hugging Face
+- small floating-point differences are possible across hardware backends but should be negligible in same-process repeated calls
+
+Explicitly out of scope:
+
+- vector index implementation
+- duplicate heuristics/reranking
+- proprietary embedding providers
+
 ## Execution Update (2026-04-06): Wave 2 embedding provider layer
 
 Current goal:
