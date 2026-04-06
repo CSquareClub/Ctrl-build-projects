@@ -1,75 +1,69 @@
-import React from 'react';
 import { Building2, MapPin, Link2, Users, UserCheck } from 'lucide-react';
 
 export default function UserProfile({ user }) {
   const defaultUser = {
     login: 'username',
     avatar_url: 'https://avatars.githubusercontent.com/u/1?v=4',
-    followers: 1234,
-    following: 567,
-    bio: 'Full-stack developer | Open source enthusiast',
-    company: 'TechCorp',
-    location: 'San Francisco, CA',
-    blog: 'https://example.com',
+    followers: 0,
+    following: 0,
+    bio: '',
+    company: '',
+    location: '',
+    blog: '',
   };
 
-  const profileData = user || defaultUser;
+  const p = user || defaultUser;
 
   return (
-    <div className="bg-github-bg border border-github-border rounded-lg p-6 mb-6">
-      <div className="flex gap-6 items-start">
-        {/* Avatar */}
-        <img
-          src={profileData.avatar_url}
-          alt={profileData.login}
-          className="w-20 h-20 rounded-full border-2 border-github-border flex-shrink-0"
-        />
+    <div className="border border-terminal-border rounded bg-terminal-surface p-4 mb-4 terminal-hover">
+      {/* top bar */}
+      <div className="flex items-center gap-2 mb-3 text-terminal-muted text-xs border-b border-terminal-border pb-2">
+        <span className="text-terminal-bright">$</span>
+        <span>gh user <span className="text-terminal-text">--profile</span> {p.login}</span>
+      </div>
 
-        {/* User Info */}
+      <div className="flex gap-4 items-start">
+        {/* avatar with green ring */}
+        <div className="flex-shrink-0 relative">
+          <div className="w-16 h-16 rounded border-2 border-terminal-text p-0.5" style={{ boxShadow: '0 0 12px rgba(34,197,94,0.3)' }}>
+            <img src={p.avatar_url} alt={p.login} className="w-full h-full rounded object-cover" />
+          </div>
+        </div>
+
+        {/* info */}
         <div className="flex-1 min-w-0">
-          <h1 className="text-xl font-bold text-white mb-1">{profileData.login}</h1>
-          {profileData.bio && (
-            <p className="text-github-muted text-sm mb-4">{profileData.bio}</p>
-          )}
+          <div className="text-terminal-bright font-bold text-base glow">{p.login}</div>
+          {p.bio && <div className="text-terminal-muted text-xs mt-0.5 italic">// {p.bio}</div>}
 
-          <div className="flex gap-6 mb-3">
-            <div className="flex items-center gap-1.5 text-github-text text-sm">
-              <Users size={14} className="text-github-muted" />
-              <span className="font-semibold text-white">{(profileData.followers || 0).toLocaleString()}</span>
-              <span className="text-github-muted">followers</span>
+          <div className="flex gap-5 mt-2">
+            <div className="flex items-center gap-1.5 text-xs">
+              <Users size={11} className="text-terminal-muted" />
+              <span className="text-terminal-bright font-bold">{(p.followers||0).toLocaleString()}</span>
+              <span className="text-terminal-muted">followers</span>
             </div>
-            <div className="flex items-center gap-1.5 text-github-text text-sm">
-              <UserCheck size={14} className="text-github-muted" />
-              <span className="font-semibold text-white">{(profileData.following || 0).toLocaleString()}</span>
-              <span className="text-github-muted">following</span>
+            <div className="flex items-center gap-1.5 text-xs">
+              <UserCheck size={11} className="text-terminal-muted" />
+              <span className="text-terminal-bright font-bold">{(p.following||0).toLocaleString()}</span>
+              <span className="text-terminal-muted">following</span>
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-4 text-github-muted text-xs">
-            {profileData.company && (
-              <div className="flex items-center gap-1.5">
-                <Building2 size={12} />
-                <span>{profileData.company}</span>
-              </div>
+          <div className="flex flex-wrap gap-4 mt-2">
+            {p.company && (
+              <span className="flex items-center gap-1 text-xs text-terminal-muted">
+                <Building2 size={10} />{p.company}
+              </span>
             )}
-            {profileData.location && (
-              <div className="flex items-center gap-1.5">
-                <MapPin size={12} />
-                <span>{profileData.location}</span>
-              </div>
+            {p.location && (
+              <span className="flex items-center gap-1 text-xs text-terminal-muted">
+                <MapPin size={10} />{p.location}
+              </span>
             )}
-            {profileData.blog && (
-              <div className="flex items-center gap-1.5">
-                <Link2 size={12} />
-                <a
-                  href={profileData.blog}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-400 hover:underline truncate max-w-xs"
-                >
-                  {profileData.blog}
-                </a>
-              </div>
+            {p.blog && (
+              <a href={p.blog} target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-1 text-xs text-terminal-text hover:text-terminal-bright underline">
+                <Link2 size={10} />{p.blog}
+              </a>
             )}
           </div>
         </div>
