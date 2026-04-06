@@ -4,7 +4,7 @@ import re
 from typing import Any, Dict, Tuple
 from urllib import error, request
 
-from app.services.priority_service import assign_priority
+from app.services.priority_service import PriorityService
 
 BUG_KEYWORDS = {"error", "bug", "crash", "exception", "fail", "broken", "issue", "doesn't work", "not working"}
 FEATURE_KEYWORDS = {"feature", "add", "enhance", "improve", "request", "support", "new", "idea"}
@@ -201,7 +201,8 @@ def triage_issue(title: str, description: str) -> Dict[str, Any]:
         }
     except Exception:
         label, classification_confidence = _heuristic_classify(title, description)
-        priority, priority_confidence = assign_priority(label, title, description)
+        priority = PriorityService.determine_priority(title, description)
+        priority_confidence = 0.8
         if priority == "critical":
             priority = "high"
 

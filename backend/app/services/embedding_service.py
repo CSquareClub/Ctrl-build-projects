@@ -67,3 +67,14 @@ class EmbeddingService:
             'model_loaded': self.model is not None,
             'embedding_dimension': self.model.get_sentence_embedding_dimension() if self.model else 0
         }
+
+
+# Factory function for backward compatibility
+_embedding_service_instance = None
+
+def get_embedding_service() -> EmbeddingService:
+    """Get or create the global embedding service instance"""
+    global _embedding_service_instance
+    if _embedding_service_instance is None:
+        _embedding_service_instance = EmbeddingService()
+    return _embedding_service_instance

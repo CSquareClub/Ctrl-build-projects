@@ -94,3 +94,20 @@ class VectorService:
             'index_path': self.index_path,
             'is_loaded': self.index is not None
         }
+
+
+# Global vector service instance
+_vector_service_instance = None
+
+def get_vector_service() -> VectorService:
+    """Get or create global vector service instance"""
+    global _vector_service_instance
+    if _vector_service_instance is None:
+        index_path = os.path.join(os.path.dirname(__file__), '../../data/faiss_index.index')
+        _vector_service_instance = VectorService(index_path)
+    return _vector_service_instance
+
+def find_similar_issues(query_embedding: List[float], k: int = 5) -> List[Tuple[str, float]]:
+    """Find similar issues based on embedding"""
+    service = get_vector_service()
+    return service.search(query_embedding, k)
