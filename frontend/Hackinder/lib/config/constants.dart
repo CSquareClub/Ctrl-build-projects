@@ -1,3 +1,5 @@
+
+// This file contains app constants
 class AppConstants {
   // Spring Boot API
   static const String baseUrl = 'http://localhost:8080/api';
