@@ -1,3 +1,4 @@
+from collections import Counter
 from functools import lru_cache
 import math
 import os
@@ -26,6 +27,30 @@ EXPERIENCE_KEYWORDS = (
     "implemented",
     "led",
 )
+COMMON_REPEAT_WORDS = {
+    "about",
+    "after",
+    "also",
+    "been",
+    "building",
+    "candidate",
+    "company",
+    "data",
+    "from",
+    "have",
+    "into",
+    "more",
+    "over",
+    "that",
+    "their",
+    "them",
+    "they",
+    "this",
+    "with",
+    "within",
+    "would",
+    "years",
+}
 SKILL_PATTERNS = (
     ("python", (r"(?<![a-z0-9])python(?![a-z0-9])",)),
     ("java", (r"(?<![a-z0-9])java(?![a-z0-9])",)),
@@ -33,24 +58,66 @@ SKILL_PATTERNS = (
     ("typescript", (r"(?<![a-z0-9])typescript(?![a-z0-9])",)),
     ("sql", (r"(?<![a-z0-9])sql(?![a-z0-9])",)),
     ("react", (r"(?<![a-z0-9])react(?:\.js|js)?(?![a-z0-9])",)),
-    ("node.js", (r"(?<![a-z0-9])node(?:\.js|js|[ -]js)?(?![a-z0-9])",)),
+    ("node.js", (r"(?<![a-z0-9])node(?:\.js|js|[ -]js)(?![a-z0-9])",)),
     ("django", (r"(?<![a-z0-9])django(?![a-z0-9])",)),
     ("flask", (r"(?<![a-z0-9])flask(?![a-z0-9])",)),
     ("fastapi", (r"(?<![a-z0-9])fastapi(?![a-z0-9])",)),
-    ("machine learning", (r"(?<![a-z0-9])machine[\s-]+learning(?![a-z0-9])", r"(?<![a-z0-9])ml(?![a-z0-9])")),
+    (
+        "machine learning",
+        (
+            r"(?<![a-z0-9])machine[\s-]+learning(?![a-z0-9])",
+            r"(?<![a-z0-9])ml(?![a-z0-9])",
+        ),
+    ),
     ("deep learning", (r"(?<![a-z0-9])deep[\s-]+learning(?![a-z0-9])",)),
-    ("artificial intelligence", (r"(?<![a-z0-9])artificial[\s-]+intelligence(?![a-z0-9])", r"(?<![a-z0-9])ai(?![a-z0-9])")),
-    ("nlp", (r"(?<![a-z0-9])natural[\s-]+language[\s-]+processing(?![a-z0-9])", r"(?<![a-z0-9])nlp(?![a-z0-9])")),
+    (
+        "artificial intelligence",
+        (
+            r"(?<![a-z0-9])artificial[\s-]+intelligence(?![a-z0-9])",
+            r"(?<![a-z0-9])ai(?![a-z0-9])",
+        ),
+    ),
+    (
+        "nlp",
+        (
+            r"(?<![a-z0-9])natural[\s-]+language[\s-]+processing(?![a-z0-9])",
+            r"(?<![a-z0-9])nlp(?![a-z0-9])",
+        ),
+    ),
     ("pandas", (r"(?<![a-z0-9])pandas(?![a-z0-9])",)),
     ("numpy", (r"(?<![a-z0-9])numpy(?![a-z0-9])",)),
     ("tensorflow", (r"(?<![a-z0-9])tensorflow(?![a-z0-9])",)),
     ("pytorch", (r"(?<![a-z0-9])pytorch(?![a-z0-9])",)),
-    ("scikit-learn", (r"(?<![a-z0-9])scikit[\s-]*learn(?![a-z0-9])", r"(?<![a-z0-9])sklearn(?![a-z0-9])")),
-    ("aws", (r"(?<![a-z0-9])aws(?![a-z0-9])", r"(?<![a-z0-9])amazon[\s-]+web[\s-]+services(?![a-z0-9])")),
+    (
+        "scikit-learn",
+        (
+            r"(?<![a-z0-9])scikit[\s-]*learn(?![a-z0-9])",
+            r"(?<![a-z0-9])sklearn(?![a-z0-9])",
+        ),
+    ),
+    (
+        "aws",
+        (
+            r"(?<![a-z0-9])aws(?![a-z0-9])",
+            r"(?<![a-z0-9])amazon[\s-]+web[\s-]+services(?![a-z0-9])",
+        ),
+    ),
     ("azure", (r"(?<![a-z0-9])azure(?![a-z0-9])",)),
-    ("gcp", (r"(?<![a-z0-9])gcp(?![a-z0-9])", r"(?<![a-z0-9])google[\s-]+cloud(?![a-z0-9])")),
+    (
+        "gcp",
+        (
+            r"(?<![a-z0-9])gcp(?![a-z0-9])",
+            r"(?<![a-z0-9])google[\s-]+cloud(?![a-z0-9])",
+        ),
+    ),
     ("docker", (r"(?<![a-z0-9])docker(?![a-z0-9])",)),
-    ("kubernetes", (r"(?<![a-z0-9])kubernetes(?![a-z0-9])", r"(?<![a-z0-9])k8s(?![a-z0-9])")),
+    (
+        "kubernetes",
+        (
+            r"(?<![a-z0-9])kubernetes(?![a-z0-9])",
+            r"(?<![a-z0-9])k8s(?![a-z0-9])",
+        ),
+    ),
     ("git", (r"(?<![a-z0-9])git(?![a-z0-9])",)),
     ("tableau", (r"(?<![a-z0-9])tableau(?![a-z0-9])",)),
     ("power bi", (r"(?<![a-z0-9])power[\s-]+bi(?![a-z0-9])",)),
@@ -68,6 +135,14 @@ os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
 os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 
 
+class InvalidPDFError(ValueError):
+    pass
+
+
+class EmptyTextError(ValueError):
+    pass
+
+
 def _default_result(reasons=None, explanation="Unable to analyze resume."):
     return {
         "match_score": 0.0,
@@ -81,18 +156,35 @@ def _default_result(reasons=None, explanation="Unable to analyze resume."):
 
 
 def _compile_boundary_pattern(term):
-    words = [re.escape(part) for part in term.lower().split()]
-    core = r"[\s/&-]+".join(words)
-    return re.compile(rf"(?<![a-z0-9]){core}(?![a-z0-9])")
+    pieces = [re.escape(piece) for piece in term.lower().split()]
+    return re.compile(rf"(?<![a-z0-9]){'[\\s/&-]+'.join(pieces)}(?![a-z0-9])")
 
 
-BUZZWORD_REGEXES = {buzzword: _compile_boundary_pattern(buzzword) for buzzword in BUZZWORDS}
+BUZZWORD_REGEXES = {term: _compile_boundary_pattern(term) for term in BUZZWORDS}
 EXPERIENCE_REGEXES = tuple(
     _compile_boundary_pattern(keyword) for keyword in EXPERIENCE_KEYWORDS
 )
 
 
-def extract_text(file_path):
+def clean_text(text):
+    return SPACE_PATTERN.sub(" ", str(text or "").lower()).strip()
+
+
+def _tokenize(text):
+    return WORD_PATTERN.findall(clean_text(text))
+
+
+def _count_words(text):
+    return len(_tokenize(text))
+
+
+def extract_text_from_pdf(file_path):
+    if not file_path or not os.path.isfile(file_path):
+        raise InvalidPDFError("Invalid or unreadable PDF file.")
+
+    if os.path.splitext(file_path)[1].lower() != ".pdf":
+        raise InvalidPDFError("Invalid or unreadable PDF file.")
+
     try:
         import pdfplumber
     except Exception as exc:
@@ -114,17 +206,13 @@ def extract_text(file_path):
                 if page_text:
                     pages.append(page_text)
     except Exception as exc:
-        raise ValueError("Invalid or unreadable PDF file.") from exc
+        raise InvalidPDFError("Invalid or unreadable PDF file.") from exc
 
-    return "\n".join(pages).strip()
+    extracted_text = "\n".join(pages).strip()
+    if not extracted_text:
+        raise EmptyTextError("Resume contains no readable text.")
 
-
-def clean_text(text):
-    return SPACE_PATTERN.sub(" ", str(text or "").lower()).strip()
-
-
-def _count_words(text):
-    return len(WORD_PATTERN.findall(clean_text(text)))
+    return extracted_text
 
 
 def _chunk_text(text, chunk_size=EMBEDDING_CHUNK_WORDS, overlap=EMBEDDING_CHUNK_OVERLAP):
@@ -176,7 +264,7 @@ def _load_embedding_model():
         return None
 
 
-def get_embedding(text):
+def generate_embedding(text):
     chunks = _chunk_text(text)
     if not chunks:
         return []
@@ -186,7 +274,11 @@ def get_embedding(text):
         return []
 
     try:
-        embeddings = model.encode(chunks, normalize_embeddings=True, show_progress_bar=False)
+        embeddings = model.encode(
+            chunks,
+            normalize_embeddings=True,
+            show_progress_bar=False,
+        )
     except TypeError:
         embeddings = model.encode(chunks, normalize_embeddings=True)
     except Exception:
@@ -201,15 +293,13 @@ def get_embedding(text):
     if isinstance(embeddings[0], (int, float)):
         return _normalize_vector([float(value) for value in embeddings])
 
-    vector_size = len(embeddings[0])
-    averaged = [0.0] * vector_size
-
+    averaged = [0.0] * len(embeddings[0])
     for embedding in embeddings:
         for index, value in enumerate(embedding):
             averaged[index] += float(value)
 
-    total = float(len(embeddings))
-    averaged = [value / total for value in averaged]
+    total_embeddings = float(len(embeddings))
+    averaged = [value / total_embeddings for value in averaged]
     return _normalize_vector(averaged)
 
 
@@ -226,15 +316,35 @@ def _cosine_similarity(vector_a, vector_b):
     return max(-1.0, min(1.0, dot_product / (norm_a * norm_b)))
 
 
-def compute_match_score(resume_text, job_text):
-    if not resume_text or not job_text:
+def _fallback_match_score(resume_text, job_description):
+    resume_tokens = {
+        token
+        for token in _tokenize(resume_text)
+        if len(token) > 2 and token not in COMMON_REPEAT_WORDS
+    }
+    job_tokens = {
+        token
+        for token in _tokenize(job_description)
+        if len(token) > 2 and token not in COMMON_REPEAT_WORDS
+    }
+    if not resume_tokens or not job_tokens:
         return 0.0
 
-    resume_embedding = get_embedding(resume_text)
-    job_embedding = get_embedding(job_text)
-    cosine_score = _cosine_similarity(resume_embedding, job_embedding)
-    normalized_score = (cosine_score + 1.0) / 2.0
-    return max(0.0, min(1.0, float(normalized_score)))
+    overlap = len(resume_tokens & job_tokens) / float(len(job_tokens))
+    return max(0.0, min(1.0, overlap))
+
+
+def compute_match_score(resume_text, job_description):
+    if not clean_text(resume_text) or not clean_text(job_description):
+        return 0.0
+
+    resume_embedding = generate_embedding(resume_text)
+    job_embedding = generate_embedding(job_description)
+    if resume_embedding and job_embedding:
+        cosine_score = _cosine_similarity(resume_embedding, job_embedding)
+        return max(0.0, min(1.0, (cosine_score + 1.0) / 2.0))
+
+    return _fallback_match_score(resume_text, job_description)
 
 
 def extract_skills(text):
@@ -254,116 +364,156 @@ def detect_missing_skills(job_description, resume_skills):
     return [skill for skill in job_skills if skill not in resume_skill_set]
 
 
+def _score_short_resume(word_count):
+    if word_count < 150:
+        return (
+            35,
+            f"Resume is too short at {word_count} words; resumes under {MIN_RESUME_WORDS} words are higher risk.",
+        )
+    if word_count < 225:
+        return (
+            25,
+            f"Resume is short at {word_count} words; resumes under {MIN_RESUME_WORDS} words are higher risk.",
+        )
+    if word_count < MIN_RESUME_WORDS:
+        return (
+            15,
+            f"Resume is slightly short at {word_count} words; resumes under {MIN_RESUME_WORDS} words are higher risk.",
+        )
+    return 0, None
+
+
+def _score_buzzwords(cleaned_text):
+    buzzword_counts = {}
+    for buzzword, pattern in BUZZWORD_REGEXES.items():
+        count = len(pattern.findall(cleaned_text))
+        if count:
+            buzzword_counts[buzzword] = count
+
+    total_buzzwords = sum(buzzword_counts.values())
+    if total_buzzwords < 3:
+        return 0, None
+
+    details = ", ".join(
+        f"{word} ({count})" for word, count in buzzword_counts.items()
+    )
+    score = min(25, (total_buzzwords - 2) * 6)
+    return score, f"Too many self-rating buzzwords detected: {details}."
+
+
+def _score_repeated_words(tokens):
+    meaningful_tokens = [
+        token
+        for token in tokens
+        if len(token) >= 4 and token not in COMMON_REPEAT_WORDS
+    ]
+    if len(meaningful_tokens) < 40:
+        return 0, None
+
+    threshold = max(5, int(math.ceil(len(meaningful_tokens) * 0.04)))
+    repeated_words = [
+        (word, count)
+        for word, count in Counter(meaningful_tokens).items()
+        if count >= threshold
+    ]
+    if not repeated_words:
+        return 0, None
+
+    repeated_words.sort(key=lambda item: (-item[1], item[0]))
+    details = ", ".join(
+        f"{word} ({count})" for word, count in repeated_words[:5]
+    )
+    score = min(20, sum(count - threshold + 1 for _, count in repeated_words))
+    return score, f"Repeated words detected: {details}."
+
+
+def _score_experience_keywords(cleaned_text):
+    if any(pattern.search(cleaned_text) for pattern in EXPERIENCE_REGEXES):
+        return 0, None
+
+    return 25, "No project or experience keywords were found in the resume."
+
+
 def compute_fraud_score(text):
     cleaned_text = clean_text(text)
-    word_count = _count_words(cleaned_text)
+    tokens = _tokenize(cleaned_text)
+    word_count = len(tokens)
     score = 0
     reasons = []
 
-    if word_count < MIN_RESUME_WORDS:
-        if word_count < 150:
-            score += 35
-        elif word_count < 225:
-            score += 25
-        else:
-            score += 15
-        reasons.append(
-            f"Resume is short at {word_count} words; resumes under {MIN_RESUME_WORDS} words are higher risk."
-        )
-
-    repeated_buzzwords = []
-    buzzword_penalty = 0
-    for buzzword, pattern in BUZZWORD_REGEXES.items():
-        count = len(pattern.findall(cleaned_text))
-        if count >= 3:
-            repeated_buzzwords.append(f"{buzzword} ({count} times)")
-            buzzword_penalty += (count - 2) * 8
-
-    if repeated_buzzwords:
-        score += min(30, buzzword_penalty)
-        reasons.append(
-            "Repeated buzzwords detected: " + ", ".join(repeated_buzzwords) + "."
-        )
-
-    if not any(pattern.search(cleaned_text) for pattern in EXPERIENCE_REGEXES):
-        score += 30
-        reasons.append("No project or experience keywords were found in the resume.")
+    for scorer in (
+        lambda: _score_short_resume(word_count),
+        lambda: _score_buzzwords(cleaned_text),
+        lambda: _score_repeated_words(tokens),
+        lambda: _score_experience_keywords(cleaned_text),
+    ):
+        partial_score, reason = scorer()
+        score += partial_score
+        if reason:
+            reasons.append(reason)
 
     return min(100, score), reasons
 
 
-def _fraud_risk_label(fraud_score):
-    if fraud_score >= 60:
-        return "high"
-    if fraud_score >= 30:
-        return "moderate"
-    return "low"
+def compute_final_score(match_score, fraud_score):
+    safe_match = max(0.0, min(1.0, float(match_score)))
+    safe_fraud = max(0, min(100, int(round(fraud_score))))
+    weighted_score = (safe_match * 0.7) - ((safe_fraud / 100.0) * 0.3)
+    return max(0.0, min(1.0, weighted_score))
 
 
-def _build_explanation(match_score, fraud_score, missing_skills):
+def build_explanation(match_score, fraud_score):
     match_percent = int(round(max(0.0, min(1.0, match_score)) * 100))
-    fraud_risk = _fraud_risk_label(fraud_score)
-    connector = "and" if fraud_risk == "low" else "but"
-    explanation = (
-        f"Candidate matches {match_percent}% of job requirements {connector} shows "
-        f"{fraud_risk} fraud risk."
-    )
-
-    if not missing_skills:
-        return explanation
-
-    if len(missing_skills) <= 3:
-        missing_text = ", ".join(missing_skills)
-    else:
-        missing_text = ", ".join(missing_skills[:3]) + ", and more"
-
-    return f"{explanation} Missing skills: {missing_text}."
-
-
-def _compute_final_score(match_score, fraud_score):
-    trust_factor = 1.0 - (max(0, min(100, fraud_score)) / 100.0)
-    return max(0.0, min(1.0, match_score * trust_factor))
+    fraud_percent = int(max(0, min(100, round(fraud_score))))
+    return f"Candidate matches {match_percent}% but has {fraud_percent}% fraud risk."
 
 
 def analyze_resume(file_path, job_description):
-    try:
-        resume_text = extract_text(file_path)
-    except ValueError:
-        return _default_result(
-            ["Invalid or unreadable PDF file."],
-            "Unable to analyze the resume because the PDF could not be read.",
-        )
-    except RuntimeError as exc:
-        return _default_result([str(exc)], str(exc))
-    except Exception:
-        return _default_result(
-            ["Failed to extract text from the resume."],
-            "Unable to analyze the resume because text extraction failed.",
-        )
-
-    if not clean_text(resume_text):
-        return _default_result(
-            ["Resume contains no readable text."],
-            "Unable to analyze the resume because no readable text was found.",
-        )
-
-    if not clean_text(job_description):
+    cleaned_job_description = clean_text(job_description)
+    if not cleaned_job_description:
         return _default_result(
             ["Job description is empty."],
             "Unable to analyze the resume because the job description is empty.",
         )
 
-    match_score = compute_match_score(resume_text, job_description)
-    skills = extract_skills(resume_text)
-    missing_skills = detect_missing_skills(job_description, skills)
-    fraud_score, fraud_reasons = compute_fraud_score(resume_text)
-    final_score = _compute_final_score(match_score, fraud_score)
-    explanation = _build_explanation(match_score, fraud_score, missing_skills)
+    try:
+        resume_text = extract_text_from_pdf(file_path)
+    except InvalidPDFError:
+        return _default_result(
+            ["Invalid or unreadable PDF file."],
+            "Unable to analyze the resume because the PDF is invalid or unreadable.",
+        )
+    except EmptyTextError:
+        return _default_result(
+            ["Resume contains no readable text."],
+            "Unable to analyze the resume because no readable text was found.",
+        )
+    except RuntimeError as exc:
+        return _default_result([str(exc)], str(exc))
+    except Exception:
+        return _default_result(
+            ["Failed to analyze the resume."],
+            "Unable to analyze the resume due to an unexpected error.",
+        )
+
+    cleaned_resume_text = clean_text(resume_text)
+    if not cleaned_resume_text:
+        return _default_result(
+            ["Resume contains no readable text."],
+            "Unable to analyze the resume because no readable text was found.",
+        )
+
+    match_score = compute_match_score(cleaned_resume_text, cleaned_job_description)
+    skills = extract_skills(cleaned_resume_text)
+    missing_skills = detect_missing_skills(cleaned_job_description, skills)
+    fraud_score, fraud_reasons = compute_fraud_score(cleaned_resume_text)
+    final_score = compute_final_score(match_score, fraud_score)
+    explanation = build_explanation(match_score, fraud_score)
 
     return {
-        "match_score": round(max(0.0, min(1.0, match_score)), 4),
-        "fraud_score": int(max(0, min(100, fraud_score))),
-        "final_score": round(max(0.0, min(1.0, final_score)), 4),
+        "match_score": round(match_score, 4),
+        "fraud_score": int(fraud_score),
+        "final_score": round(final_score, 4),
         "skills": skills,
         "missing_skills": missing_skills,
         "fraud_reasons": fraud_reasons,
