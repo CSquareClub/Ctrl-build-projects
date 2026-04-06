@@ -28,37 +28,33 @@ export default function ActivitiesCard({ activities }) {
   const activitiesList = activities || defaultActivities;
 
   return (
-    <div className="bg-github-bg border border-github-border rounded-lg p-6">
-      <h2 className="text-lg font-bold text-white mb-4">Recent Activity</h2>
+    <div className="bg-github-bg border border-github-border rounded-lg p-6 flex flex-col">
+      <h2 className="text-lg font-bold text-white mb-4">Activities</h2>
 
-      <div className="space-y-4">
+      <div className="flex-1 overflow-y-auto space-y-3">
         {activitiesList.map((activity) => (
           <div
             key={activity.id}
-            className="flex items-start gap-3 pb-4 border-b border-github-border last:border-b-0"
+            className="flex items-start gap-3 pb-3 border-b border-github-border last:border-b-0"
           >
-            <div className="text-xl mt-1">
+            <div className="text-lg flex-shrink-0 mt-1">
               {activity.type === 'PushEvent' && '📝'}
               {activity.type === 'PullRequestEvent' && '🔀'}
               {activity.type === 'IssueEvent' && '⚠️'}
             </div>
 
-            <div className="flex-1">
-              <div className="text-github-text text-sm">
+            <div className="flex-1 min-w-0">
+              <div className="text-github-text text-xs">
                 <span className="font-mono text-github-muted">
                   {activity.repo}
                 </span>
               </div>
-              <p className="text-white font-medium text-sm">{activity.message}</p>
+              <p className="text-white font-medium text-xs">{activity.message}</p>
               <p className="text-github-muted text-xs mt-1">{activity.timestamp}</p>
             </div>
           </div>
         ))}
       </div>
-
-      <button className="w-full mt-4 py-2 text-center bg-github-border hover:bg-blue-600 text-github-text hover:text-white rounded transition text-sm font-medium">
-        View All Activity
-      </button>
     </div>
   );
 }

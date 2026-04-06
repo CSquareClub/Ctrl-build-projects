@@ -31,32 +31,32 @@ export default function PullRequestsCard({ pullRequests }) {
   const prsList = pullRequests || defaultPRs;
 
   return (
-    <div className="bg-github-bg border border-github-border rounded-lg p-6">
+    <div className="bg-github-bg border border-github-border rounded-lg p-6 flex flex-col">
       <h2 className="text-lg font-bold text-white mb-4">
-        Pull Requests & Issues
+        Pull Request & Issues
       </h2>
 
-      <div className="space-y-3">
+      <div className="flex-1 overflow-y-auto space-y-2">
         {prsList.map((pr) => (
           <div
             key={pr.id}
-            className="flex items-center gap-3 p-3 bg-github-border bg-opacity-30 rounded hover:bg-opacity-50 transition cursor-pointer"
+            className="flex items-start gap-2 p-2 bg-github-border bg-opacity-30 rounded hover:bg-opacity-50 transition cursor-pointer"
           >
-            <div className="flex-shrink-0">
+            <div className="flex-shrink-0 mt-1">
               {pr.state === 'open' ? (
-                <span className="text-green-500 text-lg">🟢</span>
+                <span className="text-green-500 text-base">🟢</span>
               ) : (
-                <span className="text-red-500 text-lg">🔴</span>
+                <span className="text-red-500 text-base">🔴</span>
               )}
             </div>
 
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-github-text text-xs bg-github-border px-2 py-1 rounded">
+                <span className="text-github-text text-xs bg-github-border px-1.5 py-0.5 rounded">
                   #{pr.number}
                 </span>
                 <span
-                  className={`text-xs px-2 py-1 rounded font-medium ${
+                  className={`text-xs px-1.5 py-0.5 rounded font-medium ${
                     pr.state === 'open'
                       ? 'bg-green-900 bg-opacity-30 text-green-300'
                       : 'bg-purple-900 bg-opacity-30 text-purple-300'
@@ -65,20 +65,16 @@ export default function PullRequestsCard({ pullRequests }) {
                   {pr.state.toUpperCase()}
                 </span>
               </div>
-              <p className="text-white text-sm font-medium truncate">
+              <p className="text-white text-xs font-medium truncate">
                 {pr.title}
               </p>
-              <p className="text-github-muted text-xs mt-1">
+              <p className="text-github-muted text-xs mt-0.5">
                 {pr.repo} • {pr.createdAt}
               </p>
             </div>
           </div>
         ))}
       </div>
-
-      <button className="w-full mt-4 py-2 text-center bg-github-border hover:bg-blue-600 text-github-text hover:text-white rounded transition text-sm font-medium">
-        View All PRs & Issues
-      </button>
     </div>
   );
 }

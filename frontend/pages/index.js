@@ -2,36 +2,59 @@ import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Navbar from '../components/Navbar';
 import UserProfile from '../components/UserProfile';
-import Sidebar from '../components/Sidebar';
 import StatsCard from '../components/StatsCard';
-import RepoCard from '../components/RepoCard';
 import ActivitiesCard from '../components/ActivitiesCard';
 import PullRequestsCard from '../components/PullRequestsCard';
 
 export default function Home() {
-  const [userName, setUserName] = useState('octocat');
-  const [userData, setUserData] = useState(null);
-  const [userRepos, setUserRepos] = useState([]);
+  const [repoInput, setRepoInput] = useState('torvalds/linux');
+  const [repoData, setRepoData] = useState(null);
+  const [repoOwner, setRepoOwner] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Fetch user data from GitHub API
-  const fetchUserData = async (username) => {
+  // Parse repo link to extract owner and repo name
+  const parseRepoLink = (input) => {
+    // Handle full GitHub URLs
+    if (input.includes('github.com/')) {
+      const parts = input.split('github.com/')[1].split('/');
+      return { owner: parts[0], repo: parts[1] };
+    }
+    // Handle owner/repo format
+    const parts = input.split('/');
+    if (parts.length === 2) {
+      return { owner: parts[0], repo: parts[1] };
+    }
+    return null;
+  };
+
+  // Fetch repository and owner data from GitHub API
+  const fetchRepoData = async (input) => {
     setLoading(true);
     setError(null);
     try {
-      // User data
-      const userRes = await fetch(`https://api.github.com/users/${username}`);
-      if (!userRes.ok) throw new Error('User not found');
-      const user = await userRes.json();
-      setUserData(user);
+      const parsed = parseRepoLink(input);
+      if (!parsed) {
+        throw new Error('Invalid repository format. Use "owner/repo" or full GitHub URL');
+      }
 
-      // User repos
-      const reposRes = await fetch(
-        `https://api.github.com/users/${username}/repos?sort=stars&per_page=6`
+      const { owner, repo } = parsed;
+
+      // Fetch repository data
+      const repoRes = await fetch(
+        `https://api.github.com/repos/${owner}/${repo}`
       );
-      const repos = await reposRes.json();
-      setUserRepos(repos);
+      if (!repoRes.ok) throw new Error('Repository not found');
+      const repoDataResponse = await repoRes.json();
+      setRepoData(repoDataResponse);
+
+      // Fetch repository owner data
+      const ownerRes = await fetch(
+        `https://api.github.com/users/${owner}`
+      );
+      if (!ownerRes.ok) throw new Error('Owner not found');
+      const ownerDataResponse = await ownerRes.json();
+      setRepoOwner(ownerDataResponse);
     } catch (err) {
       setError(err.message);
       console.error('Error fetching data:', err);
@@ -41,42 +64,41 @@ export default function Home() {
   };
 
   useEffect(() => {
-    fetchUserData(userName);
+    fetchRepoData(repoInput);
   }, []);
 
   const handleSearch = (e) => {
     e.preventDefault();
     const searchInput = e.target.elements.search.value.trim();
     if (searchInput) {
-      setUserName(searchInput);
-      fetchUserData(searchInput);
+      setRepoInput(searchInput);
+      fetchRepoData(searchInput);
     }
   };
 
   return (
     <>
       <Head>
-        <title>GitHub Profile Viewer | Dynamic Repository Dashboard</title>
+        <title>GitHub Repository Viewer</title>
         <meta
           name="description"
-          content="View GitHub user profiles and repository information with an interactive dashboard"
+          content="View GitHub repository information and statistics"
         />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="icon" href="/favicon.ico" />
       </Head>
 
       <Navbar />
 
-      <main className="bg-github-bg min-h-screen">
-        <div className="max-w-7xl mx-auto px-4 py-8">
+      <main className="ml-64 bg-github-bg min-h-screen p-8">
+        <div className="max-w-6xl">
           {/* Search Section */}
           <div className="mb-8">
             <form onSubmit={handleSearch} className="flex gap-2 max-w-md">
               <input
                 type="text"
                 name="search"
-                placeholder="Enter GitHub username"
-                defaultValue={userName}
+                placeholder="Enter repo (owner/repo)"
+                defaultValue={repoInput}
                 className="flex-1 bg-github-border text-white px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <button
@@ -91,7 +113,6 @@ export default function Home() {
           {error && (
             <div className="bg-red-900 bg-opacity-30 border border-red-500 text-red-300 px-4 py-3 rounded-lg mb-8">
               <p>Error: {error}</p>
-              <p className="text-sm mt-1">Please check the username and try again.</p>
             </div>
           )}
 
@@ -99,97 +120,55 @@ export default function Home() {
             <div className="text-center py-12">
               <div className="inline-block">
                 <div className="animate-spin border-4 border-github-border border-t-blue-500 rounded-full w-12 h-12"></div>
-                <p className="text-github-text mt-4">Loading profile...</p>
+                <p className="text-github-text mt-4">Loading repository...</p>
               </div>
             </div>
           )}
 
-          {!loading && userData && (
+          {!loading && repoOwner && repoData && (
             <>
-              {/* User Profile Header */}
-              <UserProfile user={userData} />
+              {/* Repository Owner Profile Header */}
+              <UserProfile user={repoOwner} />
 
-              {/* Main Content Grid */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                <div className="lg:col-span-2">
-                  {/* Stats Cards */}
-                  <div className="grid grid-cols-3 gap-4 mb-8">
-                    <StatsCard
-                      title="Stars"
-                      count={userRepos.reduce((sum, repo) => sum + repo.stargazers_count, 0)}
-                      icon="⭐"
-                    />
-                    <StatsCard
-                      title="Forks"
-                      count={userRepos.reduce((sum, repo) => sum + repo.forks_count, 0)}
-                      icon="🍴"
-                    />
-                    <StatsCard
-                      title="Public Repos"
-                      count={userData.public_repos}
-                      icon="📦"
-                    />
-                  </div>
+              {/* Repository Information Section */}
+              <h2 className="text-2xl font-bold text-white mb-6">
+                Repository Information
+              </h2>
 
-                  {/* Repositories Section */}
-                  <div className="mb-8">
-                    <h2 className="text-2xl font-bold text-white mb-4">
-                      Top Repositories
-                    </h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {userRepos.length > 0 ? (
-                        userRepos.map((repo) => (
-                          <RepoCard key={repo.id} repo={repo} />
-                        ))
-                      ) : (
-                        <p className="text-github-muted col-span-2">
-                          No public repositories found.
-                        </p>
-                      )}
-                    </div>
-                  </div>
+              {/* Grid Layout: Stats + Activities + Pull Requests */}
+              <div className="grid grid-cols-3 gap-6 h-96">
+                {/* Left Column: Stars & Forks */}
+                <div className="flex flex-col gap-6">
+                  <StatsCard
+                    title="Stars"
+                    count={repoData.stargazers_count}
+                    icon="⭐"
+                  />
+                  <StatsCard
+                    title="Forks"
+                    count={repoData.forks_count}
+                    icon="🍴"
+                  />
                 </div>
 
-                {/* Sidebar - Activities */}
-                <div>
-                  <Sidebar userName={userName} />
-                </div>
-              </div>
-
-              {/* Bottom Section - Activities & PRs */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Middle Column: Activities */}
                 <ActivitiesCard activities={[]} />
+
+                {/* Right Column: Pull Requests & Issues */}
                 <PullRequestsCard pullRequests={[]} />
               </div>
             </>
           )}
 
-          {!loading && !userData && !error && (
+          {!loading && !repoOwner && !error && (
             <div className="text-center py-12">
               <p className="text-github-muted text-lg">
-                Enter a GitHub username to get started
+                Enter a repository (e.g., "owner/repo") to get started
               </p>
             </div>
           )}
         </div>
       </main>
-
-      {/* Footer */}
-      <footer className="bg-github-bg border-t border-github-border mt-16 py-8">
-        <div className="max-w-7xl mx-auto px-4 text-center text-github-muted text-sm">
-          <p>
-            Built with Next.js & Tailwind CSS | Data from{' '}
-            <a
-              href="https://developer.github.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-400 hover:underline"
-            >
-              GitHub API
-            </a>
-          </p>
-        </div>
-      </footer>
     </>
   );
 }
