@@ -12,6 +12,8 @@ export default function Home() {
   const [repoOwner, setRepoOwner] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [showSearchBar, setShowSearchBar] = useState(false);
+  const [searchValue, setSearchValue] = useState('');
 
   // Parse repo link to extract owner and repo name
   const parseRepoLink = (input) => {
@@ -69,10 +71,18 @@ export default function Home() {
 
   const handleSearch = (e) => {
     e.preventDefault();
-    const searchInput = e.target.elements.search.value.trim();
-    if (searchInput) {
-      setRepoInput(searchInput);
-      fetchRepoData(searchInput);
+    if (searchValue.trim()) {
+      setRepoInput(searchValue);
+      fetchRepoData(searchValue);
+      setShowSearchBar(false);
+      setSearchValue('');
+    }
+  };
+
+  const handleSearchButtonClick = () => {
+    setShowSearchBar(!showSearchBar);
+    if (!showSearchBar) {
+      setSearchValue('');
     }
   };
 
@@ -89,27 +99,47 @@ export default function Home() {
 
       <Navbar />
 
-      <main className="ml-64 bg-github-bg min-h-screen p-8">
-        <div className="max-w-6xl">
-          {/* Search Section */}
-          <div className="mb-8">
-            <form onSubmit={handleSearch} className="flex gap-2 max-w-md">
+      {/* Dynamic Search Bar - Sticky, Translucent, Blurred */}
+      {showSearchBar && (
+        <div className="fixed top-0 left-64 right-0 z-40 backdrop-blur-md bg-github-bg bg-opacity-80 border-b border-github-border border-opacity-50 p-4">
+          <div className="max-w-6xl mx-auto">
+            <form onSubmit={handleSearch} className="flex gap-2">
               <input
                 type="text"
-                name="search"
+                value={searchValue}
+                onChange={(e) => setSearchValue(e.target.value)}
                 placeholder="Enter repo (owner/repo)"
-                defaultValue={repoInput}
-                className="flex-1 bg-github-border text-white px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                autoFocus
+                className="flex-1 bg-github-border bg-opacity-40 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-github-muted"
               />
               <button
                 type="submit"
-                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition"
               >
                 Search
               </button>
+              <button
+                type="button"
+                onClick={() => setShowSearchBar(false)}
+                className="bg-github-border hover:bg-red-600 text-white px-4 py-2 rounded-lg font-medium transition"
+              >
+                Close
+              </button>
             </form>
           </div>
+        </div>
+      )}
 
+      {/* Search Button - Top Right */}
+      <button
+        onClick={handleSearchButtonClick}
+        className="fixed top-4 right-4 z-50 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition shadow-lg"
+      >
+        🔍 Search
+      </button>
+
+      <main className={`ml-64 bg-github-bg min-h-screen p-8 ${showSearchBar ? 'pt-24' : ''}`}>
+        <div className="max-w-6xl">
           {error && (
             <div className="bg-red-900 bg-opacity-30 border border-red-500 text-red-300 px-4 py-3 rounded-lg mb-8">
               <p>Error: {error}</p>
@@ -163,7 +193,7 @@ export default function Home() {
           {!loading && !repoOwner && !error && (
             <div className="text-center py-12">
               <p className="text-github-muted text-lg">
-                Enter a repository (e.g., "owner/repo") to get started
+                Click the search button to find a repository
               </p>
             </div>
           )}
