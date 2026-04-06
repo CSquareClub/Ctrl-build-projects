@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tesseract-resume-ranker"
+version = "0.1.0"
+description = "Resume authenticity detection and ranking pipeline."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "pdfplumber>=0.11.9",
+    "sentence-transformers>=5.3.0",
+]
+
+[tool.setuptools]
+packages = ["ai"]
+py-modules = ["ai_pipeline"]

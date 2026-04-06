@@ -3,14 +3,26 @@ from functools import lru_cache
 import math
 import os
 import re
+import tempfile
 
 
 SPACE_PATTERN = re.compile(r"\s+")
 WORD_PATTERN = re.compile(r"\b[a-z0-9]+\b")
+CHARACTER_NORMALIZATION_MAP = str.maketrans(
+    {
+        0x2018: "'",
+        0x2019: "'",
+        0x201C: '"',
+        0x201D: '"',
+        0x2013: "-",
+        0x2014: "-",
+    }
+)
 
 MIN_RESUME_WORDS = 300
 EMBEDDING_CHUNK_WORDS = 120
 EMBEDDING_CHUNK_OVERLAP = 24
+FAKE_RESUME_THRESHOLD = 45
 BUZZWORDS = ("expert", "advanced")
 EXPERIENCE_KEYWORDS = (
     "experience",
@@ -51,6 +63,56 @@ COMMON_REPEAT_WORDS = {
     "would",
     "years",
 }
+AUTHENTICITY_PATTERN_GROUPS = (
+    (
+        "Placeholder identity fields detected.",
+        (
+            r"\bfirst\s+name\s+last\s+name\b",
+            r"\byour\s+name\b",
+            r"\bfull\s+name\b",
+            r"\bcandidate\s+name\b",
+        ),
+        45,
+        45,
+    ),
+    (
+        "Dummy contact details detected.",
+        (
+            r"\b(?:email@email\.com|example@example\.com|name@email\.com)\b",
+            r"\b(?:email|name)@(?:email|example)\.(?:com|org|net)\b",
+            r"\b\d{3}[-.\s]?555[-.\s]?\d{4}\b",
+        ),
+        20,
+        40,
+    ),
+    (
+        "Template instruction text detected.",
+        (
+            r"\bthis\s+is\s+where\s+you\s+write\b",
+            r"\bwhat\s+motivates\s+you\b",
+            r"\bwhat\s+do\s+you\s+most\s+want\b",
+            r"\bdescribe\s+the\s+tasks\s+and\s+responsibilities\b",
+            r"\bbe\s+specific\s+and\s+use\s+numbers\b",
+            r"\blist\s+your\s+jobs\s+in\s+reverse\s+chronological\s+order\b",
+            r"\buse\s+bullet\s+points\b",
+            r"\bdon'?t\s+end\s+your\s+sentence\s+with\s+punctuation\b",
+            r"\binclude\s+volunteer\s+or\s+internships\b",
+        ),
+        15,
+        45,
+    ),
+    (
+        "Generic placeholder filler text detected.",
+        (
+            r"\bother\s+interests\b",
+            r"\byou\s+might\s+have\b",
+            r"\ban\s+idea\s+of\s+who\s+you\s+are\b",
+        ),
+        10,
+        20,
+    ),
+)
+SECOND_PERSON_TEMPLATE_TERMS = ("you", "your", "write", "describe", "include", "list")
 SKILL_PATTERNS = (
     ("python", (r"(?<![a-z0-9])python(?![a-z0-9])",)),
     ("java", (r"(?<![a-z0-9])java(?![a-z0-9])",)),
@@ -151,6 +213,13 @@ def _default_result(reasons=None, explanation="Unable to analyze resume."):
         "skills": [],
         "missing_skills": [],
         "fraud_reasons": list(reasons or []),
+        "authenticity_score": 0,
+        "authenticity_reasons": [],
+        "quality_score": 0,
+        "quality_warnings": [],
+        "is_fake": False,
+        "resume_status": "unknown",
+        "ranked": False,
         "explanation": explanation,
     }
 
@@ -164,10 +233,20 @@ BUZZWORD_REGEXES = {term: _compile_boundary_pattern(term) for term in BUZZWORDS}
 EXPERIENCE_REGEXES = tuple(
     _compile_boundary_pattern(keyword) for keyword in EXPERIENCE_KEYWORDS
 )
+AUTHENTICITY_REGEX_GROUPS = tuple(
+    (
+        reason,
+        tuple(re.compile(pattern) for pattern in patterns),
+        weight_each,
+        cap,
+    )
+    for reason, patterns, weight_each, cap in AUTHENTICITY_PATTERN_GROUPS
+)
 
 
 def clean_text(text):
-    return SPACE_PATTERN.sub(" ", str(text or "").lower()).strip()
+    normalized_text = str(text or "").translate(CHARACTER_NORMALIZATION_MAP).lower()
+    return SPACE_PATTERN.sub(" ", normalized_text).strip()
 
 
 def _tokenize(text):
@@ -213,6 +292,48 @@ def extract_text_from_pdf(file_path):
         raise EmptyTextError("Resume contains no readable text.")
 
     return extracted_text
+
+
+def analyze_resume_bytes(file_bytes, job_description, filename="resume.pdf"):
+    if not clean_text(job_description):
+        return _default_result(
+            ["Job description is empty."],
+            "Unable to analyze the resume because the job description is empty.",
+        )
+
+    if not isinstance(file_bytes, (bytes, bytearray, memoryview)):
+        return _default_result(
+            ["Uploaded file is not valid binary content."],
+            "Unable to analyze the resume because the uploaded file is not valid binary content.",
+        )
+
+    payload = bytes(file_bytes)
+    if not payload:
+        return _default_result(
+            ["Uploaded file is empty."],
+            "Unable to analyze the resume because the uploaded file is empty.",
+        )
+
+    upload_name = str(filename or "resume.pdf")
+    if os.path.splitext(upload_name)[1].lower() != ".pdf":
+        return _default_result(
+            ["Uploaded file must be a PDF."],
+            "Unable to analyze the resume because the uploaded file must be a PDF.",
+        )
+
+    temp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_file:
+            temp_file.write(payload)
+            temp_path = temp_file.name
+
+        return analyze_resume(temp_path, job_description)
+    finally:
+        if temp_path and os.path.exists(temp_path):
+            try:
+                os.remove(temp_path)
+            except OSError:
+                pass
 
 
 def _chunk_text(text, chunk_size=EMBEDDING_CHUNK_WORDS, overlap=EMBEDDING_CHUNK_OVERLAP):
@@ -364,6 +485,35 @@ def detect_missing_skills(job_description, resume_skills):
     return [skill for skill in job_skills if skill not in resume_skill_set]
 
 
+def compute_authenticity_score(text):
+    cleaned_text = clean_text(text)
+    if not cleaned_text:
+        return 0, []
+
+    score = 0
+    reasons = []
+
+    for reason, regexes, weight_each, cap in AUTHENTICITY_REGEX_GROUPS:
+        match_count = sum(1 for regex in regexes if regex.search(cleaned_text))
+        if not match_count:
+            continue
+
+        score += min(cap, match_count * weight_each)
+        reasons.append(reason)
+
+    token_counts = Counter(_tokenize(cleaned_text))
+    template_term_hits = sum(
+        token_counts.get(term, 0) for term in SECOND_PERSON_TEMPLATE_TERMS
+    )
+    if template_term_hits >= 12:
+        score += 15
+        reasons.append(
+            "Instruction-heavy second-person wording suggests an unfilled resume template."
+        )
+
+    return min(100, score), reasons
+
+
 def _score_short_resume(word_count):
     if word_count < 150:
         return (
@@ -462,10 +612,20 @@ def compute_final_score(match_score, fraud_score):
     return max(0.0, min(1.0, weighted_score))
 
 
-def build_explanation(match_score, fraud_score):
+def build_explanation(is_fake, match_score, fraud_score, authenticity_score):
+    if is_fake:
+        return (
+            "Resume appears to be fake or template-based "
+            f"({int(max(0, min(100, round(authenticity_score))))}% authenticity risk), "
+            "so ranking was skipped."
+        )
+
     match_percent = int(round(max(0.0, min(1.0, match_score)) * 100))
     fraud_percent = int(max(0, min(100, round(fraud_score))))
-    return f"Candidate matches {match_percent}% but has {fraud_percent}% fraud risk."
+    return (
+        f"Resume appears real. Candidate matches {match_percent}% "
+        f"with {fraud_percent}% review risk."
+    )
 
 
 def analyze_resume(file_path, job_description):
@@ -503,12 +663,47 @@ def analyze_resume(file_path, job_description):
             "Unable to analyze the resume because no readable text was found.",
         )
 
-    match_score = compute_match_score(cleaned_resume_text, cleaned_job_description)
     skills = extract_skills(cleaned_resume_text)
+    authenticity_score, authenticity_reasons = compute_authenticity_score(
+        cleaned_resume_text
+    )
+    quality_score, quality_warnings = compute_fraud_score(cleaned_resume_text)
+    fraud_score = min(100, authenticity_score + quality_score)
+    fraud_reasons = authenticity_reasons + quality_warnings
+    is_fake = authenticity_score >= FAKE_RESUME_THRESHOLD
+
+    if is_fake:
+        return {
+            "match_score": 0.0,
+            "fraud_score": int(fraud_score),
+            "final_score": 0.0,
+            "skills": skills,
+            "missing_skills": [],
+            "fraud_reasons": fraud_reasons,
+            "authenticity_score": int(authenticity_score),
+            "authenticity_reasons": authenticity_reasons,
+            "quality_score": int(quality_score),
+            "quality_warnings": quality_warnings,
+            "is_fake": True,
+            "resume_status": "fake",
+            "ranked": False,
+            "explanation": build_explanation(
+                True,
+                0.0,
+                fraud_score,
+                authenticity_score,
+            ),
+        }
+
+    match_score = compute_match_score(cleaned_resume_text, cleaned_job_description)
     missing_skills = detect_missing_skills(cleaned_job_description, skills)
-    fraud_score, fraud_reasons = compute_fraud_score(cleaned_resume_text)
     final_score = compute_final_score(match_score, fraud_score)
-    explanation = build_explanation(match_score, fraud_score)
+    explanation = build_explanation(
+        False,
+        match_score,
+        fraud_score,
+        authenticity_score,
+    )
 
     return {
         "match_score": round(match_score, 4),
@@ -517,8 +712,15 @@ def analyze_resume(file_path, job_description):
         "skills": skills,
         "missing_skills": missing_skills,
         "fraud_reasons": fraud_reasons,
+        "authenticity_score": int(authenticity_score),
+        "authenticity_reasons": authenticity_reasons,
+        "quality_score": int(quality_score),
+        "quality_warnings": quality_warnings,
+        "is_fake": False,
+        "resume_status": "real",
+        "ranked": True,
         "explanation": explanation,
     }
 
 
-__all__ = ["analyze_resume"]
+__all__ = ["analyze_resume", "analyze_resume_bytes"]
