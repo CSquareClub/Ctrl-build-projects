@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DevMatch - Hackathons Near You</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #00ff9d;
+            --urgent: #ff3366;
+            --bg: #0a0b0f;
+            --card: #12141a;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: #e0e0e0;
+            min-height: 100vh;
+            display: flex;
+        }
+
+        .sidebar {
+            width: 260px;
+            background: #0f1117;
+            border-right: 1px solid rgba(255,255,255,0.08);
+            padding: 28px 24px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .logo {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 50px;
+            letter-spacing: -1.5px;
+            cursor: pointer;
+        }
+
+        .logo:hover { color: #00e68a; }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 14px 18px;
+            margin-bottom: 6px;
+            border-radius: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .menu-item:hover {
+            background: rgba(0, 255, 157, 0.12);
+            color: var(--primary);
+        }
+
+        .main {
+            flex: 1;
+            padding: 40px;
+        }
+
+        h1 { font-family: 'Space Grotesk', sans-serif; font-size: 34px; font-weight: 600; margin-bottom: 8px; }
+        .subtitle { color: #888; font-size: 16px; }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+            gap: 28px;
+            margin-top: 30px;
+        }
+
+        .card {
+            background: var(--card);
+            border-radius: 22px;
+            padding: 26px;
+            border: 1px solid rgba(255,255,255,0.06);
+            position: relative;
+            transition: all 0.4s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 25px 50px rgba(0, 255, 157, 0.15);
+        }
+
+        .status {
+            position: absolute;
+            top: 20px;
+            right: 24px;
+            padding: 6px 18px;
+            font-size: 12px;
+            font-weight: 700;
+            border-radius: 30px;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+        }
+
+        .urgent { background: #ff336622; color: var(--urgent); border: 1px solid var(--urgent); }
+        .open { background: #00ff9d22; color: var(--primary); border: 1px solid var(--primary); }
+
+        .title { font-size: 23px; font-weight: 600; margin: 8px 0 6px; }
+        .location { color: #aaa; font-size: 15px; margin-bottom: 18px; }
+
+        .tags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 22px; }
+        .tag {
+            background: rgba(255,255,255,0.08);
+            padding: 6px 14px;
+            border-radius: 30px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .countdown {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 26px;
+        }
+
+        .join-btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(90deg, #00ff9d, #00e68a);
+            color: #000;
+            border: none;
+            border-radius: 14px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+        }
+
+        .join-btn:hover {
+            transform: scale(1.03);
+            box-shadow: 0 10px 30px rgba(0, 255, 157, 0.35);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="logo" onclick="window.location.href='index.html'">DevMatch</div>
+        <div class="menu">
+            <div class="menu-item" onclick="window.location.reload()">🏆 Discover</div>
+            <div class="menu-item" onclick="showNotifications()">🔔 Notifications</div>
+            <div class="menu-item" onclick="showOrganizers()">👤 Organizer</div>
+            <div class="menu-item" id="join-by-id">🔑 Join by ID</div>
+            <div class="menu-item" onclick="window.location.href='profile.html'">👤 Profile</div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main">
+        <h1>Hackathons Near You</h1>
+        <p class="subtitle">Chandigarh • 8 exciting events this week</p>
+
+        <div class="grid" id="events-grid"></div>
+    </div>
+
+    <script>
+        const events = [
+            { title: "AI Builders Summit", location: "Chandigarh", tags: ["AI", "Frontend", "Backend"], timeLeft: 4*3600000 + 51*60000, id: "AI2026" },
+            { title: "Web3 Hackfest", location: "Delhi", tags: ["Blockchain", "UI/UX"], timeLeft: 11*3600000 + 52*60000, id: "WEB2026" },
+            { title: "HealthTech Hack", location: "Ludhiana", tags: ["Mobile", "Backend", "AI"], timeLeft: 2*3600000 + 39*60000, id: "HEALTH2026" },
+            { title: "GreenCode Challenge", location: "Online", tags: ["Sustainability", "Climate"], timeLeft: 35*3600000 + 54*60000, id: "GREEN2026" },
+            { title: "FinTech Innovation Hack", location: "Chandigarh", tags: ["FinTech", "Backend"], timeLeft: 47*3600000 + 54*60000, id: "FIN2026" },
+            { title: "AR/VR Game Jam", location: "Mohali", tags: ["AR", "VR", "GameDev"], timeLeft: 17*3600000 + 54*60000, id: "ARVR2026" },
+            { title: "DevOps Masterclass", location: "Online", tags: ["DevOps", "Cloud"], timeLeft: 72*3600000, id: "DEVOPS2026" },
+            { title: "EdTech Revolution", location: "Chandigarh", tags: ["Education", "AI"], timeLeft: 8*3600000 + 30*60000, id: "ED2026" }
+        ];
+
+        function renderEvents() {
+            const container = document.getElementById('events-grid');
+            container.innerHTML = '';
+
+            events.forEach(event => {
+                const isUrgent = event.timeLeft < 24 * 3600000;
+
+                const cardHTML = `
+                    <div class="card">
+                        <div class="status ${isUrgent ? 'urgent' : 'open'}">
+                            ${isUrgent ? 'URGENT' : 'OPEN'}
+                        </div>
+                        <h3 class="title">${event.title}</h3>
+                        <p class="location">${event.location}</p>
+                        <div class="tags">
+                            ${event.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+                        </div>
+                        <div class="countdown" id="countdown-${event.id}">⏰ Calculating...</div>
+                        <button class="join-btn" onclick="startJoinFlow('${event.title}', '${event.id}')">
+                            JOIN HACKATHON
+                        </button>
+                    </div>
+                `;
+                container.innerHTML += cardHTML;
+            });
+
+            events.forEach(event => {
+                const isUrgent = event.timeLeft < 24 * 3600000;
+                startCountdown(event.timeLeft, `countdown-${event.id}`, isUrgent);
+            });
+        }
+
+        function startCountdown(ms, elementId, isUrgent) {
+            const element = document.getElementById(elementId);
+            let timeLeft = ms;
+
+            setInterval(() => {
+                timeLeft -= 1000;
+                if (timeLeft <= 0) {
+                    element.innerHTML = `<span style="color:#ff3366">Event Ended</span>`;
+                    return;
+                }
+                const h = Math.floor(timeLeft / 3600000);
+                const m = Math.floor((timeLeft % 3600000) / 60000);
+                const color = isUrgent ? '#ff3366' : '#00ff9d';
+                element.innerHTML = `<span style="font-size:18px">⏰</span> <span style="color:${color}">${h}h ${m}m left</span>`;
+            }, 1000);
+        }
+
+        // New Join Flow
+        function startJoinFlow(title, eventId) {
+            // Save selected event for next pages
+            localStorage.setItem('selectedEvent', JSON.stringify({ title, id: eventId }));
+            window.location.href = "join-interest.html";
+        }
+
+        // Other modals (Notifications, Organizer, Join by ID) - kept same as before
+        function showNotifications() {
+            alert("Notifications:\n• Your AI Builders Summit application is under review.\n• New hackathon added near you.");
+        }
+
+        function showOrganizers() {
+            alert("Organizers in Chandigarh:\n• TechChandigarh Community\n• Web3 Punjab\n• Health Innovation Hub");
+        }
+
+        document.getElementById('join-by-id').addEventListener('click', () => {
+            const id = prompt("Enter Event ID:");
+            if (id) alert(`Joined event with ID: ${id}`);
+        });
+
+        window.onload = renderEvents;
+    </script>
+</body>
+</html>
