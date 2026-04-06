@@ -792,6 +792,27 @@ function isFlashcardRequestPrompt(content) {
 	return /\bflash\s*cards?\b\s+(?:on|about|for)\b/.test(lowered);
 }
 
+function isMindmapRequestPrompt(content) {
+	if (typeof content !== "string") {
+		return false;
+	}
+
+	const lowered = content.trim().toLowerCase();
+	if (!lowered) {
+		return false;
+	}
+
+	if (lowered.includes("mind map") || lowered.includes("mindmap")) {
+		return true;
+	}
+
+	if (/\b(?:make|create|generate|build|give)\b.*\bmind\s*map\b/.test(lowered)) {
+		return true;
+	}
+
+	return /\bmind\s*map\b\s+(?:on|about|for|of)\b/.test(lowered);
+}
+
 function showThinkingIndicator(mode = "normal") {
 	removeEmptyState();
 
@@ -842,6 +863,22 @@ function showThinkingIndicator(mode = "normal") {
 			bars.appendChild(bar);
 		}
 		thinkingBox.appendChild(bars);
+	} else if (mode === "mindmap") {
+		thinkingBox.classList.add("thinking-box-mindmap");
+
+		const mindmapLabel = document.createElement("div");
+		mindmapLabel.classList.add("thinking-mindmap-label");
+		mindmapLabel.textContent = "Generating Mind Map...";
+		thinkingBox.appendChild(mindmapLabel);
+
+		const dots = document.createElement("div");
+		dots.classList.add("mindmap-thinking-dots");
+		for (let i = 0; i < 4; i++) {
+			const dot = document.createElement("span");
+			dot.classList.add("mindmap-thinking-dot");
+			dots.appendChild(dot);
+		}
+		thinkingBox.appendChild(dots);
 	}
 
 	const dotsContainer = document.createElement("div");
@@ -1558,10 +1595,11 @@ async function loadMessages() {
 	}
 
 	try {
-		const [messagesPayload, quizzesPayload, flashcardsPayload] = await Promise.all([
+		const [messagesPayload, quizzesPayload, flashcardsPayload, mindmapsPayload] = await Promise.all([
 			apiFetch(`/messages/${state.activeChatId}`),
 			apiFetch(`/quizzes/chat/${state.activeChatId}`).catch(() => ({ quizzes: [] })),
 			apiFetch(`/flashcards/chat/${state.activeChatId}`).catch(() => ({ flashcards: [] })),
+			apiFetch(`/mindmaps/chat/${state.activeChatId}`).catch(() => ({ mindmaps: [] })),
 		]);
 
 		const allMessages = Array.isArray(messagesPayload) ? [...messagesPayload] : [];
@@ -1587,21 +1625,30 @@ async function loadMessages() {
 			.filter((flashcard) => !!flashcard);
 		const flashcardsByIndex = buildFlashcardIndexMap(flashcards);
 
+		const rawMindmaps = Array.isArray(mindmapsPayload && mindmapsPayload.mindmaps)
+			? mindmapsPayload.mindmaps
+			: [];
+		const mindmaps = rawMindmaps
+			.map((rawMindmap) => normalizeStoredMindmapRecord(rawMindmap))
+			.filter((mindmap) => !!mindmap);
+		const mindmapsByIndex = buildMindmapIndexMap(mindmaps);
+
 		messagesContainer.innerHTML = "";
 
-		if (allMessages.length > 0 || quizzes.length > 0 || flashcards.length > 0) {
+		if (allMessages.length > 0 || quizzes.length > 0 || flashcards.length > 0 || mindmaps.length > 0) {
 			hideWelcomeScreen();  // Hide welcome when chat has messages
 			allMessages.forEach((msg, fallbackIndex) => {
 				const messageIndex = Number.isInteger(msg && msg.message_index)
 					? msg.message_index
 					: fallbackIndex;
 
-				if (!isQuizSummaryMessage(msg) && !isFlashcardSummaryMessage(msg)) {
+				if (!isQuizSummaryMessage(msg) && !isFlashcardSummaryMessage(msg) && !isMindmapSummaryMessage(msg)) {
 					appendMessage(msg, false);
 				}
 
 				renderQuizzesAtMessageIndex(quizzesByIndex, messageIndex, null, false);
 				renderFlashcardsAtMessageIndex(flashcardsByIndex, messageIndex, null, false);
+				renderMindmapsAtMessageIndex(mindmapsByIndex, messageIndex, null, false);
 			});
 
 			chatArea.scrollTop = chatArea.scrollHeight;
@@ -1670,9 +1717,11 @@ async function sendMessage(content) {
 	chatArea.scrollTop = chatArea.scrollHeight;
 
 	const thinkingStartTime = Date.now();
-	const thinkingMode = isFlashcardRequestPrompt(trimmedContent)
+	const thinkingMode = isMindmapRequestPrompt(trimmedContent)
+		? "mindmap"
+		: (isFlashcardRequestPrompt(trimmedContent)
 		? "flashcard"
-		: (isQuizRequestPrompt(trimmedContent) ? "quiz" : "normal");
+		: (isQuizRequestPrompt(trimmedContent) ? "quiz" : "normal"));
 	showThinkingIndicator(thinkingMode);
 
 	try {
@@ -1712,10 +1761,34 @@ async function sendMessage(content) {
 				}
 
 				const responseType = response.type || "text";
+				const mindmapPayload = extractMindmapPayloadFromResponse(response);
 				const flashcardPayload = extractFlashcardPayloadFromResponse(response);
 				const quizPayload = extractQuizPayloadFromResponse(response);
 
-				if (flashcardPayload) {
+				if (mindmapPayload) {
+					// --- MIND MAP RESPONSE (LAUNCHER CARD) ---
+					hideWelcomeScreen();
+					removeEmptyState();
+					isGenerating = false;
+					generatingChatId = null;
+					hideStopButton();
+
+					let persistedMindmapMeta = null;
+					try {
+						persistedMindmapMeta = await saveMindmapForChat(mindmapPayload, response);
+					} catch (persistError) {
+						console.error("Failed to persist mind map:", persistError);
+					}
+
+					renderMindmapLauncherCard(
+						mindmapPayload,
+						responseLevel,
+						persistedMindmapMeta || {},
+						true,
+					);
+					chatArea.scrollTop = chatArea.scrollHeight;
+
+				} else if (flashcardPayload) {
 					// --- FLASHCARD RESPONSE (LAUNCHER CARD) ---
 					hideWelcomeScreen();
 					removeEmptyState();
@@ -1816,7 +1889,910 @@ async function sendMessage(content) {
 // ========================
 
 /**
- * Attempts to parse quiz JSON from assistant content.
+ * Attempts to parse mind map JSON from assistant content.
+ */
+function parseMindmapJsonContent(content) {
+	if (typeof content !== "string") {
+		return null;
+	}
+
+	const trimmed = content.trim();
+	if (!trimmed) {
+		return null;
+	}
+
+	let candidate = trimmed;
+	const fenced = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+	if (fenced && fenced[1]) {
+		candidate = fenced[1].trim();
+	}
+
+	try {
+		const parsed = JSON.parse(candidate);
+		return normalizeMindmapPayload(parsed);
+	} catch (_error) {
+		return null;
+	}
+}
+
+function normalizeMindmapPayload(rawMindmap) {
+	if (!rawMindmap || typeof rawMindmap !== "object") {
+		return null;
+	}
+
+	const type = String(rawMindmap.type || "mindmap").trim().toLowerCase();
+	if (type !== "mindmap") {
+		return null;
+	}
+
+	const topic = typeof rawMindmap.topic === "string" && rawMindmap.topic.trim()
+		? rawMindmap.topic.trim()
+		: "General Topic";
+
+	if (!Array.isArray(rawMindmap.nodes) || rawMindmap.nodes.length < 3) {
+		return null;
+	}
+
+	const normalizedNodes = [];
+	const seenIds = new Set();
+	rawMindmap.nodes.forEach((rawNode, index) => {
+		if (!rawNode || typeof rawNode !== "object") {
+			return;
+		}
+
+		const nodeId = typeof rawNode.id === "string" && rawNode.id.trim()
+			? rawNode.id.trim()
+			: `n${index + 1}`;
+		const label = typeof rawNode.label === "string" ? rawNode.label.trim() : "";
+		if (!nodeId || !label || seenIds.has(nodeId)) {
+			return;
+		}
+
+		seenIds.add(nodeId);
+		const parentRaw = rawNode.parent;
+		normalizedNodes.push({
+			id: nodeId,
+			label,
+			parent: parentRaw == null ? null : String(parentRaw).trim() || null,
+		});
+	});
+
+	if (normalizedNodes.length < 3) {
+		return null;
+	}
+
+	const nodesById = new Map();
+	normalizedNodes.forEach((node) => {
+		nodesById.set(node.id, node);
+	});
+
+	normalizedNodes.forEach((node) => {
+		if (node.parent === node.id || !nodesById.has(node.parent)) {
+			node.parent = null;
+		}
+	});
+
+	const rootCandidates = normalizedNodes.filter((node) => node.parent === null);
+	const rootNode = rootCandidates[0] || normalizedNodes[0];
+	rootNode.parent = null;
+	rootCandidates.slice(1).forEach((node) => {
+		if (node.id !== rootNode.id) {
+			node.parent = rootNode.id;
+		}
+	});
+
+	// Break any accidental cycles by re-parenting cyclic nodes to the root.
+	normalizedNodes.forEach((node) => {
+		if (node.id === rootNode.id || node.parent === null) {
+			return;
+		}
+
+		const seenChain = new Set([node.id]);
+		let currentParent = node.parent;
+		while (currentParent) {
+			if (seenChain.has(currentParent)) {
+				node.parent = rootNode.id;
+				break;
+			}
+			seenChain.add(currentParent);
+			const parentNode = nodesById.get(currentParent);
+			if (!parentNode) {
+				node.parent = rootNode.id;
+				break;
+			}
+			currentParent = parentNode.parent;
+		}
+	});
+
+	const reachable = new Set();
+	const markReachable = (nodeId) => {
+		if (!nodeId || reachable.has(nodeId)) {
+			return;
+		}
+		reachable.add(nodeId);
+		normalizedNodes.forEach((candidateNode) => {
+			if (candidateNode.parent === nodeId) {
+				markReachable(candidateNode.id);
+			}
+		});
+	};
+	markReachable(rootNode.id);
+
+	normalizedNodes.forEach((node) => {
+		if (!reachable.has(node.id) && node.id !== rootNode.id) {
+			node.parent = rootNode.id;
+		}
+	});
+
+	return {
+		type: "mindmap",
+		topic,
+		nodes: normalizedNodes,
+	};
+}
+
+function extractMindmapPayloadFromResponse(response) {
+	if (!response || typeof response !== "object") {
+		return null;
+	}
+
+	if (response.mindmap) {
+		const normalizedMindmap = normalizeMindmapPayload(response.mindmap);
+		if (normalizedMindmap) {
+			return normalizedMindmap;
+		}
+	}
+
+	if (typeof response.content === "string") {
+		return parseMindmapJsonContent(response.content);
+	}
+
+	return null;
+}
+
+function isMindmapSummaryText(content) {
+	if (typeof content !== "string") {
+		return false;
+	}
+	return content.trim().startsWith("🧠 Mind Map:");
+}
+
+function isMindmapSummaryMessage(message) {
+	if (!message || typeof message !== "object") {
+		return false;
+	}
+	return message.role === "assistant" && isMindmapSummaryText(message.content);
+}
+
+function buildMindmapSavePayload(mindmapData) {
+	const normalizedMindmap = normalizeMindmapPayload(mindmapData);
+	if (!normalizedMindmap) {
+		return null;
+	}
+
+	return {
+		topic: normalizedMindmap.topic,
+		nodes: normalizedMindmap.nodes.map((node) => ({
+			id: node.id,
+			label: node.label,
+			parent: node.parent,
+		})),
+	};
+}
+
+async function saveMindmapForChat(mindmapData, responsePayload) {
+	if (!state.userId || !state.activeChatId) {
+		return null;
+	}
+
+	const mindmapSavePayload = buildMindmapSavePayload(mindmapData);
+	if (!mindmapSavePayload) {
+		return null;
+	}
+
+	const responseMessageIndex = responsePayload && responsePayload.message_index;
+	const messageIndex = Number.isInteger(responseMessageIndex)
+		? responseMessageIndex
+		: null;
+
+	if (messageIndex === null || messageIndex < 0) {
+		console.error("Cannot persist mind map without a valid message_index from backend response");
+		return null;
+	}
+
+	const savedMindmap = await apiFetch("/mindmaps", {
+		method: "POST",
+		body: {
+			user_id: state.userId,
+			chat_id: state.activeChatId,
+			message_index: messageIndex,
+			topic: mindmapSavePayload.topic,
+			nodes: mindmapSavePayload.nodes,
+		},
+	});
+
+	if (!savedMindmap || typeof savedMindmap !== "object") {
+		return null;
+	}
+
+	return {
+		mindmapId: savedMindmap.mindmap_id || null,
+		messageIndex: typeof savedMindmap.message_index === "number" ? savedMindmap.message_index : messageIndex,
+	};
+}
+
+function normalizeStoredMindmapRecord(rawMindmap) {
+	if (!rawMindmap || typeof rawMindmap !== "object") {
+		return null;
+	}
+
+	const rawNodes = Array.isArray(rawMindmap.nodes) ? rawMindmap.nodes : [];
+	const preparedNodes = rawNodes.map((node, index) => ({
+		id: typeof node.id === "string" && node.id.trim() ? node.id.trim() : `n${index + 1}`,
+		label: typeof node.label === "string" ? node.label : "",
+		parent: node.parent == null ? null : String(node.parent),
+	}));
+
+	const normalizedMindmap = normalizeMindmapPayload({
+		type: "mindmap",
+		topic: rawMindmap.topic,
+		nodes: preparedNodes,
+	});
+
+	if (!normalizedMindmap) {
+		return null;
+	}
+
+	return {
+		mindmap_id: typeof rawMindmap.mindmap_id === "string" ? rawMindmap.mindmap_id : "",
+		message_index: Number.isInteger(rawMindmap.message_index) ? rawMindmap.message_index : 0,
+		mindmap: normalizedMindmap,
+	};
+}
+
+function buildMindmapIndexMap(mindmaps) {
+	const mindmapMap = new Map();
+	mindmaps.forEach((mindmapRecord) => {
+		const index = mindmapRecord.message_index;
+		if (!mindmapMap.has(index)) {
+			mindmapMap.set(index, []);
+		}
+		mindmapMap.get(index).push(mindmapRecord);
+	});
+	return mindmapMap;
+}
+
+function renderMindmapsAtMessageIndex(mindmapMap, messageIndex, responseLevel = null, autoScroll = false) {
+	const mindmapRecords = mindmapMap.get(messageIndex) || [];
+	mindmapRecords.forEach((mindmapRecord) => {
+		renderMindmapLauncherCard(
+			mindmapRecord.mindmap,
+			responseLevel,
+			{
+				mindmapId: mindmapRecord.mindmap_id,
+				messageIndex: mindmapRecord.message_index,
+			},
+			autoScroll,
+		);
+	});
+}
+
+const mindmapModalState = {
+	overlay: null,
+	topic: null,
+	zoomLabel: null,
+	viewport: null,
+	canvas: null,
+	linksSvg: null,
+	nodesLayer: null,
+	mindmapData: null,
+	mindmapId: null,
+	collapsedNodeIds: new Set(),
+	scale: 1,
+};
+
+function ensureMindmapModal() {
+	if (mindmapModalState.overlay) {
+		return mindmapModalState;
+	}
+
+	const overlay = document.createElement("div");
+	overlay.id = "mindmap-modal-overlay";
+	overlay.className = "mindmap-modal-overlay";
+	overlay.setAttribute("aria-hidden", "true");
+	overlay.setAttribute("role", "dialog");
+
+	const modal = document.createElement("div");
+	modal.className = "mindmap-modal";
+
+	const header = document.createElement("div");
+	header.className = "mindmap-modal-header";
+
+	const titleWrap = document.createElement("div");
+	titleWrap.className = "mindmap-modal-title-wrap";
+
+	const title = document.createElement("h3");
+	title.className = "mindmap-modal-title";
+	title.textContent = "Mind Map";
+	titleWrap.appendChild(title);
+
+	const topic = document.createElement("div");
+	topic.className = "mindmap-modal-topic";
+	topic.textContent = "General Topic";
+	titleWrap.appendChild(topic);
+	header.appendChild(titleWrap);
+
+	const actions = document.createElement("div");
+	actions.className = "mindmap-modal-actions";
+
+	const controls = document.createElement("div");
+	controls.className = "mindmap-modal-controls";
+
+	const zoomOutBtn = document.createElement("button");
+	zoomOutBtn.type = "button";
+	zoomOutBtn.className = "mindmap-zoom-btn";
+	zoomOutBtn.textContent = "-";
+	controls.appendChild(zoomOutBtn);
+
+	const zoomLabel = document.createElement("span");
+	zoomLabel.className = "mindmap-zoom-label";
+	zoomLabel.textContent = "100%";
+	controls.appendChild(zoomLabel);
+
+	const zoomInBtn = document.createElement("button");
+	zoomInBtn.type = "button";
+	zoomInBtn.className = "mindmap-zoom-btn";
+	zoomInBtn.textContent = "+";
+	controls.appendChild(zoomInBtn);
+
+	const zoomResetBtn = document.createElement("button");
+	zoomResetBtn.type = "button";
+	zoomResetBtn.className = "mindmap-zoom-reset-btn";
+	zoomResetBtn.textContent = "Reset";
+	controls.appendChild(zoomResetBtn);
+
+	actions.appendChild(controls);
+
+	const closeBtn = document.createElement("button");
+	closeBtn.type = "button";
+	closeBtn.className = "mindmap-modal-close";
+	closeBtn.textContent = "Close";
+	actions.appendChild(closeBtn);
+
+	header.appendChild(actions);
+
+	const body = document.createElement("div");
+	body.className = "mindmap-modal-body";
+
+	const viewport = document.createElement("div");
+	viewport.className = "mindmap-viewport";
+
+	const canvas = document.createElement("div");
+	canvas.className = "mindmap-canvas";
+
+	const linksSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+	linksSvg.classList.add("mindmap-links");
+	linksSvg.setAttribute("aria-hidden", "true");
+	canvas.appendChild(linksSvg);
+
+	const nodesLayer = document.createElement("div");
+	nodesLayer.className = "mindmap-nodes-layer";
+	canvas.appendChild(nodesLayer);
+
+	viewport.appendChild(canvas);
+	body.appendChild(viewport);
+
+	const hint = document.createElement("div");
+	hint.className = "mindmap-modal-hint";
+	hint.textContent = "Tip: click branch nodes to collapse or expand sections.";
+	body.appendChild(hint);
+
+	modal.appendChild(header);
+	modal.appendChild(body);
+	overlay.appendChild(modal);
+	document.body.appendChild(overlay);
+
+	mindmapModalState.overlay = overlay;
+	mindmapModalState.topic = topic;
+	mindmapModalState.zoomLabel = zoomLabel;
+	mindmapModalState.viewport = viewport;
+	mindmapModalState.canvas = canvas;
+	mindmapModalState.linksSvg = linksSvg;
+	mindmapModalState.nodesLayer = nodesLayer;
+
+	overlay.addEventListener("click", (event) => {
+		if (event.target === overlay) {
+			closeMindmapModal();
+		}
+	});
+
+	closeBtn.addEventListener("click", closeMindmapModal);
+
+	const updateMindmapZoom = (nextScale, centerOnRoot = false) => {
+		if (!mindmapModalState.viewport) {
+			return;
+		}
+
+		const previousScale = mindmapModalState.scale || 1;
+		const clampedScale = Math.min(1.8, Math.max(0.65, nextScale));
+		if (Math.abs(clampedScale - previousScale) < 0.001 && !centerOnRoot) {
+			return;
+		}
+
+		const viewportEl = mindmapModalState.viewport;
+		const centerX = (viewportEl.scrollLeft + viewportEl.clientWidth / 2) / previousScale;
+		const centerY = (viewportEl.scrollTop + viewportEl.clientHeight / 2) / previousScale;
+
+		mindmapModalState.scale = clampedScale;
+		renderMindmapGraph(centerOnRoot);
+
+		if (!centerOnRoot) {
+			viewportEl.scrollLeft = Math.max(0, centerX * clampedScale - viewportEl.clientWidth / 2);
+			viewportEl.scrollTop = Math.max(0, centerY * clampedScale - viewportEl.clientHeight / 2);
+		}
+	};
+
+	zoomInBtn.addEventListener("click", () => {
+		updateMindmapZoom((mindmapModalState.scale || 1) + 0.15, false);
+	});
+
+	zoomOutBtn.addEventListener("click", () => {
+		updateMindmapZoom((mindmapModalState.scale || 1) - 0.15, false);
+	});
+
+	zoomResetBtn.addEventListener("click", () => {
+		updateMindmapZoom(1, true);
+	});
+
+	return mindmapModalState;
+}
+
+function handleMindmapModalKeydown(event) {
+	if (event.key === "Escape" && mindmapModalState.overlay && mindmapModalState.overlay.classList.contains("active")) {
+		event.preventDefault();
+		closeMindmapModal();
+	}
+}
+
+function closeMindmapModal() {
+	if (mindmapModalState.overlay) {
+		mindmapModalState.overlay.classList.remove("active");
+		mindmapModalState.overlay.setAttribute("aria-hidden", "true");
+	}
+
+	document.body.classList.remove("mindmap-modal-open");
+	document.removeEventListener("keydown", handleMindmapModalKeydown);
+}
+
+function buildMindmapHierarchy(mindmapData) {
+	const normalizedMindmap = normalizeMindmapPayload(mindmapData);
+	if (!normalizedMindmap) {
+		return null;
+	}
+
+	const order = [];
+	const byId = new Map();
+	normalizedMindmap.nodes.forEach((node) => {
+		order.push(node.id);
+		byId.set(node.id, {
+			id: node.id,
+			label: node.label,
+			parent: node.parent,
+			children: [],
+		});
+	});
+
+	let rootId = null;
+	order.forEach((nodeId) => {
+		const node = byId.get(nodeId);
+		if (!node) {
+			return;
+		}
+
+		if (!node.parent || !byId.has(node.parent) || node.parent === node.id) {
+			node.parent = null;
+			if (!rootId) {
+				rootId = node.id;
+			}
+		}
+	});
+
+	if (!rootId && order.length > 0) {
+		rootId = order[0];
+		const fallbackRoot = byId.get(rootId);
+		if (fallbackRoot) {
+			fallbackRoot.parent = null;
+		}
+	}
+
+	order.forEach((nodeId) => {
+		const node = byId.get(nodeId);
+		if (!node) {
+			return;
+		}
+
+		if (node.parent && byId.has(node.parent)) {
+			byId.get(node.parent).children.push(nodeId);
+		}
+	});
+
+	if (!rootId || !byId.has(rootId)) {
+		return null;
+	}
+
+	return {
+		rootId,
+		byId,
+		order,
+	};
+}
+
+function collectVisibleMindmapIds(nodeId, hierarchy, visibleSet = new Set()) {
+	if (!nodeId || !hierarchy || !hierarchy.byId.has(nodeId) || visibleSet.has(nodeId)) {
+		return visibleSet;
+	}
+
+	visibleSet.add(nodeId);
+	if (mindmapModalState.collapsedNodeIds.has(nodeId)) {
+		return visibleSet;
+	}
+
+	const node = hierarchy.byId.get(nodeId);
+	node.children.forEach((childId) => {
+		collectVisibleMindmapIds(childId, hierarchy, visibleSet);
+	});
+
+	return visibleSet;
+}
+
+function layoutVisibleMindmapNodes(hierarchy) {
+	const horizontalGap = 260;
+	const verticalGap = 106;
+	const nodeWidth = 200;
+	const nodeHeight = 68;
+	const marginX = 72;
+	const marginY = 58;
+
+	const visibleIds = collectVisibleMindmapIds(hierarchy.rootId, hierarchy, new Set());
+	const positionMap = new Map();
+	let maxDepth = 0;
+	let leafCursor = 0;
+
+	const placeNode = (nodeId, depth) => {
+		maxDepth = Math.max(maxDepth, depth);
+		const node = hierarchy.byId.get(nodeId);
+		if (!node) {
+			return 0;
+		}
+
+		const visibleChildren = node.children.filter((childId) => visibleIds.has(childId));
+		if (visibleChildren.length === 0) {
+			const y = leafCursor * verticalGap;
+			leafCursor += 1;
+			positionMap.set(nodeId, { depth, y });
+			return y;
+		}
+
+		let totalY = 0;
+		visibleChildren.forEach((childId) => {
+			totalY += placeNode(childId, depth + 1);
+		});
+
+		const y = totalY / visibleChildren.length;
+		positionMap.set(nodeId, { depth, y });
+		return y;
+	};
+
+	placeNode(hierarchy.rootId, 0);
+
+	const leafCount = Math.max(leafCursor, 1);
+	const graphHeight = Math.max((leafCount - 1) * verticalGap + nodeHeight, nodeHeight);
+	const graphWidth = Math.max(maxDepth * horizontalGap + nodeWidth, nodeWidth);
+	const canvasWidth = graphWidth + marginX * 2;
+	const canvasHeight = Math.max(graphHeight + marginY * 2, 440);
+	const yOffset = (canvasHeight - graphHeight) / 2;
+
+	positionMap.forEach((position) => {
+		position.x = marginX + position.depth * horizontalGap;
+		position.y = yOffset + position.y;
+	});
+
+	return {
+		visibleIds,
+		positionMap,
+		canvasWidth,
+		canvasHeight,
+		nodeWidth,
+		nodeHeight,
+		rootPosition: positionMap.get(hierarchy.rootId) || {
+			x: marginX,
+			y: marginY,
+		},
+	};
+}
+
+function renderMindmapGraph(centerOnRoot = false) {
+	if (
+		!mindmapModalState.mindmapData ||
+		!mindmapModalState.canvas ||
+		!mindmapModalState.linksSvg ||
+		!mindmapModalState.nodesLayer ||
+		!mindmapModalState.viewport
+	) {
+		return;
+	}
+
+	const hierarchy = buildMindmapHierarchy(mindmapModalState.mindmapData);
+	if (!hierarchy) {
+		return;
+	}
+
+	mindmapModalState.collapsedNodeIds = new Set(
+		Array.from(mindmapModalState.collapsedNodeIds).filter((nodeId) => hierarchy.byId.has(nodeId))
+	);
+
+	const layout = layoutVisibleMindmapNodes(hierarchy);
+	const scale = Math.min(1.8, Math.max(0.65, mindmapModalState.scale || 1));
+	mindmapModalState.scale = scale;
+
+	const scaledWidth = Math.round(layout.canvasWidth * scale);
+	const scaledHeight = Math.round(layout.canvasHeight * scale);
+	mindmapModalState.canvas.style.width = `${scaledWidth}px`;
+	mindmapModalState.canvas.style.height = `${scaledHeight}px`;
+
+	if (mindmapModalState.zoomLabel) {
+		mindmapModalState.zoomLabel.textContent = `${Math.round(scale * 100)}%`;
+	}
+
+	mindmapModalState.linksSvg.innerHTML = "";
+	mindmapModalState.linksSvg.setAttribute("viewBox", `0 0 ${scaledWidth} ${scaledHeight}`);
+	mindmapModalState.linksSvg.setAttribute("width", String(scaledWidth));
+	mindmapModalState.linksSvg.setAttribute("height", String(scaledHeight));
+
+	mindmapModalState.nodesLayer.innerHTML = "";
+
+	hierarchy.order.forEach((nodeId) => {
+		if (!layout.visibleIds.has(nodeId)) {
+			return;
+		}
+
+		const node = hierarchy.byId.get(nodeId);
+		const sourcePos = layout.positionMap.get(nodeId);
+		if (!node || !sourcePos) {
+			return;
+		}
+
+		node.children.forEach((childId) => {
+			if (!layout.visibleIds.has(childId)) {
+				return;
+			}
+
+			const childPos = layout.positionMap.get(childId);
+			if (!childPos) {
+				return;
+			}
+
+			const sourceX = (sourcePos.x + layout.nodeWidth) * scale;
+			const sourceY = (sourcePos.y + layout.nodeHeight / 2) * scale;
+			const targetX = childPos.x * scale;
+			const targetY = (childPos.y + layout.nodeHeight / 2) * scale;
+			const controlOffset = Math.max(56, (targetX - sourceX) * 0.38);
+
+			const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+			path.setAttribute("d", `M ${sourceX} ${sourceY} C ${sourceX + controlOffset} ${sourceY}, ${targetX - controlOffset} ${targetY}, ${targetX} ${targetY}`);
+			path.setAttribute("class", "mindmap-link");
+			mindmapModalState.linksSvg.appendChild(path);
+		});
+	});
+
+	const orderedVisibleNodes = Array.from(layout.positionMap.entries())
+		.sort((a, b) => {
+			if (a[1].x === b[1].x) {
+				return a[1].y - b[1].y;
+			}
+			return a[1].x - b[1].x;
+		})
+		.map(([nodeId]) => nodeId);
+
+	orderedVisibleNodes.forEach((nodeId) => {
+		const node = hierarchy.byId.get(nodeId);
+		const position = layout.positionMap.get(nodeId);
+		if (!node || !position) {
+			return;
+		}
+
+		const nodeElement = document.createElement("button");
+		nodeElement.type = "button";
+		nodeElement.className = "mindmap-node";
+		nodeElement.style.left = `${Math.round(position.x * scale)}px`;
+		nodeElement.style.top = `${Math.round(position.y * scale)}px`;
+		nodeElement.style.width = `${Math.round(layout.nodeWidth * scale)}px`;
+		nodeElement.style.minHeight = `${Math.round(layout.nodeHeight * scale)}px`;
+		nodeElement.style.padding = `${Math.max(8, Math.round(12 * scale))}px ${Math.max(10, Math.round(14 * scale))}px`;
+		nodeElement.style.fontSize = `${Math.max(12, Math.round(14 * scale))}px`;
+		nodeElement.style.lineHeight = "1.3";
+
+		if (nodeId === hierarchy.rootId) {
+			nodeElement.classList.add("mindmap-node-root");
+		}
+
+		const childCount = node.children.length;
+		if (childCount > 0) {
+			nodeElement.classList.add("mindmap-node-branch");
+			if (mindmapModalState.collapsedNodeIds.has(nodeId)) {
+				nodeElement.classList.add("collapsed");
+			}
+		}
+
+		const label = document.createElement("span");
+		label.className = "mindmap-node-label";
+		label.textContent = node.label;
+		nodeElement.appendChild(label);
+
+		if (childCount > 0) {
+			const toggle = document.createElement("span");
+			toggle.className = "mindmap-node-toggle";
+			toggle.textContent = mindmapModalState.collapsedNodeIds.has(nodeId)
+				? `+${childCount}`
+				: `-${childCount}`;
+			nodeElement.appendChild(toggle);
+
+			nodeElement.title = mindmapModalState.collapsedNodeIds.has(nodeId)
+				? "Expand branch"
+				: "Collapse branch";
+			nodeElement.setAttribute("aria-expanded", String(!mindmapModalState.collapsedNodeIds.has(nodeId)));
+			nodeElement.addEventListener("click", () => {
+				if (mindmapModalState.collapsedNodeIds.has(nodeId)) {
+					mindmapModalState.collapsedNodeIds.delete(nodeId);
+				} else {
+					mindmapModalState.collapsedNodeIds.add(nodeId);
+				}
+				renderMindmapGraph(false);
+			});
+		} else {
+			nodeElement.classList.add("mindmap-node-leaf");
+			nodeElement.disabled = true;
+		}
+
+		mindmapModalState.nodesLayer.appendChild(nodeElement);
+	});
+
+	if (centerOnRoot && mindmapModalState.viewport) {
+		mindmapModalState.viewport.scrollLeft = 0;
+		const rootCenterY = (layout.rootPosition.y + layout.nodeHeight / 2) * scale;
+		mindmapModalState.viewport.scrollTop = Math.max(
+			0,
+			rootCenterY - mindmapModalState.viewport.clientHeight / 2
+		);
+	}
+}
+
+function openMindmapModal(mindmapData, metadata = {}) {
+	const normalizedMindmap = normalizeMindmapPayload(mindmapData);
+	if (!normalizedMindmap) {
+		return;
+	}
+
+	ensureMindmapModal();
+
+	mindmapModalState.mindmapData = normalizedMindmap;
+	mindmapModalState.mindmapId =
+		typeof metadata.mindmapId === "string" && metadata.mindmapId ? metadata.mindmapId : null;
+	mindmapModalState.collapsedNodeIds = new Set();
+	mindmapModalState.scale = 1;
+
+	if (mindmapModalState.topic) {
+		mindmapModalState.topic.textContent = normalizedMindmap.topic;
+	}
+
+	if (mindmapModalState.overlay) {
+		mindmapModalState.overlay.classList.add("active");
+		mindmapModalState.overlay.setAttribute("aria-hidden", "false");
+	}
+
+	document.body.classList.add("mindmap-modal-open");
+	document.addEventListener("keydown", handleMindmapModalKeydown);
+	renderMindmapGraph(true);
+}
+
+function renderMindmapLauncherCard(mindmapData, responseLevel = null, metadata = {}, autoScroll = true) {
+	const normalizedMindmap = normalizeMindmapPayload(mindmapData);
+	if (!normalizedMindmap) {
+		return null;
+	}
+
+	const wrapper = document.createElement("div");
+	wrapper.classList.add("message", "ai-message");
+
+	const avatar = document.createElement("div");
+	avatar.classList.add("message-avatar");
+	const logo = document.createElement("img");
+	logo.src = "assests/logo.png";
+	logo.alt = "Saivo";
+	logo.classList.add("bot-logo");
+	avatar.appendChild(logo);
+	wrapper.appendChild(avatar);
+
+	const card = document.createElement("div");
+	card.classList.add("mindmap-card", "mindmap-launcher-card");
+	const levelBadge = createResponseLevelBadge(responseLevel);
+	if (levelBadge) {
+		card.appendChild(levelBadge);
+	}
+
+	const header = document.createElement("div");
+	header.classList.add("mindmap-card-header");
+	const icon = document.createElement("div");
+	icon.classList.add("mindmap-card-icon");
+	icon.textContent = "🧠";
+	header.appendChild(icon);
+
+	const headerText = document.createElement("div");
+	const title = document.createElement("div");
+	title.classList.add("mindmap-card-title");
+	title.textContent = "Mind Map Ready";
+	headerText.appendChild(title);
+	const topic = document.createElement("div");
+	topic.classList.add("mindmap-card-topic");
+	topic.textContent = normalizedMindmap.topic;
+	headerText.appendChild(topic);
+	header.appendChild(headerText);
+	card.appendChild(header);
+
+	const launcherBody = document.createElement("div");
+	launcherBody.classList.add("mindmap-launcher-body");
+
+	const meta = document.createElement("div");
+	meta.classList.add("mindmap-launcher-meta");
+	meta.textContent = `${normalizedMindmap.nodes.length} nodes available`;
+	launcherBody.appendChild(meta);
+
+	const openBtn = document.createElement("button");
+	openBtn.type = "button";
+	openBtn.classList.add("open-mindmap-btn");
+	openBtn.textContent = "Open Mind Map";
+	launcherBody.appendChild(openBtn);
+
+	card.appendChild(launcherBody);
+
+	card.__mindmapData = normalizedMindmap;
+	card.dataset.mindmapPayload = JSON.stringify(normalizedMindmap);
+	if (metadata && metadata.mindmapId) {
+		card.dataset.mindmapId = metadata.mindmapId;
+	}
+	if (metadata && Number.isInteger(metadata.messageIndex)) {
+		card.dataset.messageIndex = String(metadata.messageIndex);
+	}
+
+	openBtn.addEventListener("click", () => {
+		let storedMindmap = card.__mindmapData || null;
+		if (!storedMindmap && card.dataset.mindmapPayload) {
+			try {
+				storedMindmap = normalizeMindmapPayload(JSON.parse(card.dataset.mindmapPayload));
+			} catch (_error) {
+				storedMindmap = null;
+			}
+		}
+
+		if (!storedMindmap) {
+			return;
+		}
+
+		openMindmapModal(storedMindmap, {
+			mindmapId: card.dataset.mindmapId || "",
+		});
+	});
+
+	wrapper.appendChild(card);
+	messagesContainer.appendChild(wrapper);
+	if (autoScroll) {
+		chatArea.scrollTop = chatArea.scrollHeight;
+	}
+	return wrapper;
+}
+
+/**
+ * Attempts to parse flashcard JSON from assistant content.
  */
 function parseFlashcardJsonContent(content) {
 	if (typeof content !== "string") {

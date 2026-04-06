@@ -17,6 +17,7 @@ from schemas.message_schema import (
     SendMessageRequest,
 )
 from services.ai_services import (
+    generate_mindmap_payload,
     generate_flashcard_payload,
     generate_ai_reply_with_mode,
     generate_quiz_feedback_reply,
@@ -97,7 +98,9 @@ PERSONAL_QUERY_PATTERNS = (
 STRUCTURED_TARGET_PATTERNS = (
     re.compile(r"\b(?:quiz|test)\b(?:\s+me)?\s+(?:on|about|for)\s+(.+)$", re.IGNORECASE),
     re.compile(r"\b(?:flash\s*cards?|study\s*cards?)\b\s+(?:on|about|for)\s+(.+)$", re.IGNORECASE),
+    re.compile(r"\bmind\s*map\b\s+(?:on|about|for|of)\s+(.+)$", re.IGNORECASE),
     re.compile(r"\b(?:make|create|generate|give)\b.*\b(?:quiz|flash\s*cards?|study\s*cards?)\b\s+(?:on|about|for)\s+(.+)$", re.IGNORECASE),
+    re.compile(r"\b(?:make|create|generate|build|give)\b.*\bmind\s*map\b\s+(?:on|about|for|of)\s+(.+)$", re.IGNORECASE),
 )
 ACADEMIC_TOPIC_HINTS = (
     "math", "maths", "algebra", "geometry", "calculus", "statistics", "probability",
@@ -264,6 +267,9 @@ def _is_subject_control_message(value: str) -> bool:
     if "flashcard" in lowered or "flash card" in lowered or "study card" in lowered:
         return True
 
+    if "mind map" in lowered or "mindmap" in lowered:
+        return True
+
     return False
 
 
@@ -287,6 +293,17 @@ def _is_flashcard_request(value: str) -> bool:
         return True
 
     return bool(re.search(r"\bflash\s*cards?\b\s+(?:on|about|for)\b", lowered))
+
+
+def _is_mindmap_request(value: str) -> bool:
+    lowered = value.strip().lower()
+    if "mind map" in lowered or "mindmap" in lowered:
+        return True
+
+    if re.search(r"\b(?:make|create|generate|build|give)\b.*\bmind\s*map\b", lowered):
+        return True
+
+    return bool(re.search(r"\bmind\s*map\b\s+(?:on|about|for|of)\b", lowered))
 
 
 def _normalize_person_target(raw_value: str) -> str:
@@ -356,7 +373,7 @@ def _extract_structured_request_target(value: str) -> Optional[str]:
 
 
 def _is_structured_request_about_person(value: str) -> bool:
-    if not (_is_quiz_request(value) or _is_flashcard_request(value)):
+    if not (_is_quiz_request(value) or _is_flashcard_request(value) or _is_mindmap_request(value)):
         return False
 
     target = _extract_structured_request_target(value)
@@ -735,6 +752,7 @@ async def send_message(
             response["new_title"] = new_title
         return response
 
+    is_mindmap = _is_mindmap_request(payload.content)
     is_flashcard = _is_flashcard_request(payload.content)
     is_quiz = _is_quiz_request(payload.content)
     is_summary = content_lower.strip() == "summarize" or content_lower.strip().startswith("summarize ")
@@ -762,6 +780,77 @@ async def send_message(
             "message_id": str(result.inserted_id),
             "message_index": assistant_index,
             "pending": False,
+            "response_level": response_level,
+        }
+        if new_title:
+            response["new_title"] = new_title
+        return response
+
+    if is_mindmap:
+        mindmap_data = await generate_mindmap_payload(
+            message=prompt_for_api,
+            context=context,
+            difficulty_level=difficulty,
+            session_subject=session_subject,
+        )
+
+        if str(mindmap_data.get("type", "")).strip().lower() != "mindmap":
+            refusal_text = str(mindmap_data.get("content", "")).strip()
+            if not refusal_text:
+                refusal_text = "I can only create mind maps for study or education-related topics."
+
+            assistant_message = Message.create(
+                chat_id=chat_id,
+                user_id=user_id,
+                role="assistant",
+                content=refusal_text,
+            )
+            assistant_document = assistant_message.to_document()
+            assistant_document["message_index"] = assistant_index
+            assistant_document["ai_generated"] = True
+            assistant_document["was_stopped"] = False
+            if response_level:
+                assistant_document["response_level"] = response_level
+            result = await db["messages"].insert_one(assistant_document)
+
+            response = {
+                "type": "text",
+                "content": refusal_text,
+                "chat_id": str(chat_id),
+                "user_id": str(user_id),
+                "message_id": str(result.inserted_id),
+                "message_index": assistant_index,
+                "pending": False,
+                "response_level": response_level,
+            }
+            if new_title:
+                response["new_title"] = new_title
+            return response
+
+        node_count = len(mindmap_data.get("nodes", []))
+        mindmap_summary = (
+            f"🧠 Mind Map: {mindmap_data.get('topic', 'Topic')} — {node_count} nodes generated."
+        )
+        assistant_message = Message.create(
+            chat_id=chat_id, user_id=user_id, role="assistant", content=mindmap_summary,
+        )
+        assistant_document = assistant_message.to_document()
+        assistant_document["message_index"] = assistant_index
+        assistant_document["ai_generated"] = True
+        assistant_document["was_stopped"] = False
+        if response_level:
+            assistant_document["response_level"] = response_level
+        result = await db["messages"].insert_one(assistant_document)
+
+        response = {
+            "type": "mindmap",
+            "content": mindmap_summary,
+            "chat_id": str(chat_id),
+            "user_id": str(user_id),
+            "message_id": str(result.inserted_id),
+            "message_index": assistant_index,
+            "pending": False,
+            "mindmap": mindmap_data,
             "response_level": response_level,
         }
         if new_title:

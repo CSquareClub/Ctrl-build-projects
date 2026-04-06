@@ -31,6 +31,7 @@ from routes.help_routes import router as help_router
 from routes.account_routes import router as account_router
 from routes.quiz_routes import router as quiz_router
 from routes.flashcard_routes import router as flashcard_router
+from routes.mindmap_routes import router as mindmap_router
 from services.deletion_service import process_scheduled_deletions
 
 # Create FastAPI application instance
@@ -58,6 +59,7 @@ app.include_router(help_router)
 app.include_router(account_router)
 app.include_router(quiz_router)
 app.include_router(flashcard_router)
+app.include_router(mindmap_router)
 
 
 @app.on_event("startup")
@@ -70,7 +72,7 @@ async def startup_event():
     await connect_to_mongo()
     
     # Ensure educational content indexes exist.
-    # quiz_id/flashcard_id must be unique and queries by chat should be fast.
+    # quiz_id/flashcard_id/mindmap_id must be unique and queries by chat should be fast.
     try:
         db = get_database()
         await db["messages"].create_index([("chat_id", 1), ("message_index", 1)])
@@ -80,6 +82,10 @@ async def startup_event():
         )
         await db["flashcards"].create_index("flashcard_id", unique=True)
         await db["flashcards"].create_index(
+            [("chat_id", 1), ("message_index", 1), ("created_at", 1)]
+        )
+        await db["mindmaps"].create_index("mindmap_id", unique=True)
+        await db["mindmaps"].create_index(
             [("chat_id", 1), ("message_index", 1), ("created_at", 1)]
         )
         await db["quiz_attempts"].create_index(

@@ -29,6 +29,14 @@ FLASHCARD_TOPIC_PATTERNS = (
     re.compile(r"flash\s*cards?\s+(?:on|about|for)\s+(.+)", re.IGNORECASE),
     re.compile(r"study\s+cards?\s+(?:on|about|for)\s+(.+)", re.IGNORECASE),
 )
+MINDMAP_TOPIC_PATTERNS = (
+    re.compile(
+        r"(?:make|create|generate|build)\s+(?:me\s+)?(?:a\s+)?mind\s*map\s+(?:on|about|for|of)\s+(.+)",
+        re.IGNORECASE,
+    ),
+    re.compile(r"mind\s*map\s+(?:on|about|for|of)\s+(.+)", re.IGNORECASE),
+    re.compile(r"map\s+out\s+(.+)", re.IGNORECASE),
+)
 
 # System prompt for normal conversational tutoring mode.
 SYSTEM_PROMPT = """You are Saivo, a friendly and smart AI tutor built to help students learn effectively.
@@ -44,11 +52,15 @@ QUIZ HANDLING:
 - If quiz interactions are requested by runtime instructions, follow those instructions exactly.
 - Keep feedback encouraging and specific.
 
+MIND MAP HANDLING:
+- If mind map interactions are requested by runtime instructions, follow those instructions exactly.
+
 SUMMARY HANDLING:
 - If summary interactions are requested by runtime instructions, follow those instructions exactly.
 
 SAFETY LAYER (INDIVIDUALS):
 - Never generate quiz content, flashcards, summaries, or any structured content about a real person or individual by name.
+- Never generate mind maps about a real person or individual by name.
 - If asked for educational content about any individual, refuse with exactly: "I can only generate educational content about academic topics, not about individuals"
 - One hardcoded exception: if the user asks exactly "who is Kush Dalal", reply with exactly: "Kush Dalal is a student at Chandigarh University."
 - For any other person, refuse and do not provide personal details.
@@ -189,6 +201,8 @@ def _infer_topic_from_context(context: Sequence[str]) -> str:
             continue
         if "quiz me" in user_lower or "test me" in user_lower:
             continue
+        if "mind map" in user_lower or "mindmap" in user_lower:
+            continue
         if "summarize" in user_lower:
             continue
         return user_text[:120]
@@ -298,6 +312,25 @@ def _extract_flashcard_topic(message: str) -> str | None:
 
     # Handle compact forms like "flashcards on photosynthesis"
     compact_match = re.search(r"\bflash\s*cards?\b\s+(?:on|about|for)\s+(.+)", message, re.IGNORECASE)
+    if compact_match:
+        candidate = compact_match.group(1).strip(" .,!?:;\n\t")
+        if candidate:
+            return candidate[:120]
+
+    return None
+
+
+def _extract_mindmap_topic(message: str) -> str | None:
+    for pattern in MINDMAP_TOPIC_PATTERNS:
+        match = pattern.search(message)
+        if not match:
+            continue
+
+        candidate = match.group(1).strip(" .,!?:;\n\t")
+        if candidate:
+            return candidate[:120]
+
+    compact_match = re.search(r"\bmind\s*map\b\s+(?:on|about|for|of)\s+(.+)", message, re.IGNORECASE)
     if compact_match:
         candidate = compact_match.group(1).strip(" .,!?:;\n\t")
         if candidate:
@@ -478,6 +511,95 @@ def _normalize_flashcard_payload(payload: dict[str, Any] | None, topic: str) -> 
         "type": "flashcard",
         "topic": topic_value,
         "cards": normalized_cards,
+    }
+
+
+def _fallback_mindmap_payload(topic: str) -> dict[str, Any]:
+    return {
+        "type": "mindmap",
+        "topic": topic,
+        "nodes": [
+            {"id": "1", "label": topic, "parent": None},
+            {"id": "2", "label": "Core Concepts", "parent": "1"},
+            {"id": "3", "label": "Applications", "parent": "1"},
+            {"id": "4", "label": "Methods", "parent": "1"},
+            {"id": "5", "label": "Common Mistakes", "parent": "1"},
+            {"id": "6", "label": "Related Ideas", "parent": "1"},
+            {"id": "7", "label": "Definitions", "parent": "2"},
+            {"id": "8", "label": "Key Principles", "parent": "2"},
+            {"id": "9", "label": "Real-world Examples", "parent": "3"},
+            {"id": "10", "label": "Use Cases", "parent": "3"},
+            {"id": "11", "label": "Step-by-step Process", "parent": "4"},
+            {"id": "12", "label": "Practice Strategy", "parent": "4"},
+            {"id": "13", "label": "Misconceptions", "parent": "5"},
+            {"id": "14", "label": "How to Avoid Errors", "parent": "5"},
+            {"id": "15", "label": "Advanced Connections", "parent": "6"},
+            {"id": "16", "label": "Revision Tips", "parent": "6"},
+        ],
+    }
+
+
+def _normalize_mindmap_payload(payload: dict[str, Any] | None, topic: str) -> dict[str, Any]:
+    fallback = _fallback_mindmap_payload(topic)
+    if not isinstance(payload, dict):
+        return fallback
+
+    if str(payload.get("type", "")).strip().lower() != "mindmap":
+        return fallback
+
+    raw_nodes = payload.get("nodes")
+    if not isinstance(raw_nodes, list) or len(raw_nodes) < 9:
+        return fallback
+
+    normalized_nodes: list[dict[str, Any]] = []
+    seen_ids: set[str] = set()
+
+    for raw_node in raw_nodes:
+        if not isinstance(raw_node, dict):
+            continue
+
+        node_id = str(raw_node.get("id", "")).strip()
+        label = str(raw_node.get("label", "")).strip()
+        parent_raw = raw_node.get("parent")
+        parent = None if parent_raw is None else str(parent_raw).strip()
+
+        if not node_id or not label or node_id in seen_ids:
+            continue
+
+        seen_ids.add(node_id)
+        normalized_nodes.append(
+            {
+                "id": node_id,
+                "label": label,
+                "parent": parent if parent else None,
+            }
+        )
+
+    if len(normalized_nodes) < 9:
+        return fallback
+
+    node_ids = {node["id"] for node in normalized_nodes}
+    root_nodes = [node for node in normalized_nodes if node["parent"] is None]
+    if len(root_nodes) != 1:
+        return fallback
+
+    for node in normalized_nodes:
+        parent = node.get("parent")
+        if parent is None:
+            continue
+        if parent not in node_ids or parent == node["id"]:
+            return fallback
+
+    root_id = root_nodes[0]["id"]
+    branch_nodes = [node for node in normalized_nodes if node.get("parent") == root_id]
+    if len(branch_nodes) < 4:
+        return fallback
+
+    topic_value = str(payload.get("topic", "")).strip() or topic
+    return {
+        "type": "mindmap",
+        "topic": topic_value,
+        "nodes": normalized_nodes,
     }
 
 
@@ -770,6 +892,97 @@ async def generate_flashcard_payload(
             }
 
     return _normalize_flashcard_payload(parsed, topic)
+
+
+async def generate_mindmap_payload(
+    message: str,
+    context: Sequence[str],
+    difficulty_level: str,
+    session_subject: str = "Anyone",
+) -> dict[str, Any]:
+    """Generate a structured mind map payload."""
+    normalized_difficulty = _normalize_difficulty(difficulty_level)
+    normalized_subject = _normalize_session_subject(session_subject)
+    topic = _extract_mindmap_topic(message) or _infer_topic_from_context(context)
+    runtime_instructions = _build_runtime_instructions(normalized_difficulty, normalized_subject)
+
+    mindmap_system_prompt = (
+        f"{SYSTEM_PROMPT}\n\n"
+        f"{runtime_instructions}\n\n"
+        "You are creating mind maps for study and education use only.\n"
+        "Never generate mind maps about real people or individuals by name.\n"
+        "If the request is about any individual, respond with exactly: \"I can only generate educational content about academic topics, not about individuals\"\n"
+        "Step 1: Verify whether the requested topic is study or education related.\n"
+        "If it is NOT study/education related, politely refuse in one short sentence.\n"
+        "Step 2: If the topic is valid, return the mind map in this exact JSON format and nothing else:\n"
+        "{\n"
+        "  \"type\": \"mindmap\",\n"
+        "  \"topic\": \"main topic\",\n"
+        "  \"nodes\": [\n"
+        "    {\n"
+        "      \"id\": \"1\",\n"
+        "      \"label\": \"Main Topic\",\n"
+        "      \"parent\": null\n"
+        "    },\n"
+        "    {\n"
+        "      \"id\": \"2\",\n"
+        "      \"label\": \"Subtopic 1\",\n"
+        "      \"parent\": \"1\"\n"
+        "    },\n"
+        "    {\n"
+        "      \"id\": \"3\",\n"
+        "      \"label\": \"Child of Subtopic 1\",\n"
+        "      \"parent\": \"2\"\n"
+        "    }\n"
+        "  ]\n"
+        "}\n"
+        "Generate 1 root node, 4-5 main branches, and 2-3 children per branch.\n"
+        "Return only JSON for valid topics, with no markdown and no extra text."
+    )
+
+    mindmap_user_prompt = (
+        f"Current topic for mind map: {topic}\n"
+        f"User request: {message}\n"
+        "Generate the mind map now."
+    )
+
+    raw_reply = await _call_groq(
+        messages=[
+            {"role": "system", "content": mindmap_system_prompt},
+            {"role": "user", "content": mindmap_user_prompt},
+        ],
+        temperature=0.45,
+    )
+
+    if not raw_reply:
+        return _fallback_mindmap_payload(topic)
+
+    parsed = _parse_json_object(raw_reply)
+    if not parsed:
+        refusal = _extract_refusal_text(raw_reply)
+        if refusal:
+            return {
+                "type": "text",
+                "content": refusal,
+            }
+
+        if "{" not in raw_reply and "[" not in raw_reply:
+            return {
+                "type": "text",
+                "content": raw_reply.strip(),
+            }
+
+        return _fallback_mindmap_payload(topic)
+
+    if str(parsed.get("type", "")).strip().lower() != "mindmap":
+        refusal = str(parsed.get("content", "")).strip()
+        if refusal:
+            return {
+                "type": "text",
+                "content": refusal,
+            }
+
+    return _normalize_mindmap_payload(parsed, topic)
 
 
 async def generate_summary_payload(
