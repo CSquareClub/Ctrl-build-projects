@@ -15,6 +15,28 @@ This folder hosts the FastAPI backend foundation for OpenIssue.
   - `app/embeddings`
   - `app/vectorstore`
   - `app/triage`
+- local vector indexing/query route support:
+  - `POST /api/vectors/index`
+  - `POST /api/vectors/query`
+
+## Vector indexing layer
+
+This branch includes a local, swappable vector indexing path for normalized issues:
+
+- embedding provider boundary (`app/embeddings/contracts.py`)
+- canonical semantic embedding implementation (`minilm-local` via `sentence-transformers/all-MiniLM-L6-v2`)
+- vector store boundary (`app/vectorstore/contracts.py`)
+- local persistent SQLite vector store (`sqlite-local`)
+- indexing/query orchestration service (`app/vectorindex/service.py`)
+
+The vector layer is intentionally local/free-first and replaceable for later branches.
+
+### Reindex/invalidation behavior
+
+- Each stored vector row is tagged with an `embedding_signature` (provider + model + dimension).
+- Queries only search rows matching the active runtime signature.
+- On indexing, if a repository already has rows from a different signature (for example older hashing vectors), the repository slice is cleared before MiniLM upsert continues.
+- This prevents mixed placeholder/semantic indexes from silently masquerading as one index.
 
 Implementation placeholders raise `NotImplementedError` by design so later branches can add real behavior without fake completion.
 
@@ -55,3 +77,41 @@ Expected response shape:
   "environment": "development"
 }
 ```
+
+## Index issues and query similar candidates
+
+Index normalized issues from a repository:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/vectors/index \
+  -H "Content-Type: application/json" \
+  -d '{
+    "owner": "vercel",
+    "repo": "next.js",
+    "state": "open",
+    "include_pull_requests": false
+  }'
+```
+
+Query top-k similar issue candidates:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/vectors/query \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query_text": "build fails on arm64",
+    "k": 5,
+    "owner": "vercel",
+    "repo": "next.js"
+  }'
+```
+
+The index response includes:
+
+- `embedding_provider`
+- `embedding_model`
+- `embedding_signature`
+- `reindex_required`
+- `cleared_count`
+
+These fields indicate whether stale rows were invalidated before indexing.
