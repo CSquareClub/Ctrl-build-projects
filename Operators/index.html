@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>DevMatch — Hackathon Organizer</title>
   <link rel="stylesheet" href="style.css" />
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet"/>
 </head>
 <body>
 
@@ -37,18 +37,45 @@
   </div>
 
   <!-- ══════════════════════════════════════
+       HACKATHON LIST PAGE
+  ══════════════════════════════════════ -->
+  <div id="page-hklist" class="page">
+    <div class="hklist-wrap">
+      <div class="hklist-logo">
+        <span class="logo-icon small">⬡</span>
+        <span class="logo-text">DevMatch</span>
+      </div>
+      <div class="hklist-header">
+        <div>
+          <h1>My Hackathons</h1>
+          <p>Select an event to manage, or create a new one</p>
+        </div>
+        <button class="btn-primary" onclick="goCreateHackathon()">+ New Hackathon</button>
+      </div>
+      <div class="hk-list-grid" id="hk-list-grid"></div>
+      <div class="hklist-empty" id="hklist-empty" style="display:none">
+        No hackathons yet. Create your first one above.
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
        CREATE HACKATHON PAGE
   ══════════════════════════════════════ -->
   <div id="page-create" class="page">
     <div class="create-wrap">
       <div class="create-header">
-        <span class="logo-icon small">⬡</span>
-        <h1>Create Hackathon</h1>
+        <div class="create-header-row">
+          <div class="login-logo" style="margin-bottom:0">
+            <span class="logo-icon small">⬡</span>
+            <span class="logo-text">DevMatch</span>
+          </div>
+          <button class="btn-back" onclick="goBackFromCreate()">← Back</button>
+        </div>
+        <h1 style="margin-top:1.2rem">Create Hackathon</h1>
         <p>Set up your event in minutes</p>
       </div>
-
       <div class="create-form">
-        <!-- Basic Info -->
         <div class="form-section">
           <div class="section-label">Basic Info</div>
           <div class="form-group">
@@ -65,22 +92,20 @@
           </div>
         </div>
 
-        <!-- Timing -->
         <div class="form-section">
           <div class="section-label">Timing</div>
           <div class="form-row">
             <div class="form-group">
-              <label>Start Date & Time</label>
+              <label>Start Date &amp; Time</label>
               <input type="datetime-local" id="hk-start"/>
             </div>
             <div class="form-group">
-              <label>End Date & Time</label>
+              <label>End Date &amp; Time</label>
               <input type="datetime-local" id="hk-end"/>
             </div>
           </div>
         </div>
 
-        <!-- Location -->
         <div class="form-section">
           <div class="section-label">Location</div>
           <div class="form-row">
@@ -99,7 +124,6 @@
           </div>
         </div>
 
-        <!-- Registration -->
         <div class="form-section">
           <div class="section-label">Registration</div>
           <div class="form-row">
@@ -137,11 +161,28 @@
        MAIN APP (Sidebar + Content)
   ══════════════════════════════════════ -->
   <div id="page-app" class="page">
+
     <!-- Sidebar -->
     <aside class="sidebar">
       <div class="sidebar-logo">
         <span class="logo-icon">⬡</span>
         <span class="logo-text">DevMatch</span>
+      </div>
+
+      <!-- Current hackathon switcher -->
+      <div class="sidebar-hk-switcher" onclick="goHkList()">
+        <div class="shk-label">Current Event</div>
+        <div class="shk-name" id="shk-name">—</div>
+      </div>
+      <button class="btn-new-hk-sidebar" onclick="goCreateHackathon()">+ New Hackathon</button>
+
+      <!-- Organiser mini profile pill -->
+      <div class="sidebar-profile-mini" onclick="switchTab('profile')" id="sidebar-profile-mini">
+        <div class="spm-avatar" id="spm-avatar">?</div>
+        <div class="spm-info">
+          <div class="spm-name" id="spm-name">Your Name</div>
+          <div class="spm-role">Organizer</div>
+        </div>
       </div>
 
       <nav class="sidebar-nav">
@@ -154,9 +195,12 @@
         <a class="nav-item" onclick="switchTab('attendance')" data-tab="attendance">
           <span class="nav-icon">◉</span> Attendance
         </a>
+        <a class="nav-item" onclick="switchTab('profile')" data-tab="profile">
+          <span class="nav-icon">◎</span> My Profile
+        </a>
       </nav>
 
-      <button class="btn-logout" onclick="logout()">Logout</button>
+      <button class="btn-logout" onclick="logout()">↩ Logout</button>
     </aside>
 
     <!-- Mobile Top Bar -->
@@ -168,18 +212,20 @@
       <button class="hamburger" onclick="toggleMobileNav()" id="hamburger">☰</button>
     </div>
 
-    <!-- Mobile Nav Overlay -->
+    <!-- Mobile Nav -->
     <div class="mobile-nav" id="mobile-nav">
-      <a class="nav-item active" onclick="switchTab('dashboard'); closeMobileNav()" data-tab="dashboard">▣ Dashboard</a>
-      <a class="nav-item" onclick="switchTab('teams'); closeMobileNav()" data-tab="teams">◈ Teams</a>
-      <a class="nav-item" onclick="switchTab('attendance'); closeMobileNav()" data-tab="attendance">◉ Attendance</a>
-      <button class="btn-logout" onclick="logout()">Logout</button>
+      <a class="nav-item active" onclick="switchTab('dashboard');closeMobileNav()" data-tab="dashboard">▣ Dashboard</a>
+      <a class="nav-item" onclick="switchTab('teams');closeMobileNav()" data-tab="teams">◈ Teams</a>
+      <a class="nav-item" onclick="switchTab('attendance');closeMobileNav()" data-tab="attendance">◉ Attendance</a>
+      <a class="nav-item" onclick="switchTab('profile');closeMobileNav()" data-tab="profile">◎ My Profile</a>
+      <a class="nav-item" onclick="goHkList();closeMobileNav()">⊞ All Hackathons</a>
+      <button class="btn-logout" onclick="logout()">↩ Logout</button>
     </div>
 
     <!-- Main Content -->
     <main class="main-content">
 
-      <!-- ── DASHBOARD ── -->
+      <!-- DASHBOARD -->
       <section id="tab-dashboard" class="tab active">
         <div class="page-header">
           <div>
@@ -188,44 +234,41 @@
           </div>
           <span class="badge" id="dash-mode-badge">Offline</span>
         </div>
-
         <div class="stats-grid">
           <div class="stat-card">
-            <div class="stat-icon">👥</div>
-            <div class="stat-num" id="stat-participants">148</div>
+            <div class="stat-icon">◈</div>
+            <div class="stat-num" id="stat-participants">—</div>
             <div class="stat-label">Total Participants</div>
           </div>
           <div class="stat-card">
-            <div class="stat-icon">🧩</div>
-            <div class="stat-num" id="stat-teams">32</div>
+            <div class="stat-icon">▣</div>
+            <div class="stat-num" id="stat-teams">—</div>
             <div class="stat-label">Total Teams</div>
           </div>
           <div class="stat-card">
-            <div class="stat-icon">✅</div>
+            <div class="stat-icon">◉</div>
             <div class="stat-num" id="stat-present">0</div>
             <div class="stat-label">Present Today</div>
           </div>
         </div>
-
         <div class="info-cards">
           <div class="info-card">
-            <div class="info-card-label">📅 Event Dates</div>
+            <div class="info-card-label">Event Dates</div>
             <div class="info-card-val" id="dash-dates">—</div>
           </div>
           <div class="info-card">
-            <div class="info-card-label">📍 Venue</div>
+            <div class="info-card-label">Venue</div>
             <div class="info-card-val" id="dash-venue">—</div>
           </div>
           <div class="info-card">
-            <div class="info-card-label">🗓️ Registration</div>
+            <div class="info-card-label">Registration</div>
             <div class="info-card-val" id="dash-reg">—</div>
           </div>
           <div class="info-card">
-            <div class="info-card-label">💰 Entry Fee</div>
+            <div class="info-card-label">Entry Fee</div>
             <div class="info-card-val" id="dash-fee">Free</div>
           </div>
         </div>
-
         <div class="desc-card">
           <div class="desc-card-title">About this Hackathon</div>
           <p id="dash-desc"></p>
@@ -234,22 +277,19 @@
         </div>
       </section>
 
-      <!-- ── TEAMS ── -->
+      <!-- TEAMS -->
       <section id="tab-teams" class="tab">
         <div class="page-header">
           <div>
             <h2>Teams</h2>
             <p class="meta-text">All registered teams</p>
           </div>
-          <span class="badge accent2" id="teams-count-badge">32 Teams</span>
+          <span class="badge accent2" id="teams-count-badge">— Teams</span>
         </div>
-
-        <div class="teams-grid" id="teams-grid">
-          <!-- Rendered by JS -->
-        </div>
+        <div class="teams-grid" id="teams-grid"></div>
       </section>
 
-      <!-- ── ATTENDANCE ── -->
+      <!-- ATTENDANCE -->
       <section id="tab-attendance" class="tab">
         <div class="page-header">
           <div>
@@ -261,9 +301,8 @@
             <span class="att-chip absent-chip" id="att-absent-count">0 Absent</span>
           </div>
         </div>
-
         <div class="table-wrap">
-          <table class="att-table" id="att-table">
+          <table class="att-table">
             <thead>
               <tr>
                 <th>#</th>
@@ -273,10 +312,96 @@
                 <th>Actions</th>
               </tr>
             </thead>
-            <tbody id="att-body">
-              <!-- Rendered by JS -->
-            </tbody>
+            <tbody id="att-body"></tbody>
           </table>
+        </div>
+      </section>
+
+      <!-- MY PROFILE -->
+      <section id="tab-profile" class="tab">
+        <div class="page-header">
+          <div>
+            <h2>My Profile</h2>
+            <p class="meta-text">Manage your organizer information</p>
+          </div>
+          <span class="badge" id="profile-saved-badge" style="display:none;">✓ Saved</span>
+        </div>
+
+        <div class="profile-layout">
+
+          <!-- Left: Avatar card -->
+          <div class="profile-avatar-card">
+            <div class="profile-avatar-circle" id="profile-avatar-display">?</div>
+            <div class="profile-avatar-name" id="profile-display-name">Your Name</div>
+            <div class="profile-avatar-role">Organizer · DevMatch</div>
+            <div class="profile-avatar-email" id="profile-display-email">—</div>
+            <div class="profile-social-links" id="profile-social-links"></div>
+          </div>
+
+          <!-- Right: Form -->
+          <div class="profile-form-area">
+            <div class="form-section">
+              <div class="section-label">Personal Info</div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Full Name</label>
+                  <input type="text" id="prof-name" placeholder="e.g. Aryan Sharma"/>
+                </div>
+                <div class="form-group">
+                  <label>Username</label>
+                  <input type="text" id="prof-username" placeholder="e.g. aryan_dev"/>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Email</label>
+                  <input type="email" id="prof-email" placeholder="organizer@devmatch.io"/>
+                </div>
+                <div class="form-group">
+                  <label>Phone</label>
+                  <input type="tel" id="prof-phone" placeholder="+91 98765 43210"/>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-section">
+              <div class="section-label">Professional Info</div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Organisation / College</label>
+                  <input type="text" id="prof-org" placeholder="e.g. IIT Bombay"/>
+                </div>
+                <div class="form-group">
+                  <label>Designation</label>
+                  <input type="text" id="prof-designation" placeholder="e.g. Event Lead"/>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Bio</label>
+                <textarea id="prof-bio" rows="3" placeholder="A short bio about yourself as an organizer..."></textarea>
+              </div>
+            </div>
+
+            <div class="form-section">
+              <div class="section-label">Social Links</div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>LinkedIn</label>
+                  <input type="url" id="prof-linkedin" placeholder="https://linkedin.com/in/yourprofile"/>
+                </div>
+                <div class="form-group">
+                  <label>GitHub</label>
+                  <input type="url" id="prof-github" placeholder="https://github.com/yourhandle"/>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Portfolio / Website</label>
+                <input type="url" id="prof-website" placeholder="https://yoursite.com"/>
+              </div>
+            </div>
+
+            <button class="btn-primary full-width" onclick="saveProfile()">Save Profile</button>
+          </div>
         </div>
       </section>
 

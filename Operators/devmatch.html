@@ -1,0 +1,1547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>DevMatch — Hackathon Organizer</title>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet"/>
+<style>
+/* ═══════════════════════════════════════════
+   PALETTE  #3c2626 → #c29585 → #f5e9ae
+═══════════════════════════════════════════ */
+:root{
+  /* Raw gradient stops */
+  --g-dark:   #3c2626;
+  --g-mid:    #c29585;
+  --g-light:  #f5e9ae;
+
+  /* Surfaces built from the dark stop */
+  --bg:       #251818;
+  --bg2:      #2e1e1e;
+  --bg3:      #3c2626;
+  --surface:  #432a2a;
+  --surface2: #4e3030;
+
+  /* Borders */
+  --border:   rgba(194,149,133,0.20);
+  --border2:  rgba(245,233,174,0.30);
+
+  /* Text */
+  --text:     #f5ede4;
+  --text2:    #c29585;
+  --text3:    #8a6255;
+
+  /* Accents */
+  --accent:       #f5e9ae;
+  --accent-soft:  #edd97e;
+  --accent-faint: rgba(245,233,174,0.08);
+  --accent-glow:  0 0 24px rgba(245,233,174,0.25);
+
+  --terra:        #c29585;
+  --terra-lt:     #d4ac9e;
+  --terra-faint:  rgba(194,149,133,0.10);
+  --terra-border: rgba(194,149,133,0.28);
+  --terra-glow:   0 0 20px rgba(194,149,133,0.35);
+
+  /* Gradient string */
+  --grad: linear-gradient(135deg, #3c2626 0%, #c29585 55%, #f5e9ae 100%);
+  --grad-btn: linear-gradient(135deg, #c29585 0%, #3c2626 100%);
+  --grad-h:   linear-gradient(90deg, #3c2626, #c29585, #f5e9ae);
+
+  --radius: 14px;
+  --radius-sm: 8px;
+  --shadow: 0 6px 32px rgba(15,5,5,0.65);
+  --trans: 0.22s ease;
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{font-size:16px;scroll-behavior:smooth;}
+body{
+  font-family:'Libre Baskerville',Georgia,serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height:100vh;
+  line-height:1.65;
+  overflow-x:hidden;
+}
+
+/* ── Bold weight shortcut ── */
+h1,h2,h3,h4,.logo-text,.stat-num,.section-label,.desc-title,
+.team-name,.nav-item,.btn-primary,.btn-logout,.badge,.att-chip,
+.stat-label,label,th,.card-name,.hk-tab-label{
+  font-family:'Libre Baskerville',Georgia,serif;
+  font-weight:700;
+}
+
+a{text-decoration:none;cursor:pointer;}
+input,textarea,select,button{
+  font-family:'Libre Baskerville',Georgia,serif;
+  font-size:inherit;border:none;outline:none;
+}
+
+/* ── Pages ── */
+.page{display:none;}
+.page.active{display:flex;}
+
+/* ══════════════════════════════════
+   SHARED AUTH LAYOUT (login/register)
+══════════════════════════════════ */
+.auth-page{
+  min-height:100vh;
+  align-items:center;
+  justify-content:center;
+  position:relative;
+  overflow:hidden;
+}
+.auth-bg{
+  position:fixed;inset:0;z-index:0;
+  background:
+    radial-gradient(ellipse 70% 55% at 10% 30%, #4e2e2e 0%, transparent 60%),
+    radial-gradient(ellipse 55% 50% at 88% 75%, #3c2626 0%, transparent 55%),
+    radial-gradient(ellipse 40% 40% at 50% 50%, #291616 0%, transparent 70%),
+    var(--bg);
+}
+.auth-orb{
+  position:absolute;border-radius:50%;
+  filter:blur(100px);animation:float 9s ease-in-out infinite alternate;
+}
+.orb1{width:460px;height:460px;background:#5a3232;top:-150px;left:-120px;opacity:.45;}
+.orb2{width:340px;height:340px;background:#c29585;bottom:-100px;right:-80px;opacity:.18;animation-delay:-4.5s;}
+.orb3{width:220px;height:220px;background:#f5e9ae;top:40%;left:60%;opacity:.08;animation-delay:-2s;}
+@keyframes float{
+  from{transform:translate(0,0) scale(1);}
+  to{transform:translate(24px,16px) scale(1.07);}
+}
+
+.auth-card{
+  position:relative;z-index:1;
+  background: linear-gradient(160deg, rgba(67,42,42,0.95) 0%, rgba(44,28,28,0.98) 100%);
+  border:1px solid var(--border2);
+  border-radius:22px;
+  padding:2.8rem 2.6rem;
+  width:min(440px,93vw);
+  box-shadow: var(--shadow), 0 0 0 1px rgba(245,233,174,0.06), var(--accent-glow);
+  animation:slideUp .5s cubic-bezier(.16,1,.3,1);
+}
+@keyframes slideUp{
+  from{opacity:0;transform:translateY(32px);}
+  to{opacity:1;transform:translateY(0);}
+}
+
+/* ── Logo ── */
+.auth-logo{display:flex;align-items:center;gap:.65rem;margin-bottom:.3rem;}
+.logo-icon{
+  font-size:1.9rem;
+  background: var(--grad);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+  filter:drop-shadow(0 0 8px rgba(245,233,174,0.4));
+}
+.logo-icon.sm{font-size:1.3rem;}
+.logo-text{font-size:1.6rem;letter-spacing:-.02em;color:var(--text);}
+
+.auth-sub{
+  font-size:.8rem;color:var(--text3);margin-bottom:2rem;
+  letter-spacing:.07em;text-transform:uppercase;font-style:italic;
+}
+
+/* ── Tab switcher (login / register) ── */
+.auth-tabs{
+  display:flex;gap:.3rem;
+  background:var(--bg3);
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:.3rem;
+  margin-bottom:1.8rem;
+}
+.auth-tab{
+  flex:1;text-align:center;padding:.55rem;
+  border-radius:7px;font-size:.82rem;
+  color:var(--text3);cursor:pointer;
+  transition:background var(--trans),color var(--trans);
+  font-weight:700;letter-spacing:.03em;
+}
+.auth-tab.active{
+  background:var(--grad-btn);
+  color:var(--accent);
+  box-shadow:0 2px 10px rgba(60,38,38,.5);
+}
+
+/* ── Form ── */
+.form-group{margin-bottom:1.15rem;}
+.form-group label{
+  display:block;font-size:.76rem;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--text2);margin-bottom:.42rem;
+}
+.form-group input,
+.form-group textarea,
+.form-group select{
+  width:100%;
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  color:var(--text);
+  padding:.75rem 1rem;
+  transition:border-color var(--trans),box-shadow var(--trans);
+}
+.form-group input::placeholder,
+.form-group textarea::placeholder{color:var(--text3);}
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus{
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px rgba(245,233,174,0.12);
+}
+.form-group textarea{resize:vertical;min-height:82px;}
+.form-group select{
+  appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23c29585' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-position:right 1rem center;
+  padding-right:2.4rem;cursor:pointer;
+}
+.form-group input[type="date"],
+.form-group input[type="datetime-local"]{color-scheme:dark;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+
+/* ── Buttons ── */
+.btn-primary{
+  background:var(--grad-btn);
+  color:var(--accent);
+  padding:.9rem 1.6rem;
+  border-radius:var(--radius-sm);
+  font-size:.95rem;cursor:pointer;
+  transition:transform var(--trans),box-shadow var(--trans),filter var(--trans);
+  letter-spacing:.02em;
+  box-shadow:0 4px 18px rgba(60,38,38,.55), var(--terra-glow);
+}
+.btn-primary:hover{transform:translateY(-2px);filter:brightness(1.1);box-shadow:0 8px 28px rgba(60,38,38,.7);}
+.btn-primary:active{transform:translateY(0);}
+.btn-primary.full{width:100%;}
+
+.btn-ghost{
+  background:transparent;
+  border:1px solid var(--border);
+  color:var(--text2);
+  padding:.7rem 1.2rem;
+  border-radius:var(--radius-sm);
+  cursor:pointer;font-size:.85rem;
+  transition:border-color var(--trans),color var(--trans);
+}
+.btn-ghost:hover{border-color:var(--terra);color:var(--terra-lt);}
+
+.auth-hint{text-align:center;font-size:.77rem;color:var(--text3);margin-top:1rem;font-style:italic;}
+
+/* ── Toggle ── */
+.toggle-row{display:flex;align-items:center;gap:.9rem;font-size:.9rem;color:var(--text2);}
+.toggle{
+  width:50px;height:26px;background:var(--bg3);
+  border:1px solid var(--border);border-radius:50px;
+  cursor:pointer;position:relative;transition:background var(--trans),border-color var(--trans);
+}
+.toggle.on{background:var(--terra);border-color:var(--terra);box-shadow:var(--terra-glow);}
+.toggle-knob{
+  width:20px;height:20px;background:#fff;border-radius:50%;
+  position:absolute;top:2px;left:2px;
+  transition:left var(--trans);box-shadow:0 1px 6px rgba(0,0,0,.35);
+}
+.toggle.on .toggle-knob{left:26px;}
+
+/* ══════════════════════════════════
+   HACKATHON LIST PAGE
+══════════════════════════════════ */
+#page-hklist{
+  min-height:100vh;flex-direction:column;
+  background:var(--bg);
+  padding:0;
+}
+
+.hklist-topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:1.4rem 2.4rem;
+  background:var(--bg2);
+  border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:10;
+}
+.hklist-topbar-right{display:flex;align-items:center;gap:1rem;}
+.hklist-body{
+  flex:1;padding:2.8rem 2.4rem;
+  max-width:1000px;width:100%;margin:0 auto;
+}
+.hklist-heading{margin-bottom:.4rem;font-size:2rem;letter-spacing:-.03em;}
+.hklist-sub{color:var(--text3);font-size:.9rem;font-style:italic;margin-bottom:2.2rem;}
+
+/* Gradient headline rule */
+.grad-rule{
+  display:inline-block;
+  background:var(--grad);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+
+.hk-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(290px,1fr));
+  gap:1.2rem;
+}
+
+.hk-card{
+  background: linear-gradient(160deg, var(--surface) 0%, var(--bg3) 100%);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:1.6rem;
+  cursor:pointer;
+  transition:transform var(--trans),border-color var(--trans),box-shadow var(--trans);
+  position:relative;overflow:hidden;
+}
+.hk-card::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,rgba(194,149,133,.06) 0%,transparent 60%);
+  pointer-events:none;
+}
+.hk-card::after{
+  content:'';position:absolute;
+  bottom:0;left:0;right:0;height:2px;
+  background:var(--grad-h);
+  transform:scaleX(0);transition:transform var(--trans);transform-origin:left;
+}
+.hk-card:hover{
+  transform:translateY(-4px);
+  border-color:var(--terra-border);
+  box-shadow:0 14px 36px rgba(10,4,4,.65),var(--terra-glow);
+}
+.hk-card:hover::after{transform:scaleX(1);}
+.hk-card.current{border-color:var(--accent);box-shadow:0 0 0 2px rgba(245,233,174,.15);}
+
+.card-name{font-size:1.05rem;color:var(--text);margin-bottom:.3rem;}
+.card-meta{font-size:.8rem;color:var(--text3);font-style:italic;margin-bottom:.85rem;}
+.card-badge{
+  display:inline-block;
+  padding:.2rem .75rem;border-radius:50px;
+  font-size:.72rem;letter-spacing:.05em;text-transform:uppercase;
+  background:var(--terra-faint);color:var(--terra-lt);
+  border:1px solid var(--terra-border);
+}
+.card-actions{display:flex;gap:.5rem;margin-top:1.1rem;justify-content:flex-end;}
+.btn-card-open{
+  padding:.35rem .9rem;border-radius:6px;font-size:.77rem;cursor:pointer;
+  background:var(--grad-btn);color:var(--accent);border:none;
+  font-family:'Libre Baskerville',serif;font-weight:700;
+  transition:filter var(--trans),transform var(--trans);
+}
+.btn-card-open:hover{filter:brightness(1.1);transform:translateY(-1px);}
+.btn-card-del{
+  padding:.35rem .7rem;border-radius:6px;font-size:.77rem;cursor:pointer;
+  background:transparent;color:var(--text3);
+  border:1px solid var(--border);
+  font-family:'Libre Baskerville',serif;
+  transition:border-color var(--trans),color var(--trans);
+}
+.btn-card-del:hover{border-color:var(--terra);color:var(--terra-lt);}
+
+.hklist-empty{
+  text-align:center;padding:4rem 1rem;
+  color:var(--text3);font-style:italic;
+}
+.hklist-empty strong{
+  display:block;font-size:1.1rem;
+  color:var(--text2);margin-bottom:.5rem;
+}
+
+/* ══════════════════════════════════
+   CREATE HACKATHON PAGE
+══════════════════════════════════ */
+#page-create{
+  min-height:100vh;flex-direction:column;
+  background:var(--bg);
+}
+.create-topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:1.2rem 2.4rem;
+  background:var(--bg2);
+  border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:10;
+}
+.create-body{
+  flex:1;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:0;
+  max-width:1100px;width:100%;margin:0 auto;
+  padding:3rem 2rem;
+  gap:2.4rem;
+}
+
+/* Left column: hero text */
+.create-hero{
+  display:flex;flex-direction:column;justify-content:flex-start;
+  padding-right:2rem;
+  border-right:1px solid var(--border);
+}
+.create-hero h2{
+  font-size:2.4rem;letter-spacing:-.03em;line-height:1.15;
+  margin-bottom:1rem;
+}
+.create-hero p{color:var(--text2);font-size:.95rem;line-height:1.8;margin-bottom:2rem;}
+
+.create-steps{display:flex;flex-direction:column;gap:.85rem;margin-top:1rem;}
+.create-step{
+  display:flex;align-items:flex-start;gap:.85rem;
+  padding:1rem 1.1rem;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  transition:border-color var(--trans);
+}
+.create-step:hover{border-color:var(--terra-border);}
+.step-num{
+  width:28px;height:28px;border-radius:50%;
+  background:var(--grad-btn);
+  display:flex;align-items:center;justify-content:center;
+  font-size:.78rem;color:var(--accent);font-weight:700;
+  flex-shrink:0;
+}
+.step-text strong{display:block;font-size:.88rem;color:var(--text);margin-bottom:.15rem;}
+.step-text span{font-size:.78rem;color:var(--text3);}
+
+/* Right column: form */
+.create-form-col{display:flex;flex-direction:column;gap:1.4rem;}
+
+.form-section{
+  background: linear-gradient(160deg, var(--surface) 0%, var(--bg3) 100%);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:1.6rem 1.8rem;
+  transition:border-color var(--trans);
+}
+.form-section:hover{border-color:var(--border2);}
+.section-label{
+  font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--terra-lt);margin-bottom:1.2rem;
+  display:flex;align-items:center;gap:.6rem;
+}
+.section-label::after{
+  content:'';flex:1;height:1px;
+  background:linear-gradient(90deg,var(--terra-border),transparent);
+}
+
+/* ══════════════════════════════════
+   APP LAYOUT
+══════════════════════════════════ */
+#page-app{flex-direction:row;min-height:100vh;}
+
+/* ── Sidebar ── */
+.sidebar{
+  width:240px;flex-shrink:0;
+  background: linear-gradient(180deg, var(--bg2) 0%, var(--bg) 100%);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+  padding:1.8rem 1.1rem 1.6rem;
+  position:sticky;top:0;height:100vh;overflow-y:auto;
+}
+.sidebar-logo{display:flex;align-items:center;gap:.55rem;margin-bottom:1.4rem;padding-left:.3rem;}
+
+/* Current event switcher */
+.sidebar-event{
+  background:var(--terra-faint);
+  border:1px solid var(--terra-border);
+  border-radius:var(--radius-sm);
+  padding:.65rem .9rem;margin-bottom:.5rem;
+  cursor:pointer;
+  transition:background var(--trans),border-color var(--trans);
+}
+.sidebar-event:hover{background:rgba(194,149,133,.2);border-color:var(--terra-lt);}
+.se-label{font-size:.62rem;text-transform:uppercase;letter-spacing:.09em;color:var(--text3);margin-bottom:.15rem;}
+.se-name{font-size:.86rem;color:var(--text);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.btn-new-event{
+  width:100%;padding:.48rem;border-radius:var(--radius-sm);
+  font-size:.76rem;cursor:pointer;
+  background:transparent;color:var(--terra-lt);
+  border:1px dashed var(--terra-border);
+  font-family:'Libre Baskerville',serif;
+  margin-bottom:1.3rem;
+  transition:border-color var(--trans),color var(--trans),background var(--trans);
+  text-align:center;
+}
+.btn-new-event:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-faint);}
+
+/* Profile mini */
+.sidebar-profile{
+  display:flex;align-items:center;gap:.75rem;
+  background:var(--accent-faint);
+  border:1px solid var(--border2);
+  border-radius:var(--radius-sm);
+  padding:.7rem .9rem;margin-bottom:1.4rem;
+  cursor:pointer;
+  transition:background var(--trans),border-color var(--trans);
+}
+.sidebar-profile:hover{background:rgba(245,233,174,.12);border-color:var(--accent);}
+.sp-avatar{
+  width:38px;height:38px;border-radius:50%;
+  background:var(--grad-btn);
+  display:flex;align-items:center;justify-content:center;
+  font-size:1rem;color:var(--accent);font-weight:700;flex-shrink:0;
+  box-shadow:var(--terra-glow);
+}
+.sp-info{overflow:hidden;}
+.sp-name{font-size:.85rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sp-role{font-size:.7rem;color:var(--terra-lt);font-style:italic;}
+
+.sidebar-nav{display:flex;flex-direction:column;gap:.22rem;flex:1;}
+.nav-item{
+  display:flex;align-items:center;gap:.75rem;
+  padding:.7rem 1rem;border-radius:var(--radius-sm);
+  color:var(--text2);font-size:.88rem;cursor:pointer;
+  transition:background var(--trans),color var(--trans);
+  user-select:none;border:1px solid transparent;
+}
+.nav-item:hover{background:var(--bg3);color:var(--text);}
+.nav-item.active{
+  background:var(--accent-faint);color:var(--accent);
+  border-color:var(--border2);
+}
+.nav-icon{font-size:.95rem;width:18px;text-align:center;}
+
+.btn-logout{
+  margin-top:1rem;padding:.6rem 1rem;
+  background:transparent;border:1px solid var(--border);
+  border-radius:var(--radius-sm);color:var(--text3);
+  cursor:pointer;font-size:.82rem;
+  transition:border-color var(--trans),color var(--trans);
+}
+.btn-logout:hover{border-color:var(--terra);color:var(--terra-lt);}
+
+/* ── Mobile ── */
+.mobile-topbar{display:none;}
+.mobile-nav{display:none;}
+.hamburger{background:none;border:none;color:var(--text);font-size:1.4rem;cursor:pointer;padding:.4rem;}
+
+/* ── Main ── */
+.main-content{
+  flex:1;padding:2.4rem 2.4rem 3rem;
+  overflow-y:auto;min-height:100vh;max-width:100%;
+}
+.tab{display:none;}
+.tab.active{display:block;animation:fadeIn .3s ease;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+
+/* ── Page header ── */
+.page-header{
+  display:flex;align-items:flex-start;justify-content:space-between;
+  margin-bottom:2rem;flex-wrap:wrap;gap:.8rem;
+}
+.page-header h2{font-size:1.75rem;letter-spacing:-.02em;color:var(--text);line-height:1.2;}
+.meta-text{font-size:.83rem;color:var(--text3);margin-top:.2rem;font-style:italic;}
+
+.badge{
+  display:inline-block;padding:.32rem .95rem;border-radius:50px;
+  font-size:.73rem;letter-spacing:.06em;text-transform:uppercase;
+  background:var(--accent-faint);color:var(--accent);
+  border:1px solid var(--border2);white-space:nowrap;
+}
+.badge.b2{
+  background:var(--terra-faint);color:var(--terra-lt);
+  border-color:var(--terra-border);
+}
+
+/* ══════════════════════════════════
+   DASHBOARD
+══════════════════════════════════ */
+.stats-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  gap:1.2rem;margin-bottom:1.5rem;
+}
+.stat-card{
+  background: linear-gradient(160deg, var(--surface) 0%, var(--bg3) 100%);
+  border:1px solid var(--border);border-radius:var(--radius);
+  padding:1.6rem 1.4rem;text-align:center;
+  transition:transform var(--trans),border-color var(--trans),box-shadow var(--trans);
+  position:relative;overflow:hidden;
+}
+.stat-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  background:var(--grad-h);opacity:0;transition:opacity var(--trans);
+}
+.stat-card:hover{transform:translateY(-3px);border-color:var(--terra-border);box-shadow:0 10px 30px rgba(10,4,4,.6);}
+.stat-card:hover::before{opacity:1;}
+.stat-icon{
+  font-size:1.1rem;margin-bottom:.6rem;
+  color:var(--terra-lt);letter-spacing:.05em;
+}
+.stat-num{font-size:2.5rem;color:var(--text);letter-spacing:-.04em;line-height:1;margin-bottom:.35rem;}
+.stat-label{font-size:.74rem;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;}
+
+.info-cards{
+  display:grid;grid-template-columns:repeat(2,1fr);
+  gap:1rem;margin-bottom:1.5rem;
+}
+.info-card{
+  background: linear-gradient(160deg, var(--surface) 0%, var(--bg3) 100%);
+  border:1px solid var(--border);border-radius:var(--radius-sm);
+  padding:1.1rem 1.3rem;transition:border-color var(--trans);
+}
+.info-card:hover{border-color:var(--terra-border);}
+.info-card-label{font-size:.75rem;color:var(--text3);margin-bottom:.4rem;font-style:italic;}
+.info-card-val{font-size:.93rem;color:var(--text);font-weight:700;}
+
+.desc-card{
+  background: linear-gradient(160deg, var(--surface) 0%, var(--bg3) 100%);
+  border:1px solid var(--border);border-radius:var(--radius);padding:1.6rem;
+}
+.desc-title{font-size:.74rem;letter-spacing:.09em;text-transform:uppercase;color:var(--terra-lt);margin-bottom:.6rem;}
+.desc-card p{color:var(--text2);font-size:.9rem;line-height:1.75;}
+
+/* ══════════════════════════════════
+   TEAMS
+══════════════════════════════════ */
+.teams-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(276px,1fr));gap:1.2rem;
+}
+.team-card{
+  background: linear-gradient(160deg, var(--surface) 0%, var(--bg3) 100%);
+  border:1px solid var(--border);border-radius:var(--radius);
+  padding:1.5rem;
+  transition:transform var(--trans),border-color var(--trans),box-shadow var(--trans);
+  position:relative;overflow:hidden;
+}
+.team-card::after{
+  content:'';position:absolute;bottom:0;left:0;right:0;height:2px;
+  background:var(--grad-h);transform:scaleX(0);
+  transition:transform var(--trans);transform-origin:left;
+}
+.team-card:hover{transform:translateY(-4px);border-color:var(--terra-border);box-shadow:0 14px 36px rgba(10,4,4,.65),var(--terra-glow);}
+.team-card:hover::after{transform:scaleX(1);}
+.team-name{font-size:1.06rem;color:var(--text);margin-bottom:.25rem;}
+.team-leader{font-size:.82rem;color:var(--text3);margin-bottom:.8rem;font-style:italic;}
+.team-leader span{color:var(--terra-lt);font-style:normal;font-weight:700;}
+.team-count{
+  display:inline-flex;align-items:center;gap:.4rem;
+  background:var(--terra-faint);border:1px solid var(--terra-border);
+  border-radius:50px;padding:.22rem .75rem;
+  font-size:.78rem;color:var(--terra-lt);margin-bottom:1rem;
+}
+.team-roles{display:flex;flex-wrap:wrap;gap:.35rem;}
+.role-tag{padding:.22rem .65rem;border-radius:4px;font-size:.7rem;letter-spacing:.03em;}
+.role-fe {background:rgba(194,149,133,.18);color:var(--terra-lt);}
+.role-be {background:rgba(245,233,174,.10);color:var(--accent-soft);}
+.role-ml {background:rgba(97,58,58,.45);color:#d4b0a8;}
+.role-ds {background:rgba(138,92,82,.22);color:var(--terra-lt);}
+.role-mob{background:rgba(194,149,133,.12);color:#e0c4ba;}
+.role-des{background:rgba(245,233,174,.12);color:var(--accent);}
+
+/* ══════════════════════════════════
+   ATTENDANCE
+══════════════════════════════════ */
+.att-summary{display:flex;gap:.6rem;}
+.att-chip{padding:.3rem .9rem;border-radius:50px;font-size:.77rem;}
+.chip-present{background:rgba(194,149,133,.18);color:var(--terra-lt);border:1px solid var(--terra-border);}
+.chip-absent {background:rgba(245,233,174,.08);color:var(--accent-soft);border:1px solid var(--border2);}
+
+.table-wrap{
+  background: linear-gradient(160deg, var(--surface) 0%, var(--bg3) 100%);
+  border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;
+}
+.att-table{width:100%;border-collapse:collapse;}
+.att-table th{
+  padding:.9rem 1.2rem;text-align:left;
+  font-size:.71rem;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--text3);background:var(--bg3);border-bottom:1px solid var(--border);
+}
+.att-table td{
+  padding:.9rem 1.2rem;border-bottom:1px solid var(--border);
+  font-size:.87rem;color:var(--text2);vertical-align:middle;
+}
+.att-table tbody tr:last-child td{border-bottom:none;}
+.att-table tbody tr:hover{background:rgba(255,255,255,.02);}
+.att-table td:nth-child(2){color:var(--text);font-weight:700;}
+.att-table td:first-child{color:var(--text3);font-size:.79rem;}
+
+.status-badge{display:inline-block;padding:.25rem .75rem;border-radius:50px;font-size:.75rem;}
+.status-pending{background:rgba(97,58,58,.28);color:var(--text3);}
+.status-present{background:rgba(194,149,133,.2);color:var(--terra-lt);border:1px solid var(--terra-border);}
+.status-absent {background:rgba(245,233,174,.08);color:var(--accent-soft);border:1px solid var(--border2);}
+
+.att-actions{display:flex;gap:.5rem;}
+.btn-present,.btn-absent{
+  padding:.3rem .85rem;border-radius:6px;font-size:.75rem;
+  cursor:pointer;transition:all var(--trans);letter-spacing:.02em;
+}
+.btn-present{background:rgba(194,149,133,.2);color:var(--terra-lt);border:1px solid var(--terra-border);}
+.btn-present:hover{background:rgba(194,149,133,.38);border-color:var(--terra-lt);}
+.btn-absent{background:rgba(245,233,174,.06);color:var(--accent-soft);border:1px solid var(--border2);}
+.btn-absent:hover{background:rgba(245,233,174,.15);border-color:var(--accent);}
+
+/* ══════════════════════════════════
+   PROFILE
+══════════════════════════════════ */
+.profile-layout{display:grid;grid-template-columns:255px 1fr;gap:1.4rem;align-items:flex-start;}
+.profile-card{
+  background: linear-gradient(160deg, var(--surface) 0%, var(--bg3) 100%);
+  border:1px solid var(--border);border-radius:var(--radius);
+  padding:2rem 1.5rem;text-align:center;
+  position:sticky;top:2rem;transition:border-color var(--trans);
+}
+.profile-card:hover{border-color:var(--terra-border);}
+.profile-avatar{
+  width:90px;height:90px;border-radius:50%;
+  background:var(--grad-btn);
+  display:flex;align-items:center;justify-content:center;
+  font-size:2.2rem;font-weight:700;color:var(--accent);
+  margin:0 auto 1.1rem;
+  box-shadow:var(--terra-glow),0 4px 20px rgba(10,4,4,.5);
+}
+.profile-name{font-size:1.04rem;color:var(--text);margin-bottom:.2rem;}
+.profile-role{font-size:.77rem;color:var(--terra-lt);margin-bottom:.4rem;font-style:italic;}
+.profile-email{font-size:.79rem;color:var(--text3);word-break:break-all;margin-bottom:1rem;}
+.profile-links{display:flex;flex-direction:column;gap:.5rem;margin-top:.8rem;}
+.profile-link{
+  display:block;font-size:.77rem;color:var(--text2);
+  background:var(--bg3);border:1px solid var(--border);border-radius:6px;
+  padding:.4rem .75rem;
+  transition:border-color var(--trans),color var(--trans);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.profile-link:hover{border-color:var(--terra-border);color:var(--terra-lt);}
+.profile-form-area{display:flex;flex-direction:column;gap:1.4rem;}
+
+/* ══════════════════════════════════
+   RESPONSIVE
+══════════════════════════════════ */
+@media(max-width:960px){
+  .create-body{grid-template-columns:1fr;}
+  .create-hero{border-right:none;border-bottom:1px solid var(--border);padding-right:0;padding-bottom:2rem;}
+  .profile-layout{grid-template-columns:1fr;}
+  .profile-card{position:static;}
+}
+@media(max-width:900px){
+  .stats-grid{grid-template-columns:repeat(2,1fr);}
+  .info-cards{grid-template-columns:1fr;}
+  .form-row{grid-template-columns:1fr;}
+}
+@media(max-width:750px){
+  .sidebar{display:none;}
+  .mobile-topbar{
+    display:flex;align-items:center;justify-content:space-between;
+    background:var(--bg2);border-bottom:1px solid var(--border);
+    padding:.9rem 1.2rem;position:sticky;top:0;z-index:100;width:100%;
+  }
+  .mobile-nav{
+    display:flex;flex-direction:column;gap:.4rem;
+    position:fixed;top:0;left:0;
+    width:76vw;max-width:280px;height:100vh;
+    background:var(--bg2);border-right:1px solid var(--border);
+    padding:4.5rem 1.2rem 2rem;z-index:99;
+    transform:translateX(-100%);transition:transform var(--trans);
+  }
+  .mobile-nav.open{transform:translateX(0);box-shadow:10px 0 40px rgba(10,4,4,.8);}
+  #page-app{flex-direction:column;}
+  .main-content{padding:1.4rem 1rem 3rem;}
+  .stats-grid{grid-template-columns:1fr 1fr;}
+  .teams-grid{grid-template-columns:1fr;}
+  .page-header{flex-direction:column;}
+  .att-table th:nth-child(3),.att-table td:nth-child(3){display:none;}
+  .hk-grid{grid-template-columns:1fr;}
+  .hklist-body{padding:1.8rem 1.2rem;}
+  .hklist-topbar{padding:1rem 1.2rem;}
+  .create-body{padding:2rem 1.2rem;}
+  .create-topbar{padding:1rem 1.2rem;}
+}
+@media(max-width:480px){
+  .stats-grid{grid-template-columns:1fr;}
+  .auth-card{padding:2rem 1.4rem;}
+  .stat-num{font-size:2rem;}
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar{width:5px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--bg3);border-radius:50px;}
+::-webkit-scrollbar-thumb:hover{background:var(--terra);}
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════
+     LOGIN / REGISTER  (shared auth page)
+════════════════════════════════════ -->
+<div id="page-auth" class="page active auth-page">
+  <div class="auth-bg">
+    <div class="auth-orb orb1"></div>
+    <div class="auth-orb orb2"></div>
+    <div class="auth-orb orb3"></div>
+  </div>
+  <div class="auth-card">
+    <div class="auth-logo">
+      <span class="logo-icon">⬡</span>
+      <span class="logo-text">DevMatch</span>
+    </div>
+    <p class="auth-sub">Organizer Portal</p>
+
+    <!-- Tab switcher -->
+    <div class="auth-tabs">
+      <div class="auth-tab active" id="tab-login-btn" onclick="showAuthTab('login')">Login</div>
+      <div class="auth-tab"        id="tab-reg-btn"   onclick="showAuthTab('register')">Register</div>
+    </div>
+
+    <!-- LOGIN FORM -->
+    <div id="auth-login">
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="login-email" placeholder="organizer@devmatch.io" autocomplete="off"/>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="login-password" placeholder="••••••••"/>
+      </div>
+      <button class="btn-primary full" onclick="handleLogin()">Login as Organizer</button>
+      <p class="auth-hint">Demo: any email + password</p>
+    </div>
+
+    <!-- REGISTER FORM -->
+    <div id="auth-register" style="display:none">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Full Name</label>
+          <input type="text" id="reg-name" placeholder="Aryan Sharma"/>
+        </div>
+        <div class="form-group">
+          <label>Username</label>
+          <input type="text" id="reg-username" placeholder="aryan_dev"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="reg-email" placeholder="organizer@devmatch.io"/>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Phone</label>
+          <input type="tel" id="reg-phone" placeholder="+91 98765 43210"/>
+        </div>
+        <div class="form-group">
+          <label>Organisation</label>
+          <input type="text" id="reg-org" placeholder="IIT Bombay"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="reg-password" placeholder="Create a password"/>
+      </div>
+      <div class="form-group">
+        <label>Confirm Password</label>
+        <input type="password" id="reg-confirm" placeholder="Re-enter password"/>
+      </div>
+      <button class="btn-primary full" onclick="handleRegister()">Create Account →</button>
+      <p class="auth-hint">All fields stored locally in demo mode</p>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
+     MY HACKATHONS LIST
+════════════════════════════════════ -->
+<div id="page-hklist" class="page">
+  <div class="hklist-topbar">
+    <div class="auth-logo" style="margin:0">
+      <span class="logo-icon sm">⬡</span>
+      <span class="logo-text" style="font-size:1.2rem">DevMatch</span>
+    </div>
+    <div class="hklist-topbar-right">
+      <div class="sp-avatar" id="hl-avatar" style="width:34px;height:34px;font-size:.85rem;cursor:default">?</div>
+      <button class="btn-ghost" onclick="logout()">↩ Logout</button>
+    </div>
+  </div>
+  <div class="hklist-body">
+    <h1 class="hklist-heading"><span class="grad-rule">My Hackathons</span></h1>
+    <p class="hklist-sub">Select an event to manage, or create a new one</p>
+    <div style="margin-bottom:1.8rem">
+      <button class="btn-primary" onclick="goCreate()">+ New Hackathon</button>
+    </div>
+    <div class="hk-grid" id="hk-grid"></div>
+    <div class="hklist-empty" id="hklist-empty" style="display:none">
+      <strong>No hackathons yet</strong>
+      Create your first event using the button above.
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
+     CREATE HACKATHON
+════════════════════════════════════ -->
+<div id="page-create" class="page">
+  <div class="create-topbar">
+    <div class="auth-logo" style="margin:0">
+      <span class="logo-icon sm">⬡</span>
+      <span class="logo-text" style="font-size:1.2rem">DevMatch</span>
+    </div>
+    <button class="btn-ghost" onclick="goBack()">← Back</button>
+  </div>
+
+  <div class="create-body">
+    <!-- LEFT: hero -->
+    <div class="create-hero">
+      <h2><span class="grad-rule">Launch your hackathon</span> in minutes.</h2>
+      <p>Fill in the details on the right to set up your event. Everything can be edited later from your dashboard.</p>
+      <div class="create-steps">
+        <div class="create-step">
+          <div class="step-num">1</div>
+          <div class="step-text">
+            <strong>Basic Info</strong>
+            <span>Name, description &amp; problem statements</span>
+          </div>
+        </div>
+        <div class="create-step">
+          <div class="step-num">2</div>
+          <div class="step-text">
+            <strong>Timing &amp; Venue</strong>
+            <span>Start / end dates and event mode</span>
+          </div>
+        </div>
+        <div class="create-step">
+          <div class="step-num">3</div>
+          <div class="step-text">
+            <strong>Registration</strong>
+            <span>Open/close dates and entry fee</span>
+          </div>
+        </div>
+        <div class="create-step">
+          <div class="step-num">4</div>
+          <div class="step-text">
+            <strong>Go live</strong>
+            <span>Your event appears in your dashboard instantly</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: form -->
+    <div class="create-form-col">
+      <div class="form-section">
+        <div class="section-label">Basic Info</div>
+        <div class="form-group">
+          <label>Hackathon Name</label>
+          <input type="text" id="hk-name" placeholder="e.g. BuildFest 2025"/>
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <textarea id="hk-desc" rows="3" placeholder="Brief overview of your hackathon..."></textarea>
+        </div>
+        <div class="form-group">
+          <label>Problem Statements</label>
+          <textarea id="hk-problems" rows="3" placeholder="List the challenges participants will solve..."></textarea>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="section-label">Timing</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Start Date &amp; Time</label>
+            <input type="datetime-local" id="hk-start"/>
+          </div>
+          <div class="form-group">
+            <label>End Date &amp; Time</label>
+            <input type="datetime-local" id="hk-end"/>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Venue</label>
+            <input type="text" id="hk-venue" placeholder="e.g. IIT Bombay Auditorium"/>
+          </div>
+          <div class="form-group">
+            <label>Mode</label>
+            <select id="hk-mode">
+              <option value="Offline">Offline</option>
+              <option value="Online">Online</option>
+              <option value="Hybrid">Hybrid</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="section-label">Registration</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Registration Start</label>
+            <input type="date" id="hk-reg-start"/>
+          </div>
+          <div class="form-group">
+            <label>Registration End</label>
+            <input type="date" id="hk-reg-end"/>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Entry Fee</label>
+          <div class="toggle-row">
+            <span>Free</span>
+            <div class="toggle" id="fee-toggle" onclick="toggleFee()"><div class="toggle-knob"></div></div>
+            <span>Paid</span>
+          </div>
+        </div>
+        <div class="form-group" id="fee-wrap" style="display:none">
+          <label>Amount (₹)</label>
+          <input type="number" id="hk-fee" placeholder="e.g. 299"/>
+        </div>
+      </div>
+
+      <button class="btn-primary full" onclick="createHackathon()">Create Hackathon →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
+     MAIN APP
+════════════════════════════════════ -->
+<div id="page-app" class="page">
+
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <span class="logo-icon sm">⬡</span>
+      <span class="logo-text" style="font-size:1.35rem">DevMatch</span>
+    </div>
+
+    <div class="sidebar-event" onclick="goHkList()">
+      <div class="se-label">Current Event</div>
+      <div class="se-name" id="se-name">—</div>
+    </div>
+    <button class="btn-new-event" onclick="goCreate()">+ New Hackathon</button>
+
+    <div class="sidebar-profile" onclick="switchTab('profile')">
+      <div class="sp-avatar" id="sp-avatar">?</div>
+      <div class="sp-info">
+        <div class="sp-name" id="sp-name">Your Name</div>
+        <div class="sp-role">Organizer</div>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a class="nav-item active" onclick="switchTab('dashboard')" data-tab="dashboard"><span class="nav-icon">▣</span> Dashboard</a>
+      <a class="nav-item" onclick="switchTab('teams')"      data-tab="teams">     <span class="nav-icon">◈</span> Teams</a>
+      <a class="nav-item" onclick="switchTab('attendance')" data-tab="attendance"><span class="nav-icon">◉</span> Attendance</a>
+      <a class="nav-item" onclick="switchTab('profile')"    data-tab="profile">   <span class="nav-icon">◎</span> My Profile</a>
+    </nav>
+
+    <button class="btn-logout" onclick="logout()">↩ Logout</button>
+  </aside>
+
+  <!-- Mobile topbar -->
+  <div class="mobile-topbar">
+    <div class="auth-logo" style="margin:0">
+      <span class="logo-icon sm">⬡</span>
+      <span class="logo-text" style="font-size:1.2rem">DevMatch</span>
+    </div>
+    <button class="hamburger" onclick="toggleMNav()" id="hamburger">☰</button>
+  </div>
+  <div class="mobile-nav" id="mobile-nav">
+    <a class="nav-item" onclick="switchTab('dashboard');closeMNav()" data-tab="dashboard">▣ Dashboard</a>
+    <a class="nav-item" onclick="switchTab('teams');closeMNav()"      data-tab="teams">◈ Teams</a>
+    <a class="nav-item" onclick="switchTab('attendance');closeMNav()" data-tab="attendance">◉ Attendance</a>
+    <a class="nav-item" onclick="switchTab('profile');closeMNav()"    data-tab="profile">◎ Profile</a>
+    <a class="nav-item" onclick="goHkList();closeMNav()">⊞ All Events</a>
+    <button class="btn-logout" onclick="logout()">↩ Logout</button>
+  </div>
+
+  <main class="main-content">
+
+    <!-- DASHBOARD -->
+    <section id="tab-dashboard" class="tab active">
+      <div class="page-header">
+        <div>
+          <h2 id="dash-title">Loading...</h2>
+          <p id="dash-meta" class="meta-text"></p>
+        </div>
+        <span class="badge" id="dash-mode-badge">Offline</span>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon">PARTICIPANTS</div>
+          <div class="stat-num" id="stat-participants">—</div>
+          <div class="stat-label">Total</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">TEAMS</div>
+          <div class="stat-num" id="stat-teams">—</div>
+          <div class="stat-label">Registered</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">PRESENT</div>
+          <div class="stat-num" id="stat-present">0</div>
+          <div class="stat-label">Today</div>
+        </div>
+      </div>
+      <div class="info-cards">
+        <div class="info-card">
+          <div class="info-card-label">Event Dates</div>
+          <div class="info-card-val" id="dash-dates">—</div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-label">Venue</div>
+          <div class="info-card-val" id="dash-venue">—</div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-label">Registration Window</div>
+          <div class="info-card-val" id="dash-reg">—</div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-label">Entry Fee</div>
+          <div class="info-card-val" id="dash-fee">Free</div>
+        </div>
+      </div>
+      <div class="desc-card">
+        <div class="desc-title">About this Hackathon</div>
+        <p id="dash-desc"></p>
+        <div class="desc-title" style="margin-top:1.2rem">Problem Statements</div>
+        <p id="dash-problems"></p>
+      </div>
+    </section>
+
+    <!-- TEAMS -->
+    <section id="tab-teams" class="tab">
+      <div class="page-header">
+        <div>
+          <h2>Teams</h2>
+          <p class="meta-text">All registered teams</p>
+        </div>
+        <span class="badge b2" id="teams-count-badge">— Teams</span>
+      </div>
+      <div class="teams-grid" id="teams-grid"></div>
+    </section>
+
+    <!-- ATTENDANCE -->
+    <section id="tab-attendance" class="tab">
+      <div class="page-header">
+        <div>
+          <h2>Attendance</h2>
+          <p class="meta-text">Mark team attendance for today</p>
+        </div>
+        <div class="att-summary">
+          <span class="att-chip chip-present" id="att-present-count">0 Present</span>
+          <span class="att-chip chip-absent"  id="att-absent-count">0 Absent</span>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="att-table">
+          <thead><tr><th>#</th><th>Team</th><th>Leader</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="att-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- PROFILE -->
+    <section id="tab-profile" class="tab">
+      <div class="page-header">
+        <div>
+          <h2>My Profile</h2>
+          <p class="meta-text">Manage your organizer information</p>
+        </div>
+        <span class="badge" id="profile-saved-badge" style="display:none">✓ Saved</span>
+      </div>
+      <div class="profile-layout">
+        <div class="profile-card">
+          <div class="profile-avatar" id="profile-avatar">?</div>
+          <div class="profile-name"  id="profile-name">Your Name</div>
+          <div class="profile-role">Organizer · DevMatch</div>
+          <div class="profile-email" id="profile-email">—</div>
+          <div class="profile-links" id="profile-links"></div>
+        </div>
+        <div class="profile-form-area">
+          <div class="form-section">
+            <div class="section-label">Personal Info</div>
+            <div class="form-row">
+              <div class="form-group"><label>Full Name</label><input type="text"  id="prof-name"        placeholder="Aryan Sharma"/></div>
+              <div class="form-group"><label>Username</label>  <input type="text"  id="prof-username"    placeholder="aryan_dev"/></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label>Email</label>     <input type="email" id="prof-email-field" placeholder="organizer@devmatch.io"/></div>
+              <div class="form-group"><label>Phone</label>     <input type="tel"   id="prof-phone"       placeholder="+91 98765 43210"/></div>
+            </div>
+          </div>
+          <div class="form-section">
+            <div class="section-label">Professional Info</div>
+            <div class="form-row">
+              <div class="form-group"><label>Organisation</label> <input type="text" id="prof-org"         placeholder="IIT Bombay"/></div>
+              <div class="form-group"><label>Designation</label>  <input type="text" id="prof-designation" placeholder="Event Lead"/></div>
+            </div>
+            <div class="form-group"><label>Bio</label><textarea id="prof-bio" rows="3" placeholder="A short bio..."></textarea></div>
+          </div>
+          <div class="form-section">
+            <div class="section-label">Social Links</div>
+            <div class="form-row">
+              <div class="form-group"><label>LinkedIn</label>  <input type="url" id="prof-linkedin" placeholder="https://linkedin.com/in/..."/></div>
+              <div class="form-group"><label>GitHub</label>    <input type="url" id="prof-github"   placeholder="https://github.com/..."/></div>
+            </div>
+            <div class="form-group"><label>Portfolio / Website</label><input type="url" id="prof-website" placeholder="https://yoursite.com"/></div>
+          </div>
+          <button class="btn-primary full" onclick="saveProfile()">Save Profile</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════════════════ -->
+<script>
+/* ── Mock Teams ── */
+const MOCK_TEAMS=[
+  {name:"ByteForce",     leader:"Aryan Sharma", members:["Aryan Sharma","Priya Nair","Kiran Das","Mehul Patel"],   roles:["Frontend","Backend","ML"]},
+  {name:"NullPointers",  leader:"Sneha Joshi",  members:["Sneha Joshi","Rahul Verma","Tanya Singh"],               roles:["Backend","DevOps","Design"]},
+  {name:"StackOverflow", leader:"Dev Anand",    members:["Dev Anand","Aisha Khan","Rohan Mehta","Lakshmi R."],     roles:["Frontend","Backend","ML","Mobile"]},
+  {name:"AlgoRhythm",   leader:"Pooja Iyer",   members:["Pooja Iyer","Sameer Gupta","Nisha Thomas"],              roles:["ML","Data Science","Backend"]},
+  {name:"HexaDev",      leader:"Vikram Nair",  members:["Vikram Nair","Anjali Rao","Manish Desai"],               roles:["Frontend","Design","Mobile"]},
+  {name:"CodeNinjas",   leader:"Ritika Pande", members:["Ritika Pande","Akshay Borkar","Swati More","Harish K."],roles:["Backend","Frontend","Data Science"]},
+  {name:"ZeroDay",      leader:"Suresh Rajan", members:["Suresh Rajan","Deepika M.","Akash N."],                  roles:["Backend","ML","DevOps"]},
+  {name:"PixelPirates", leader:"Neha Kulkarni",members:["Neha Kulkarni","Aman Tiwari","Ruchi Verma","Gaurav S."],roles:["Design","Frontend","Mobile"]}
+];
+const ROLE_CLASS={Frontend:'role-fe',Backend:'role-be',ML:'role-ml','Data Science':'role-ds',Mobile:'role-mob',Design:'role-des',DevOps:'role-be'};
+
+/* ── State ── */
+let attendanceState={};
+let feeEnabled=false;
+let activeIdx=null;
+
+/* ── Storage ── */
+const getHks=()=>JSON.parse(localStorage.getItem('dm_hks')||'[]');
+const saveHks=l=>localStorage.setItem('dm_hks',JSON.stringify(l));
+const getProfile=()=>JSON.parse(localStorage.getItem('dm_profile')||'{}');
+const saveProfileData=p=>localStorage.setItem('dm_profile',JSON.stringify(p));
+
+/* ── Init ── */
+document.addEventListener('DOMContentLoaded',()=>{
+  // migrate legacy single hackathon
+  const legacy=localStorage.getItem('dm_hackathon');
+  if(legacy){const l=getHks();if(!l.length){l.push(JSON.parse(legacy));saveHks(l);}localStorage.removeItem('dm_hackathon');}
+
+  renderTeams();
+  initAttendance();
+  loadProfileForm();
+
+  const loggedIn=sessionStorage.getItem('dm_logged_in');
+  if(!loggedIn){showPage('page-auth');return;}
+
+  const idx=sessionStorage.getItem('dm_active_idx');
+  const hks=getHks();
+  if(idx!==null && hks[+idx]){
+    activeIdx=+idx;
+    openHackathon(activeIdx);
+  } else if(hks.length){
+    showPage('page-hklist');
+    renderHkList();
+  } else {
+    showPage('page-create');
+  }
+});
+
+/* ── Pages ── */
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById(id)?.classList.add('active');
+}
+
+/* ── Auth tabs ── */
+function showAuthTab(tab){
+  document.getElementById('auth-login').style.display    = tab==='login'?'block':'none';
+  document.getElementById('auth-register').style.display = tab==='register'?'block':'none';
+  document.getElementById('tab-login-btn').classList.toggle('active', tab==='login');
+  document.getElementById('tab-reg-btn').classList.toggle('active',   tab==='register');
+}
+
+/* ── Login ── */
+function handleLogin(){
+  const email=_v('login-email'), pass=_v('login-password');
+  if(!email||!pass){flash('login-email');flash('login-password');return;}
+  sessionStorage.setItem('dm_logged_in','true');
+  // pre-fill profile email
+  const p=getProfile();if(!p.email){p.email=email;saveProfileData(p);}
+  afterAuth();
+}
+
+/* ── Register ── */
+function handleRegister(){
+  const name=_v('reg-name'),email=_v('reg-email'),pass=_v('reg-password'),conf=_v('reg-confirm');
+  if(!name){flash('reg-name');return;}
+  if(!email){flash('reg-email');return;}
+  if(!pass){flash('reg-password');return;}
+  if(pass!==conf){flash('reg-confirm');return;}
+  // Save profile from registration
+  const p={
+    name:name,username:_v('reg-username'),email:email,
+    phone:_v('reg-phone'),org:_v('reg-org'),
+    designation:'',bio:'',linkedin:'',github:'',website:''
+  };
+  saveProfileData(p);
+  sessionStorage.setItem('dm_logged_in','true');
+  afterAuth();
+}
+
+function afterAuth(){
+  const hks=getHks();
+  if(hks.length){showPage('page-hklist');renderHkList();}
+  else{showPage('page-create');}
+  loadProfileForm();
+}
+
+/* ── Flash ── */
+function flash(id){
+  const el=document.getElementById(id);if(!el)return;
+  el.style.borderColor='var(--accent)';el.style.boxShadow='0 0 0 3px rgba(245,233,174,0.15)';
+  setTimeout(()=>{el.style.borderColor='';el.style.boxShadow='';},1500);
+}
+
+/* ── Hackathon list ── */
+function goHkList(){showPage('page-hklist');renderHkList();}
+function renderHkList(){
+  const hks=getHks(),grid=document.getElementById('hk-grid'),empty=document.getElementById('hklist-empty');
+  if(!grid)return;
+  grid.innerHTML='';
+  // Update topbar avatar
+  const p=getProfile();
+  setText('hl-avatar',getInitials(p.name||p.username||'?'));
+
+  if(!hks.length){if(empty)empty.style.display='block';return;}
+  if(empty)empty.style.display='none';
+  hks.forEach((hk,idx)=>{
+    const card=document.createElement('div');
+    card.className='hk-card'+(idx===activeIdx?' current':'');
+    const dateTxt=hk.start?fmtDate(hk.start.split('T')[0]||hk.start):'—';
+    card.innerHTML=`
+      <div class="card-name">${hk.name}</div>
+      <div class="card-meta">${dateTxt}${hk.venue?' · '+hk.venue:''}</div>
+      <span class="card-badge">${hk.mode||'Offline'}</span>
+      <div class="card-actions">
+        <button class="btn-card-del" onclick="deleteHk(${idx},event)">Delete</button>
+        <button class="btn-card-open" onclick="openHackathon(${idx})">Open →</button>
+      </div>`;
+    grid.appendChild(card);
+  });
+}
+
+function openHackathon(idx){
+  const hks=getHks();if(!hks[idx])return;
+  activeIdx=idx;
+  sessionStorage.setItem('dm_active_idx',idx);
+  initAttendance();
+  showPage('page-app');
+  renderDashboard(hks[idx]);
+  loadProfileForm();
+  switchTab('dashboard');
+}
+
+function deleteHk(idx,e){
+  e.stopPropagation();
+  const hks=getHks();hks.splice(idx,1);saveHks(hks);
+  if(activeIdx===idx){activeIdx=null;sessionStorage.removeItem('dm_active_idx');}
+  else if(activeIdx>idx){activeIdx--;sessionStorage.setItem('dm_active_idx',activeIdx);}
+  renderHkList();
+}
+
+/* ── Create ── */
+function goCreate(){
+  ['hk-name','hk-desc','hk-problems','hk-start','hk-end','hk-venue','hk-reg-start','hk-reg-end','hk-fee']
+    .forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  feeEnabled=false;
+  document.getElementById('fee-toggle')?.classList.remove('on');
+  const fw=document.getElementById('fee-wrap');if(fw)fw.style.display='none';
+  showPage('page-create');
+}
+
+function goBack(){
+  const hks=getHks();
+  if(hks.length){showPage('page-hklist');renderHkList();}
+  else showPage('page-auth');
+}
+
+function toggleFee(){
+  feeEnabled=!feeEnabled;
+  document.getElementById('fee-toggle').classList.toggle('on',feeEnabled);
+  document.getElementById('fee-wrap').style.display=feeEnabled?'block':'none';
+}
+
+function createHackathon(){
+  const name=_v('hk-name');if(!name){flash('hk-name');return;}
+  const data={
+    name,
+    desc:_v('hk-desc')||'No description provided.',
+    problems:_v('hk-problems')||'No problem statements listed yet.',
+    start:document.getElementById('hk-start').value,
+    end:document.getElementById('hk-end').value,
+    venue:_v('hk-venue')||'TBD',
+    mode:document.getElementById('hk-mode').value,
+    regStart:document.getElementById('hk-reg-start').value,
+    regEnd:document.getElementById('hk-reg-end').value,
+    fee:feeEnabled?(_v('hk-fee')||'0'):null
+  };
+  const hks=getHks();hks.push(data);saveHks(hks);
+  activeIdx=hks.length-1;
+  sessionStorage.setItem('dm_active_idx',activeIdx);
+  initAttendance();
+  showPage('page-app');
+  renderDashboard(data);
+  loadProfileForm();
+  switchTab('dashboard');
+}
+
+/* ── Dashboard ── */
+function renderDashboard(hk){
+  setText('dash-title', hk.name||'Hackathon');
+  setText('dash-mode-badge', hk.mode||'Offline');
+  setText('dash-desc', hk.desc||'—');
+  setText('dash-problems', hk.problems||'—');
+  setText('dash-venue', hk.venue||'—');
+  setText('dash-fee', hk.fee?`₹${hk.fee}`:'Free');
+  setText('dash-dates', (hk.start?fmtDT(hk.start):'—')+(hk.end?' → '+fmtDT(hk.end):''));
+  setText('dash-meta', hk.venue?`${hk.venue} · ${hk.mode}`:hk.mode||'');
+  setText('dash-reg', (hk.regStart?fmtDate(hk.regStart):'—')+' → '+(hk.regEnd?fmtDate(hk.regEnd):'—'));
+  setText('stat-participants', MOCK_TEAMS.reduce((a,t)=>a+t.members.length,0));
+  setText('stat-teams', MOCK_TEAMS.length);
+  setText('se-name', hk.name||'—');
+  updatePresent();
+}
+function updatePresent(){
+  setText('stat-present', Object.values(attendanceState).filter(v=>v==='present').length);
+}
+
+/* ── Tabs ── */
+function switchTab(name){
+  document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active',el.dataset.tab===name));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+name)?.classList.add('active');
+  if(name==='dashboard')updatePresent();
+}
+
+/* ── Teams ── */
+function renderTeams(){
+  const grid=document.getElementById('teams-grid');if(!grid)return;
+  grid.innerHTML='';
+  MOCK_TEAMS.forEach(team=>{
+    const card=document.createElement('div');card.className='team-card';
+    const rolesHTML=team.roles.map(r=>`<span class="role-tag ${ROLE_CLASS[r]||'role-be'}">${r}</span>`).join('');
+    card.innerHTML=`
+      <div class="team-name">${team.name}</div>
+      <div class="team-leader">Led by <span>${team.leader}</span></div>
+      <div class="team-count">◈ ${team.members.length} member${team.members.length!==1?'s':''}</div>
+      <div class="team-roles">${rolesHTML}</div>`;
+    grid.appendChild(card);
+  });
+  setText('teams-count-badge',`${MOCK_TEAMS.length} Teams`);
+}
+
+/* ── Attendance ── */
+function initAttendance(){
+  attendanceState={};
+  MOCK_TEAMS.forEach(t=>{attendanceState[t.name]='pending';});
+  renderAttendance();
+}
+function renderAttendance(){
+  const tbody=document.getElementById('att-body');if(!tbody)return;
+  tbody.innerHTML='';
+  MOCK_TEAMS.forEach((team,idx)=>{
+    const status=attendanceState[team.name]||'pending';
+    const row=document.createElement('tr');
+    row.innerHTML=`
+      <td>${String(idx+1).padStart(2,'0')}</td>
+      <td>${team.name}</td><td>${team.leader}</td>
+      <td><span class="status-badge status-${status}" id="sb-${idx}">${cap(status)}</span></td>
+      <td class="att-actions">
+        <button class="btn-present" onclick="markAtt('${team.name}','present',${idx})">✓ Present</button>
+        <button class="btn-absent"  onclick="markAtt('${team.name}','absent',${idx})">✗ Absent</button>
+      </td>`;
+    tbody.appendChild(row);
+  });
+  refreshAttSum();
+}
+function markAtt(name,status,idx){
+  attendanceState[name]=status;
+  const b=document.getElementById(`sb-${idx}`);
+  if(b){b.className=`status-badge status-${status}`;b.textContent=cap(status);}
+  refreshAttSum();updatePresent();
+}
+function refreshAttSum(){
+  const vals=Object.values(attendanceState);
+  setText('att-present-count',`${vals.filter(v=>v==='present').length} Present`);
+  setText('att-absent-count', `${vals.filter(v=>v==='absent').length} Absent`);
+}
+
+/* ── Profile ── */
+function loadProfileForm(){
+  const p=getProfile();
+  setVal('prof-name',p.name||'');setVal('prof-username',p.username||'');
+  setVal('prof-email-field',p.email||'');setVal('prof-phone',p.phone||'');
+  setVal('prof-org',p.org||'');setVal('prof-designation',p.designation||'');
+  setVal('prof-bio',p.bio||'');setVal('prof-linkedin',p.linkedin||'');
+  setVal('prof-github',p.github||'');setVal('prof-website',p.website||'');
+  syncProfileUI(p);
+}
+function saveProfile(){
+  const p={
+    name:_v('prof-name'),username:_v('prof-username'),email:_v('prof-email-field'),
+    phone:_v('prof-phone'),org:_v('prof-org'),designation:_v('prof-designation'),
+    bio:_v('prof-bio'),linkedin:_v('prof-linkedin'),github:_v('prof-github'),website:_v('prof-website')
+  };
+  saveProfileData(p);syncProfileUI(p);
+  const b=document.getElementById('profile-saved-badge');
+  if(b){b.style.display='inline-block';clearTimeout(b._t);b._t=setTimeout(()=>b.style.display='none',2800);}
+}
+function syncProfileUI(p){
+  const ini=getInitials(p.name||p.username||'?');
+  setText('profile-avatar',ini);setText('profile-name',p.name||p.username||'Your Name');
+  setText('profile-email',p.email||'—');
+  setText('sp-avatar',ini);setText('sp-name',p.name||p.username||'Your Name');
+  const linksEl=document.getElementById('profile-links');
+  if(linksEl){
+    linksEl.innerHTML='';
+    if(p.linkedin)linksEl.innerHTML+=`<a class="profile-link" href="${p.linkedin}" target="_blank">LinkedIn</a>`;
+    if(p.github)  linksEl.innerHTML+=`<a class="profile-link" href="${p.github}"   target="_blank">GitHub</a>`;
+    if(p.website) linksEl.innerHTML+=`<a class="profile-link" href="${p.website}"  target="_blank">Website</a>`;
+  }
+}
+
+/* ── Logout ── */
+function logout(){
+  sessionStorage.removeItem('dm_logged_in');
+  sessionStorage.removeItem('dm_active_idx');
+  activeIdx=null;
+  showPage('page-auth');
+  showAuthTab('login');
+  document.getElementById('login-email').value='';
+  document.getElementById('login-password').value='';
+}
+
+/* ── Mobile nav ── */
+function toggleMNav(){document.getElementById('mobile-nav')?.classList.toggle('open');}
+function closeMNav(){document.getElementById('mobile-nav')?.classList.remove('open');}
+document.addEventListener('click',e=>{
+  const nav=document.getElementById('mobile-nav'),btn=document.getElementById('hamburger');
+  if(nav&&btn&&!nav.contains(e.target)&&!btn.contains(e.target))nav.classList.remove('open');
+});
+
+/* ── Keyboard ── */
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&document.getElementById('page-auth')?.classList.contains('active'))
+    document.getElementById('auth-login').style.display!=='none'?handleLogin():handleRegister();
+});
+
+/* ── Helpers ── */
+function setText(id,v){const el=document.getElementById(id);if(el)el.textContent=v;}
+function setVal(id,v){const el=document.getElementById(id);if(el)el.value=v;}
+function _v(id){const el=document.getElementById(id);return el?el.value.trim():'';}
+function cap(s){return s.charAt(0).toUpperCase()+s.slice(1);}
+function getInitials(n){
+  if(!n||n==='?')return '?';
+  return n.trim().split(/\s+/).map(w=>w[0].toUpperCase()).slice(0,2).join('');
+}
+function fmtDT(dt){
+  try{return new Date(dt).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:true});}
+  catch{return dt;}
+}
+function fmtDate(d){
+  try{return new Date(d).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});}
+  catch{return d;}
+}
+</script>
+</body>
+</html>
