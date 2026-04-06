@@ -1,10 +1,11 @@
 const express = require("express");
 const mongoose = require("mongoose");
+const cors = require("cors");
 const User = require("./models/User");
 
 const app = express();
 
-
+app.use(cors());
 app.use(express.json());
 
 /* -------------------- TEST ROUTE -------------------- */
@@ -43,7 +44,6 @@ app.post("/user", async (req, res) => {
     hackathonsAttended = hackathonsAttended || 0;
     experience         = experience         || 0;
     commitmentHours    = commitmentHours    || 0;
-
     let commitmentScore = 0;
     if (hackathonsJoined > 0) {
       commitmentScore = Math.min(hackathonsAttended / hackathonsJoined, 1);
@@ -154,3 +154,42 @@ mongoose.connect("mongodb://127.0.0.1:27017/devmatch", {
     console.error("MongoDB Connection Failed ❌", err);
     process.exit(1);
   });
+
+ async function createUserSafe() {
+  try {
+    const data = {
+      name: document.getElementById("reg-name")?.value || "",
+      email: document.getElementById("reg-email")?.value || "",
+      role: document.getElementById("reg-role")?.value || "",
+      skills: ["General"],
+      experience: 0,
+      commitmentHours: 0,
+      hackathonsJoined: 0,
+      hackathonsAttended: 0
+    };
+
+    const res = await fetch("http://localhost:5000/user", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(data)
+    });
+
+    const result = await res.json();
+
+    console.log(result);
+    alert("User created ✅");
+
+    // 🔥 ADD THIS PART (VERY IMPORTANT)
+    localStorage.setItem("userId", result._id);
+
+    // 👉 MOVE TO NEXT PAGE
+    document.getElementById("page-auth").classList.remove("active");
+    document.getElementById("page-profile-setup").classList.add("active");
+
+  } catch (err) {
+    console.error(err);
+    alert("Error ❌");
+  }
+}
