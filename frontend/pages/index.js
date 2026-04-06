@@ -7,6 +7,7 @@ import ActivitiesCard from '../components/ActivitiesCard';
 import PullRequestsCard from '../components/PullRequestsCard';
 import IssuesCard from '../components/IssuesCard';
 import SearchModal from '../components/SearchModal';
+import { buildIssueListUrl, mapIssueListPayloadToCardIssues } from '../lib/issueListContract';
 import { Star, GitFork, Eye, CircleDot, Search } from 'lucide-react';
 
 export default function Home() {
@@ -131,18 +132,18 @@ export default function Home() {
     setIssuesError(null);
 
     const headers = authHeaders();
+    const backendIssuesUrl = buildIssueListUrl(process.env.NEXT_PUBLIC_API_BASE_URL, owner, repo);
 
-    // Fetch open and closed separately so both tabs always have data
     const [
       commitsRes,
-      prsOpenRes, prsClosedRes,
-      issuesOpenRes, issuesClosedRes,
+      prsOpenRes,
+      prsClosedRes,
+      backendIssuesRes,
     ] = await Promise.all([
       fetch(`https://api.github.com/repos/${owner}/${repo}/commits?per_page=30`, { headers }),
       fetch(`https://api.github.com/repos/${owner}/${repo}/pulls?state=open&per_page=50`, { headers }),
       fetch(`https://api.github.com/repos/${owner}/${repo}/pulls?state=closed&per_page=50`, { headers }),
-      fetch(`https://api.github.com/repos/${owner}/${repo}/issues?state=open&per_page=100`, { headers }),
-      fetch(`https://api.github.com/repos/${owner}/${repo}/issues?state=closed&per_page=100`, { headers }),
+      fetch(backendIssuesUrl, { headers }),
     ]);
 
     // Commits
@@ -182,27 +183,27 @@ export default function Home() {
       setPrsError(await parseApiError(prsOpenRes));
     }
 
-    // Issues — merge open + closed, exclude PRs
-    const issuesOk = issuesOpenRes.ok || issuesClosedRes.ok;
-    if (issuesOk) {
-      const openIssues   = issuesOpenRes.ok   ? await issuesOpenRes.json()   : [];
-      const closedIssues = issuesClosedRes.ok ? await issuesClosedRes.json() : [];
-      setIssuesData(
-        [...openIssues, ...closedIssues]
-          .filter((issue) => !issue.pull_request)
-          .map((issue) => ({
-            id: issue.id,
-            number: issue.number,
-            title: issue.title,
-            state: issue.state,
-            createdAt: timeAgo(issue.created_at),
-          }))
-      );
-      if (!issuesOpenRes.ok)   setIssuesError(await parseApiError(issuesOpenRes));
-      if (!issuesClosedRes.ok) setIssuesError(await parseApiError(issuesClosedRes));
+    if (backendIssuesRes.ok) {
+      const issueListPayload = await backendIssuesRes.json();
+      setIssuesData(mapIssueListPayloadToCardIssues(issueListPayload, timeAgo));
     } else {
-      setIssuesData([]);
-      setIssuesError(await parseApiError(issuesOpenRes));
+      // Fetch open + closed separately (per_page=100 is GitHub API max)
+      // so both tabs have data and PR filtering doesn't drain the list
+      const [fallbackOpenRes, fallbackClosedRes] = await Promise.all([
+        fetch(`https://api.github.com/repos/${owner}/${repo}/issues?state=open&per_page=100`, { headers }),
+        fetch(`https://api.github.com/repos/${owner}/${repo}/issues?state=closed&per_page=100`, { headers }),
+      ]);
+
+      const openJson   = fallbackOpenRes.ok   ? await fallbackOpenRes.json()   : [];
+      const closedJson = fallbackClosedRes.ok ? await fallbackClosedRes.json() : [];
+      const combined   = [...openJson, ...closedJson];
+
+      if (combined.length > 0) {
+        setIssuesData(mapIssueListPayloadToCardIssues(combined, timeAgo));
+      } else {
+        setIssuesData([]);
+        setIssuesError(await parseApiError(backendIssuesRes));
+      }
     }
 
     setExtrasLoading(false);
