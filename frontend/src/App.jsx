@@ -16,10 +16,12 @@ function App() {
   const [parsedJD, setParsedJD] = useState(null);
   const [analysisResults, setAnalysisResults] = useState(null);
   const [resumeId, setResumeId] = useState(null);
+  const [uploadCount, setUploadCount] = useState(0);
 
   const handleUploadComplete = (data) => {
     setAnalysisResults(data);
     if (data.resume_id) setResumeId(data.resume_id);
+    setUploadCount(c => c + 1); // Trigger leaderboard refresh
     setTimeout(() => {
       document.getElementById('dashboard')?.scrollIntoView({ behavior: 'smooth' });
     }, 100);
@@ -60,7 +62,7 @@ function App() {
             </div>
           )}
 
-          <Leaderboard />
+          <Leaderboard refreshKey={uploadCount} />
         </main>
       </div>
     </AuthProvider>
