@@ -3,8 +3,11 @@ const mongoose = require("mongoose");
 const User = require("./models/User");
 
 const app = express();
+
+/* -------------------- MIDDLEWARE -------------------- */
 app.use(express.json());
 
+/* -------------------- TEST ROUTE -------------------- */
 app.get("/", (req, res) => {
   res.send("DevMatch Backend Running 🚀");
 });
@@ -12,13 +15,48 @@ app.get("/", (req, res) => {
 /* -------------------- CREATE USER -------------------- */
 app.post("/user", async (req, res) => {
   try {
-    let { name, email, skills, role, experience, commitmentHours, confidence } = req.body;
+    let {
+      name,
+      email,
+      skills,
+      role,
+      experience,
+      commitmentHours,
+      hackathonsJoined,
+      hackathonsAttended
+    } = req.body;
 
-    let reliabilityScore = Math.min(100, Math.round(
-      (Math.min(commitmentHours, 24) / 24 * 40) +
-      (Math.min(experience, 10) / 10 * 30) +
-      (confidence * 3)
-    ));
+    if (!name || !email || !skills || !role) {
+      return res.status(400).send({ error: "name, email, skills, and role are required" });
+    }
+
+    if (!Array.isArray(skills) || skills.length === 0) {
+      return res.status(400).send({ error: "skills must be a non-empty array" });
+    }
+
+    const existing = await User.findOne({ email });
+    if (existing) {
+      return res.status(409).send({ error: "A user with this email already exists" });
+    }
+
+    hackathonsJoined   = hackathonsJoined   || 0;
+    hackathonsAttended = hackathonsAttended || 0;
+    experience         = experience         || 0;
+    commitmentHours    = commitmentHours    || 0;
+
+    let commitmentScore = 0;
+    if (hackathonsJoined > 0) {
+      commitmentScore = Math.min(hackathonsAttended / hackathonsJoined, 1);
+    }
+
+    const normalizedHours = Math.min(commitmentHours / 40, 1) * 100;
+    const normalizedExp   = Math.min(experience / 10, 1) * 100;
+    const normalizedComm  = commitmentScore * 100;
+
+    let reliabilityScore =
+      (normalizedHours * 0.3) +
+      (normalizedExp   * 0.3) +
+      (normalizedComm  * 0.4);
 
     let newUser = new User({
       name,
@@ -27,183 +65,92 @@ app.post("/user", async (req, res) => {
       role,
       experience,
       commitmentHours,
-      confidence,
+      hackathonsJoined,
+      hackathonsAttended,
+      commitmentScore,
       reliabilityScore
     });
 
     await newUser.save();
-
-    res.status(201).send({
-      success: true,
-      message: "User created successfully",
-      data: newUser
-    });
+    res.status(201).send(newUser);
 
   } catch (err) {
-    console.error(err);
-    res.status(500).send({
-      success: false,
-      message: "Error creating user"
-    });
+    console.error("Error creating user:", err);
+    res.status(500).send({ error: "Error creating user", details: err.message });
   }
 });
 
 /* -------------------- MATCHING API -------------------- */
 app.get("/match/:id", async (req, res) => {
-  console.log("MATCH API HIT");
-
   try {
-    let user = await User.findById(req.params.id);
-    if (!user) {
-      return res.status(404).send({
-        success: false,
-        message: "User not found"
-      });
+
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).send({ error: "Invalid user ID format" });
     }
 
-    let allUsers = await User.find({ _id: { $ne: user._id } });
+    let user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).send({ error: "User not found" });
+    }
+
+    if (!user.skills || user.skills.length === 0) {
+      return res.status(400).send({ error: "User has no skills listed" });
+    }
+
+    const limit = Math.min(parseInt(req.query.limit) || 50, 100);
+
+    let allUsers = await User.find({
+      _id:  { $ne: user._id },
+      role: { $ne: user.role }
+    }).limit(limit);
 
     let matches = allUsers.map(u => {
 
-      let skillMatch = u.skills.filter(skill =>
-        !user.skills.includes(skill)
+      let commonSkills = u.skills.filter(skill =>
+        user.skills.includes(skill)
       ).length;
 
-      let rolePenalty = u.role === user.role ? 5 : 0;
+      let totalSkills = new Set([...u.skills, ...user.skills]).size;
 
-      let expDiff = Math.abs(user.experience - u.experience);
-      let expScore = Math.max(0, 10 - expDiff);
-
-      let hoursDiff = Math.abs(user.commitmentHours - u.commitmentHours);
-      let hoursScore = Math.max(0, 10 - hoursDiff * 2);
+      let skillScore = totalSkills > 0
+        ? (commonSkills / totalSkills) * 100
+        : 0;
 
       let score =
-        (skillMatch * 10) +
-        u.reliabilityScore +
-        expScore +
-        hoursScore -
-        rolePenalty;
-
-      let reasons = [];
-
-      if (skillMatch > 0) reasons.push(`Has ${skillMatch} complementary skill(s)`);
-      if (expScore > 5) reasons.push("Similar experience level");
-      if (hoursScore > 5) reasons.push("Similar availability");
-      if (u.reliabilityScore > 70) reasons.push("Highly reliable teammate");
-
-      if (reasons.length === 0) reasons.push("Potential teammate");
+        (skillScore * 0.6) +
+        (u.reliabilityScore * 0.4);
 
       return {
         user: u,
-        matchScore: score,
-        reasons: reasons
+        matchScore: parseFloat(score.toFixed(2))
       };
     });
 
     matches.sort((a, b) => b.matchScore - a.matchScore);
 
     res.send({
-      success: true,
-      count: matches.length,
-      data: matches
+      total: matches.length,
+      matches
     });
 
   } catch (err) {
-    console.error(err);
-    res.status(500).send({
-      success: false,
-      message: "Error in matching"
-    });
+    console.error("Error in matching:", err);
+    res.status(500).send({ error: "Error in matching", details: err.message });
   }
 });
 
-/* -------------------- AUTO TEAM BUILDER -------------------- */
-app.get("/build-team/:id", async (req, res) => {
-  try {
-    let user = await User.findById(req.params.id);
-
-    if (!user) {
-      return res.status(404).send({
-        success: false,
-        message: "User not found"
-      });
-    }
-
-    let allUsers = await User.find({ _id: { $ne: user._id } });
-
-    let scoredUsers = allUsers.map(u => {
-
-      let skillMatch = u.skills.filter(skill =>
-        !user.skills.includes(skill)
-      ).length;
-
-      let rolePenalty = u.role === user.role ? 5 : 0;
-
-      let expDiff = Math.abs(user.experience - u.experience);
-      let expScore = Math.max(0, 10 - expDiff);
-
-      let hoursDiff = Math.abs(user.commitmentHours - u.commitmentHours);
-      let hoursScore = Math.max(0, 10 - hoursDiff * 2);
-
-      let score =
-        (skillMatch * 10) +
-        u.reliabilityScore +
-        expScore +
-        hoursScore -
-        rolePenalty;
-
-      return { user: u, score };
+/* -------------------- DATABASE + SERVER -------------------- */
+mongoose.connect("mongodb://127.0.0.1:27017/devmatch", {
+  serverSelectionTimeoutMS: 5000,
+  socketTimeoutMS: 45000,
+})
+  .then(() => {
+    console.log("MongoDB Connected ✅");
+    app.listen(5000, () => {
+      console.log("Server running on port 5000 🚀");
     });
-
-    scoredUsers.sort((a, b) => b.score - a.score);
-
-    // ✅ First pass: unique roles only
-    let team = [user];
-    let usedRoles = new Set([user.role]);
-
-    for (let candidate of scoredUsers) {
-      if (team.length >= 4) break;
-
-      if (!usedRoles.has(candidate.user.role)) {
-        team.push(candidate.user);
-        usedRoles.add(candidate.user.role);
-      }
-    }
-
-    // ✅ Second pass: fill remaining spots if team < 4
-    for (let candidate of scoredUsers) {
-      if (team.length >= 4) break;
-
-      let alreadyAdded = team.find(m => m._id.equals(candidate.user._id));
-      if (!alreadyAdded) {
-        team.push(candidate.user);
-      }
-    }
-
-    let teamScore = team.slice(1).reduce((sum, member) => {
-      let found = scoredUsers.find(u => u.user._id.equals(member._id));
-      return sum + (found ? found.score : 0);
-    }, 0);
-
-    res.send({
-      success: true,
-      teamSize: team.length,
-      teamScore: teamScore,
-      team: team
-    });
-
-  } catch (err) {
-    console.error(err);
-    res.status(500).send({
-      success: false,
-      message: "Error building team"
-    });
-  }
-});
-
-/* -------------------- DATABASE -------------------- */
-mongoose.connect("mongodb://127.0.0.1:27017/devmatch")
-  .then(() => console.log("MongoDB Connected ✅"))
-  .catch(err => console.log(err));
-
-app.listen(5000, () => console.log("Server running on port 5000"));
+  })
+  .catch(err => {
+    console.error("MongoDB Connection Failed ❌", err);
+    process.exit(1);
+  });
