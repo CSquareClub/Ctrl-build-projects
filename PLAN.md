@@ -1,5 +1,103 @@
 # PLAN.md
 
+## Execution Update (2026-04-06): Wave 2 MiniLM primary correction
+
+Current goal:
+
+- make `sentence-transformers/all-MiniLM-L6-v2` the real primary embedding path and confirm no deterministic hash embedding path powers retrieval
+
+Exact scope:
+
+- switch default provider selection to MiniLM (`minilm-l6`)
+- keep provider abstraction stable for downstream indexing/retrieval
+- make embedding normalization and truncation behavior explicit in provider metadata/docs
+- verify repeated encoding stability through real model inference
+- inspect codebase for deterministic hashing/vector stand-ins and ensure they are not in the main path
+
+Files/components likely affected:
+
+- `services/api/app/core/settings.py`
+- `services/api/app/embeddings/contracts.py`
+- `services/api/app/embeddings/providers.py`
+- `services/api/app/embeddings/service.py`
+- `services/api/.env.example`
+- `services/api/README.md`
+
+Sequencing:
+
+1. inspect embedding and vector paths for deterministic/hash behavior
+2. update provider defaults to MiniLM primary
+3. surface normalization/truncation policy in provider metadata/docs
+4. validate model output dimensions and repeat-call stability
+
+Validation strategy:
+
+- compile backend package
+- run embedding smoke script for `embed_one` and `embed_many`
+- verify MiniLM vectors are 384-dimensional and stable across repeated calls
+
+Risks / open questions:
+
+- first-run model download latency from Hugging Face
+- small floating-point differences are possible across hardware backends but should be negligible in same-process repeated calls
+
+Explicitly out of scope:
+
+- vector index implementation
+- duplicate heuristics/reranking
+- proprietary embedding providers
+
+## Execution Update (2026-04-06): Wave 2 embedding provider layer
+
+Current goal:
+
+- implement a swappable open-source embedding provider layer for backend analysis workflows
+
+Exact scope:
+
+- define a clean embedding provider abstraction with `embed_one` and `embed_many`
+- implement `BAAI/bge-small-en-v1.5` as primary provider
+- implement `sentence-transformers/all-MiniLM-L6-v2` as lightweight fallback provider
+- expose discoverable provider identity and vector dimension metadata
+- add settings/docs for local model loading and runtime expectations
+
+Files/components likely affected:
+
+- `services/api/app/embeddings/contracts.py`
+- `services/api/app/embeddings/providers.py`
+- `services/api/app/embeddings/service.py`
+- `services/api/app/embeddings/__init__.py`
+- `services/api/app/core/settings.py`
+- `services/api/requirements.txt`
+- `services/api/.env.example`
+- `services/api/README.md`
+
+Sequencing:
+
+1. inspect existing backend contracts and embedding placeholders
+2. define provider interface + concrete sentence-transformer-backed providers
+3. add provider factory + configuration wiring
+4. document runtime/setup assumptions for local development
+5. validate both providers through sample embedding calls
+
+Validation strategy:
+
+- run Python compile check on backend package
+- run a small Python command that instantiates configured provider and calls `embed_one`
+- run a small Python command that instantiates fallback provider and verifies shared contract behavior
+
+Risks / open questions:
+
+- first model load requires network download from Hugging Face and may be slow
+- local environment may not have enough RAM/CPU acceleration for fast embedding generation
+- if dependency install fails locally, runtime checks may be limited to compile-level validation
+
+Explicitly out of scope:
+
+- vector store integration details
+- duplicate detection or priority-scoring logic
+- hosted/proprietary embedding APIs
+
 ## Execution Update (2026-04-06): Wave 0 backend foundation
 
 Current goal:

@@ -1,5 +1,5 @@
 from functools import lru_cache
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -30,6 +30,15 @@ class Settings(BaseSettings):
         alias="OPENISSUE_GITHUB_TIMEOUT_SECONDS",
     )
     github_token: Optional[str] = Field(default=None, alias="OPENISSUE_GITHUB_TOKEN")
+
+    embeddings_provider: Literal["minilm-l6", "bge-small"] = Field(
+        default="minilm-l6",
+        alias="OPENISSUE_EMBEDDINGS_PROVIDER",
+    )
+    embeddings_fallback_provider: Literal["bge-small", "minilm-l6"] = Field(
+        default="bge-small",
+        alias="OPENISSUE_EMBEDDINGS_FALLBACK_PROVIDER",
+    )
 
 
 @lru_cache(maxsize=1)

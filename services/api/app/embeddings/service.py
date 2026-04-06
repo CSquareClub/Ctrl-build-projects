@@ -1,15 +1,29 @@
+from functools import lru_cache
+
+from app.core.settings import Settings
 from app.embeddings.contracts import EmbeddingProvider
+from app.embeddings.providers import (
+    BgeSmallEmbeddingProvider,
+    MiniLmL6EmbeddingProvider,
+)
 
 
-class UnimplementedEmbeddingProvider(EmbeddingProvider):
-    def provider_name(self) -> str:
-        return "unimplemented"
+def build_embedding_provider(settings: Settings) -> EmbeddingProvider:
+    return _build_provider_from_key(settings.embeddings_provider)
 
-    def vector_dim(self) -> int:
-        return 0
 
-    def embed_one(self, text: str) -> list[float]:
-        raise NotImplementedError("Embeddings are not implemented in this branch.")
+def build_fallback_embedding_provider(settings: Settings) -> EmbeddingProvider:
+    return _build_provider_from_key(settings.embeddings_fallback_provider)
 
-    def embed_many(self, texts: list[str]) -> list[list[float]]:
-        raise NotImplementedError("Embeddings are not implemented in this branch.")
+
+@lru_cache(maxsize=2)
+def _build_provider_from_key(provider_key: str) -> EmbeddingProvider:
+    if provider_key == "bge-small":
+        return BgeSmallEmbeddingProvider()
+    if provider_key == "minilm-l6":
+        return MiniLmL6EmbeddingProvider()
+
+    raise ValueError(
+        "Unsupported embedding provider "
+        f"'{provider_key}'. Expected one of: bge-small, minilm-l6."
+    )
