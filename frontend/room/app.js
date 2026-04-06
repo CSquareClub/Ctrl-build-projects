@@ -42,22 +42,28 @@ window.onload = () => {
     fetchMyRooms();
 };
 
+function clearErrors() {
+    document.querySelectorAll('[id$="-error"]').forEach(el => el.style.display = 'none');
+}
+
 // Hub / Back Navigation
 document.getElementById('hub-btn').onclick = () => {
     activeRoom = null;
     showView('hub');
+    clearErrors();
     document.getElementById('room-header-title').textContent = '';
     document.getElementById('room-info-btn').style.display = 'none';
     if(refreshInterval) clearInterval(refreshInterval);
-    fetchMyRooms();
+    fetchMyRooms(); 
 };
-document.getElementById('nav-create-btn').onclick = () => showView('create');
-document.getElementById('nav-join-btn').onclick = () => showView('join');
-document.getElementById('cancel-create-btn').onclick = () => showView('hub');
-document.getElementById('cancel-join-btn').onclick = () => showView('hub');
+document.getElementById('nav-create-btn').onclick = () => { clearErrors(); showView('create'); };
+document.getElementById('nav-join-btn').onclick = () => { clearErrors(); showView('join'); };
+document.getElementById('cancel-create-btn').onclick = () => { showView('hub'); };
+document.getElementById('cancel-join-btn').onclick = () => { showView('hub'); };
 
 // Info/Invite Navigation
 document.getElementById('room-info-btn').onclick = () => {
+    clearErrors();
     document.getElementById('display-invite-code').textContent = currentInviteCode;
     showView('invite');
 };
@@ -91,44 +97,96 @@ function renderRoomList(rooms) {
 }
 
 document.getElementById('submit-create-btn').onclick = async () => {
+    const errorDiv = document.getElementById('create-error');
+    errorDiv.style.display = 'none';
+    
     const name = document.getElementById('create-room-name').value.trim();
     const description = document.getElementById('create-room-desc').value.trim();
-    if(!name) return;
-    const res = await fetch(`${API_BASE}/create`, {
-        method: 'POST', headers: getHeaders(), body: JSON.stringify({ name, description })
-    });
-    if(res.ok){
-        const room = await res.json();
-        document.getElementById('create-room-name').value = '';
-        document.getElementById('create-room-desc').value = '';
-        fetchMyRooms();
-        selectRoom(room);
+    if(!name) {
+        errorDiv.textContent = 'Room name is required.';
+        errorDiv.style.display = 'block';
+        return;
+    }
+    
+    try {
+        const res = await fetch(`${API_BASE}/create`, {
+            method: 'POST', headers: getHeaders(), body: JSON.stringify({ name, description })
+        });
+        
+        if(res.ok){
+            const room = await res.json();
+            document.getElementById('create-room-name').value = '';
+            document.getElementById('create-room-desc').value = '';
+            fetchMyRooms();
+            selectRoom(room);
+        } else {
+            const data = await res.json();
+            errorDiv.textContent = data.detail || 'Failed to create room.';
+            errorDiv.style.display = 'block';
+        }
+    } catch(e) {
+        errorDiv.textContent = 'Network error occurred.';
+        errorDiv.style.display = 'block';
     }
 };
 
 document.getElementById('submit-join-btn').onclick = async () => {
+    const errorDiv = document.getElementById('join-error');
+    errorDiv.style.display = 'none';
+    
     const code = document.getElementById('join-room-code').value.trim();
-    if(!code) return;
-    const res = await fetch(`${API_BASE}/join`, {
-        method: 'POST', headers: getHeaders(), body: JSON.stringify({ invite_code: code })
-    });
-    if(res.ok){
-        const room = await res.json();
-        document.getElementById('join-room-code').value = '';
-        fetchMyRooms();
-        selectRoom(room);
+    if(!code) {
+        errorDiv.textContent = 'Invite code is required.';
+        errorDiv.style.display = 'block';
+        return;
+    }
+    
+    try {
+        const res = await fetch(`${API_BASE}/join`, {
+            method: 'POST', headers: getHeaders(), body: JSON.stringify({ invite_code: code })
+        });
+        
+        if(res.ok){
+            const room = await res.json();
+            document.getElementById('join-room-code').value = '';
+            fetchMyRooms();
+            selectRoom(room);
+        } else {
+            const data = await res.json();
+            errorDiv.textContent = data.detail || 'Invalid or expired invite code.';
+            errorDiv.style.display = 'block';
+        }
+    } catch(e) {
+        errorDiv.textContent = 'Network error occurred.';
+        errorDiv.style.display = 'block';
     }
 };
 
 document.getElementById('submit-invite-btn').onclick = async () => {
+    const errorDiv = document.getElementById('invite-error');
+    errorDiv.style.display = 'none';
+
     const target = document.getElementById('invite-username').value.trim();
     if(!target || !activeRoom) return;
-    await fetch(`${API_BASE}/${activeRoom}/invite`, {
-        method: 'POST', headers: getHeaders(), body: JSON.stringify({ target_username: target })
-    });
-    document.getElementById('invite-username').value = '';
-    showView('chat');
-    alert(`Invite sent to ${target}`);
+
+    try {
+        const res = await fetch(`${API_BASE}/${activeRoom}/invite`, {
+            method: 'POST', headers: getHeaders(), body: JSON.stringify({ target_username: target })
+        });
+        
+        if(res.ok) {
+            document.getElementById('invite-username').value = '';
+            showView('chat');
+            alert(`User ${target} has been added to the room.`);
+        } else {
+            const data = await res.json();
+            errorDiv.textContent = data.detail || 'Could not send invite.';
+            errorDiv.style.display = 'block';
+        }
+    } catch(e) {
+        errorDiv.textContent = 'Network error occurred.';
+        errorDiv.style.display = 'block';
+    }
 };
 
 async function selectRoom(room) {

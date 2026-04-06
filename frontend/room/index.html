@@ -108,6 +108,7 @@
                 <div class="room-form">
                     <input type="text" class="room-input" id="create-room-name" placeholder="Name your study room...">
                     <textarea class="room-input" id="create-room-desc" placeholder="Room Description (Optional)..." rows="3" style="resize: none;"></textarea>
+                    <div id="create-error" style="color: #ef4444; font-size: 13px; display: none;"></div>
                     <button class="primary-btn" id="submit-create-btn">Create & Enter Room</button>
                     <button class="secondary-btn" id="cancel-create-btn">Back to Hub</button>
                 </div>
@@ -118,6 +119,7 @@
                 <h2>Join a Room</h2>
                 <div class="room-form">
                     <input type="text" class="room-input" id="join-room-code" placeholder="Enter Invite Code...">
+                    <div id="join-error" style="color: #ef4444; font-size: 13px; display: none;"></div>
                     <button class="primary-btn" id="submit-join-btn">Join Room</button>
                     <button class="secondary-btn" id="cancel-join-btn">Back to Hub</button>
                 </div>
@@ -132,6 +134,7 @@
                 <div class="room-form" style="margin-top: 0;">
                     <p style="text-align: center; color: var(--text-secondary);">Or invite directly by username:</p>
                     <input type="text" class="room-input" id="invite-username" placeholder="Target Username">
+                    <div id="invite-error" style="color: #ef4444; font-size: 13px; display: none;"></div>
                     <button class="primary-btn" id="submit-invite-btn">Send Invite</button>
                     <button class="secondary-btn" id="cancel-invite-btn">Return to Chat</button>
                 </div>
