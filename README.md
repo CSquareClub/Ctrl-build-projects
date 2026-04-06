@@ -69,11 +69,13 @@ The frontend collects repo + issue input, the backend fetches GitHub issues and 
 ## Quick Demo
 
 1. Start backend and frontend locally.
-2. Open the frontend app in your browser.
-3. Enter repository as `owner/repo` (example: `facebook/react`).
-4. Click **Fetch Issues** and select an issue from the list.
-5. Click **Analyze** to view classification (if enabled), priority score, and potential duplicates.
-6. Use results to decide triage action.
+2. Open the frontend app in your browser at `http://localhost:3000`.
+3. Navigate to the Dashboard to see available repositories.
+4. Click **USE** on any repository to select it for analysis.
+5. Enter issue title and description on the Intelligence page.
+6. Click **Analyze Issue** to view classification, priority score, and potential duplicates.
+7. Review similar issues and knowledge engine observations.
+8. Use results to decide triage action.
 
 ## Local Setup
 
