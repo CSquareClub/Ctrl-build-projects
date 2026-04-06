@@ -74,13 +74,13 @@ app.get("/match/:id", async (req, res) => {
       // ✅ Penalize same role
       let rolePenalty = u.role === user.role ? 5 : 0;
 
-      // 🔥 NEW: Experience similarity score
+      // 🔥 Experience similarity
       let expDiff = Math.abs(user.experience - u.experience);
-      let expScore = Math.max(0,x ,10 - expDiff);
+      let expScore = Math.max(0, 10 - expDiff);
 
-      // 🔥 NEW: Availability similarity score
+      // 🔥 Availability similarity
       let hoursDiff = Math.abs(user.commitmentHours - u.commitmentHours);
-      let hoursScore = Math.max(0, 10 - hoursDiff*2);
+      let hoursScore = Math.max(0, 10 - hoursDiff * 2);
 
       // 🔥 FINAL SCORE
       let score =
@@ -90,9 +90,31 @@ app.get("/match/:id", async (req, res) => {
         hoursScore -
         rolePenalty;
 
+      // 🔥 EXPLAINABILITY (KILLER FEATURE)
+      let reasons = [];
+
+      if (skillMatch > 0) {
+        reasons.push(`Has ${skillMatch} complementary skill(s)`);
+      }
+      if (expScore > 5) {
+        reasons.push("Similar experience level");
+      }
+      if (hoursScore > 5) {
+        reasons.push("Similar availability");
+      }
+      if (u.reliabilityScore > 70) {
+        reasons.push("Highly reliable teammate");
+      }
+
+      // ✅ Fallback if no reasons
+      if (reasons.length === 0) {
+        reasons.push("Potential teammate");
+      }
+
       return {
         user: u,
-        matchScore: score
+        matchScore: score,
+        reasons: reasons
       };
     });
 
