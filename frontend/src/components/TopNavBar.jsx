@@ -1,56 +1,50 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useLocation } from "react-router-dom";
 
-export default function TopNavBar({ currentPage = 'HOME' }) {
-  const navigate = useNavigate();
-
-  const isActive = (page) => currentPage === page;
-  const navLinkClass = (page) =>
-    isActive(page)
-      ? 'text-sm font-mono uppercase tracking-widest text-blue-400 dark:text-[#58a6ff] border-b-2 border-blue-400'
-      : 'text-sm font-mono uppercase tracking-widest text-slate-400 dark:text-slate-500 hover:text-blue-300 dark:hover:text-[#a2c9ff] transition-colors duration-200';
+export default function TopNavBar() {
+  const location = useLocation();
+  const isActive = (path) => location.pathname === path;
 
   return (
-    <nav className="bg-slate-950 dark:bg-[#10141a] fixed top-0 w-full h-14 z-50 flex justify-between items-center px-6 border-none">
-      <div className="flex items-center gap-8">
-        <span className="text-xl font-mono font-bold text-slate-100 dark:text-[#f0f6fc] cursor-pointer hover:opacity-80 transition-opacity" onClick={() => navigate('/')}>
-          OpenIssue
-        </span>
-        <div className="hidden md:flex gap-6">
-          <button
-            className={navLinkClass('HOME')}
-            onClick={() => navigate('/')}
-          >
-            Home
-          </button>
-          <button
-            className={navLinkClass('TRIAGE')}
-            onClick={() => navigate('/triage')}
-          >
-            Triage
-          </button>
-          <a
-            className="text-sm font-mono uppercase tracking-widest text-slate-400 dark:text-slate-500 hover:text-blue-300 dark:hover:text-[#a2c9ff] transition-colors duration-200 cursor-pointer"
-            href="#"
-          >
-            Dashboard
-          </a>
-          <a
-            className="text-sm font-mono uppercase tracking-widest text-slate-400 dark:text-slate-500 hover:text-blue-300 dark:hover:text-[#a2c9ff] transition-colors duration-200 cursor-pointer"
-            href="#"
-          >
-            Docs
-          </a>
-        </div>
-      </div>
-      <div className="flex items-center gap-4">
-        <button className="material-symbols-outlined text-slate-400 hover:text-blue-300 dark:hover:text-[#a2c9ff] transition-colors cursor-pointer">
+    <header className="fixed top-0 w-full z-50 flex justify-between items-center px-6 bg-white/5 backdrop-blur-md border-b border-white/10 h-[52px] shadow-[0_0_20px_rgba(124,58,237,0.15)]">
+      <div className="flex items-center gap-2 text-xl font-bold text-slate-50 font-headline tracking-tight">
+        <span className="material-symbols-outlined text-violet-400" style={{ fontVariationSettings: "'FILL' 1" }}>
           terminal
-        </button>
-        <button className="bg-primary-container text-on-primary-container text-xs font-mono font-bold py-2 px-4 rounded-lg uppercase tracking-tight hover:opacity-90 active:scale-95 transition-all">
-          Connect GitHub
-        </button>
+        </span>
+        OpenIssue
       </div>
-    </nav>
+
+      <nav className="hidden md:flex items-center gap-8 font-headline tracking-tight">
+        <Link 
+          to="/" 
+          className={isActive("/") ? "text-violet-400 border-b-2 border-violet-500 pb-1" : "text-slate-400 hover:text-slate-100 transition-colors"}
+        >
+          Home
+        </Link>
+        <Link 
+          to="/triage" 
+          className={isActive("/triage") ? "text-violet-400 border-b-2 border-violet-500 pb-1" : "text-slate-400 hover:text-slate-100 transition-colors"}
+        >
+          Triage
+        </Link>
+        <a href="#" className="text-slate-400 hover:text-slate-100 transition-colors">
+          Dashboard
+        </a>
+        <Link 
+          to="/settings" 
+          className={isActive("/settings") ? "text-violet-400 border-b-2 border-violet-500 pb-1" : "text-slate-400 hover:text-slate-100 transition-colors"}
+        >
+          Settings
+        </Link>
+      </nav>
+
+      <div className="flex items-center gap-4">
+        <span className="text-xs font-label text-slate-500">v1.0.0</span>
+        <img 
+          alt="User Avatar" 
+          className="w-7 h-7 rounded-full border border-white/10" 
+          src="https://lh3.googleusercontent.com/aida-public/AB6AXuACGyvDWF_mR6TFTDBUzMVmBZNKpNu4i1uPZIT4vYKyxLkpCTJtmaQ7qmReWwt18KyT4qqYZVzZFtd0rKKFSqPus0mrtC98hVMJi2GfgmagbJ9eCuh7uuvjT8l2s-fpiqBENgXwgtGfUJ6x7YTsNWlfC5jhWEZ9dV5IuiZnVAk6TPSm2addECqiMfzzW49c3AvlwH0lSfooeTYx2txe2-RmoiIW2EL7yvXZAXwtMjH1HMjWDAme4kcl5A1kA5zIt8zkLFj9cKRZ84Hu" 
+        />
+      </div>
+    </header>
   );
 }
