@@ -82,3 +82,27 @@ class PriorityService:
         issues.sort(key=lambda x: priority_order.get(x.get('priority', 'medium'), 2))
         
         return issues
+
+
+def assign_priority(label: str, title: str, description: str = "") -> tuple:
+    """Assign priority and confidence score based on label and text content
+    
+    Returns:
+        tuple: (priority, confidence) where priority is str and confidence is float
+    """
+    priority = PriorityService.determine_priority(title, description)
+    
+    # Adjust confidence based on whether keywords were found
+    text = f"{title} {description}".lower()
+    
+    # High confidence if strong keywords found
+    if any(kw in text for kw in PriorityService.CRITICAL_KEYWORDS):
+        confidence = 0.95
+    elif any(kw in text for kw in PriorityService.HIGH_KEYWORDS):
+        confidence = 0.85
+    elif any(kw in text for kw in PriorityService.LOW_KEYWORDS):
+        confidence = 0.8
+    else:
+        confidence = 0.6
+    
+    return priority, confidence

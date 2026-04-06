@@ -1,16 +1,17 @@
 import json
 import os
 import re
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, List, Tuple
 from urllib import error, request
 
 from app.services.priority_service import assign_priority
 
 BUG_KEYWORDS = {"error", "bug", "crash", "exception", "fail", "broken", "issue", "doesn't work", "not working"}
 FEATURE_KEYWORDS = {"feature", "add", "enhance", "improve", "request", "support", "new", "idea"}
-QUESTION_KEYWORDS = {"how", "why", "what", "question", "help", "explain", "doc", "documentation"}
-VALID_LABELS = {"bug", "feature", "question"}
-VALID_PRIORITIES = {"low", "medium", "high"}
+QUESTION_KEYWORDS = {"how", "why", "what", "question", "help", "explain"}
+DOCS_KEYWORDS = {"doc", "documentation", "typo", "readme", "comment", "spelling", "grammar", "unclear"}
+VALID_LABELS = {"bug", "feature", "question", "docs"}
+VALID_PRIORITIES = {"low", "medium", "high", "critical"}
 
 SYSTEM_PROMPT = """You are an intelligent issue triage assistant for a software project.
 
@@ -22,8 +23,9 @@ Output Format (MANDATORY)
 Always return a valid JSON object with this exact schema:
 
 {
-"label": "bug" | "feature" | "question",
-"priority": "low" | "medium" | "high",
+"label": "bug" | "feature" | "docs" | "question",
+"priority": "low" | "medium" | "high" | "critical",
+"labels": ["label1", "label2"],
 "reason": "short explanation"
 }
 
@@ -36,18 +38,26 @@ Keywords: error, crash, fail, broken, not working
 "feature":
 Use when the user is requesting a new feature, enhancement, or improvement.
 Keywords: add, feature, improve, enhancement
+"docs":
+Use when the issue is about documentation, typos, unclear explanations, or missing docs.
+Keywords: documentation, typo, readme, unclear
 "question":
 Use when the issue is asking for help, clarification, or usage guidance.
 
 If unsure, default to "question".
 
 Priority Rules
+"critical":
+Security issues, data loss, complete system failure
 "high":
-Critical bugs affecting core functionality (e.g., crashes, data loss, login failure)
+Major bugs affecting core functionality (e.g., crashes, login failure)
 "medium":
 Non-critical bugs or feature requests
 "low":
-Questions, minor issues, or vague reports
+Questions, minor issues, docs, or vague reports
+
+Labels Field
+Suggest 1-3 relevant labels (e.g., "ui", "api", "database", "auth", "testing", "performance")
 
 Reason Field
 Keep it concise (1 sentence max)
@@ -76,8 +86,9 @@ def _heuristic_classify(title: str, description: str) -> Tuple[str, float]:
     bug_matches = sum(1 for kw in BUG_KEYWORDS if kw in text)
     feature_matches = sum(1 for kw in FEATURE_KEYWORDS if kw in text)
     question_matches = sum(1 for kw in QUESTION_KEYWORDS if kw in text)
+    docs_matches = sum(1 for kw in DOCS_KEYWORDS if kw in text)
 
-    total_matches = bug_matches + feature_matches + question_matches
+    total_matches = bug_matches + feature_matches + question_matches + docs_matches
 
     if total_matches == 0:
         return "question", 0.5
@@ -86,11 +97,36 @@ def _heuristic_classify(title: str, description: str) -> Tuple[str, float]:
         "bug": bug_matches / total_matches,
         "feature": feature_matches / total_matches,
         "question": question_matches / total_matches,
+        "docs": docs_matches / total_matches,
     }
 
     best_label = max(scores, key=scores.get)
     best_confidence = scores[best_label]
     return best_label, best_confidence
+
+
+def _generate_labels(label: str, title: str, description: str) -> List[str]:
+    """Generate suggested labels based on content"""
+    text = (title + " " + description).lower()
+    labels = []
+    
+    # Category-based labels
+    label_keywords = {
+        "ui": ["ui", "frontend", "css", "style", "button", "page", "display", "layout"],
+        "api": ["api", "endpoint", "request", "response", "rest", "graphql"],
+        "database": ["database", "db", "sql", "query", "migration", "schema"],
+        "auth": ["auth", "login", "logout", "password", "token", "session", "permission"],
+        "testing": ["test", "testing", "spec", "coverage", "mock", "fixture"],
+        "performance": ["performance", "slow", "speed", "optimize", "memory", "cpu"],
+        "security": ["security", "vulnerability", "xss", "injection", "csrf"],
+        "documentation": ["doc", "readme", "comment", "example"],
+    }
+    
+    for label_name, keywords in label_keywords.items():
+        if any(kw in text for kw in keywords):
+            labels.append(label_name)
+    
+    return labels[:3]  # Return max 3 labels
 
 
 def _extract_json_text(response_text: str) -> Dict[str, Any]:
@@ -109,23 +145,25 @@ def _extract_json_text(response_text: str) -> Dict[str, Any]:
         return json.loads(match.group(0))
 
 
-def _validate_triage_payload(payload: Dict[str, Any]) -> Dict[str, str]:
+def _validate_triage_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
     label = str(payload.get("label", "")).strip().lower()
     priority = str(payload.get("priority", "")).strip().lower()
     reason = str(payload.get("reason", "")).strip()
+    labels = payload.get("labels", [])
 
     if label not in VALID_LABELS:
         raise ValueError(f"Invalid label from model: {label}")
 
-    if priority == "critical":
-        priority = "high"
     if priority not in VALID_PRIORITIES:
         raise ValueError(f"Invalid priority from model: {priority}")
 
     if not reason:
         raise ValueError("Model response missing reason")
+    
+    if not isinstance(labels, list):
+        labels = []
 
-    return {"label": label, "priority": priority, "reason": reason}
+    return {"label": label, "priority": priority, "reason": reason, "labels": labels}
 
 
 def _call_gemini_triage(title: str, description: str) -> Dict[str, str]:
@@ -189,33 +227,41 @@ def _call_gemini_triage(title: str, description: str) -> Dict[str, str]:
 
 
 def triage_issue(title: str, description: str) -> Dict[str, Any]:
+    """
+    Triage an issue using Gemini AI with heuristic fallback.
+    """
+    # Try Gemini
     try:
         ai_result = _call_gemini_triage(title, description)
         return {
             "label": ai_result["label"],
             "priority": ai_result["priority"],
+            "labels": ai_result.get("labels", _generate_labels(ai_result["label"], title, description)),
             "reason": ai_result["reason"],
             "classification_confidence": 0.95,
             "priority_confidence": 0.95,
             "source": "gemini",
         }
     except Exception:
-        label, classification_confidence = _heuristic_classify(title, description)
-        priority, priority_confidence = assign_priority(label, title, description)
-        if priority == "critical":
-            priority = "high"
+        pass
+    
+    # Heuristic fallback
+    label, classification_confidence = _heuristic_classify(title, description)
+    priority, priority_confidence = assign_priority(label, title, description)
+    labels = _generate_labels(label, title, description)
 
-        fallback_reason = (
-            "Fallback heuristic triage was used because Gemini was unavailable or returned invalid output."
-        )
-        return {
-            "label": label,
-            "priority": priority,
-            "reason": fallback_reason,
-            "classification_confidence": classification_confidence,
-            "priority_confidence": min(priority_confidence, 0.9),
-            "source": "heuristic",
-        }
+    fallback_reason = (
+        "Heuristic triage was used because Gemini API was unavailable."
+    )
+    return {
+        "label": label,
+        "priority": priority,
+        "labels": labels,
+        "reason": fallback_reason,
+        "classification_confidence": classification_confidence,
+        "priority_confidence": min(priority_confidence, 0.9),
+        "source": "heuristic",
+    }
 
 def classify_issue(title: str, description: str) -> Tuple[str, float]:
     """Backward-compatible classifier interface used by existing callers."""

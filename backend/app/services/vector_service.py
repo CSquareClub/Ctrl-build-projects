@@ -1,4 +1,8 @@
-import faiss
+try:
+    import faiss
+except ImportError:
+    faiss = None
+
 import numpy as np
 from typing import List, Tuple, Optional
 import os
@@ -13,10 +17,13 @@ class VectorService:
         self.embedding_dim = embedding_dim
         self.index = None
         self.issue_ids = []
-        self.load_or_create_index()
+        if faiss is not None:
+            self.load_or_create_index()
     
     def load_or_create_index(self) -> bool:
         """Load existing index or create new one"""
+        if faiss is None:
+            return False
         try:
             if os.path.exists(self.index_path):
                 self.index = faiss.read_index(self.index_path)
@@ -32,7 +39,8 @@ class VectorService:
                 return True
         except Exception as e:
             print(f"Error loading/creating index: {e}")
-            self.index = faiss.IndexFlatL2(self.embedding_dim)
+            if faiss is not None:
+                self.index = faiss.IndexFlatL2(self.embedding_dim)
             return False
     
     def add_vectors(self, embeddings: List[List[float]], issue_ids: List[str]) -> bool:
@@ -94,3 +102,56 @@ class VectorService:
             'index_path': self.index_path,
             'is_loaded': self.index is not None
         }
+
+
+def find_similar_issues(query_embedding: np.ndarray, issues: List[dict], top_k: int = 5) -> List[dict]:
+    """Find similar issues to a query embedding
+    
+    Args:
+        query_embedding: The embedding vector for the query
+        issues: List of issue dictionaries with 'title' and 'description'
+        top_k: Number of similar issues to return
+        
+    Returns:
+        List of similar issues with similarity scores
+    """
+    from app.services.embedding_service import get_embedding_service
+    
+    if not issues:
+        return []
+    
+    embedding_service = get_embedding_service()
+    
+    # Generate embeddings for all issues
+    similar_results = []
+    
+    for issue in issues:
+        try:
+            title = issue.get('title', '')
+            description = issue.get('description', '')
+            
+            if not title and not description:
+                continue
+            
+            # Generate embedding for this issue
+            issue_embedding = embedding_service.generate_embedding(f"{title} {description}")
+            
+            if not issue_embedding:
+                continue
+            
+            # Calculate similarity
+            similarity = embedding_service.cosine_similarity(
+                query_embedding.tolist() if hasattr(query_embedding, 'tolist') else query_embedding,
+                issue_embedding
+            )
+            
+            result = issue.copy()
+            result['similarity_score'] = similarity
+            similar_results.append(result)
+        except Exception as e:
+            print(f"Error processing issue: {e}")
+            continue
+    
+    # Sort by similarity score and return top_k
+    similar_results.sort(key=lambda x: x['similarity_score'], reverse=True)
+    return similar_results[:top_k]
