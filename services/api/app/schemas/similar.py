@@ -57,8 +57,12 @@ class SimilarIssueCandidateResponse(BaseModel):
     html_url: Optional[str] = None
     api_url: Optional[str] = None
     similarity_score: float
+    rerank_score: float = 0.0
+    final_score: float = 0.0
+    duplicate_confidence: float = 0.0
     state: Optional[str] = None
     labels: list[str] = Field(default_factory=list)
+    reasons: list[dict[str, Any]] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -72,4 +76,6 @@ class SimilarIssuesResponse(BaseModel):
     embedding_path: str
     retrieved_at: datetime
     target: SimilarIssueTarget
+    duplicate_confidence: float = 0.0
+    calibration_notes: list[str] = Field(default_factory=list)
     candidates: list[SimilarIssueCandidateResponse] = Field(default_factory=list)

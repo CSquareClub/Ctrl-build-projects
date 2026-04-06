@@ -51,6 +51,52 @@ Explicitly out of scope:
 - frontend UI implementation for classification output
 - proprietary or paid model dependencies
 
+## Execution Update (2026-04-06): Wave 3 duplicate reranking layer
+
+Current goal:
+
+- convert Wave 2 raw semantic nearest-neighbor retrieval into explainable duplicate-detection candidates with confidence and reasons
+
+Exact scope:
+
+- inspect and preserve current similar-issues candidate payload and retrieval metadata from the MiniLM-backed vector path
+- retrieve a semantic candidate pool from vector search, then apply a second-pass heuristic reranker for precision
+- compute per-candidate rerank score, final score, and duplicate confidence (without treating raw cosine as final truth)
+- attach structured similarity reasons suitable for duplicate cards and future unified analyze contract integration
+- keep this slice focused on duplicate matching only (no issue type classification or priority changes)
+
+Files/components likely affected:
+
+- `services/api/app/schemas/similar.py`
+- `services/api/app/services/similar_issues.py`
+- `services/api/README.md`
+
+Sequencing:
+
+1. inspect current similar-issues retrieval path and candidate metadata shape
+2. design explicit signal extraction and weighted rerank policy around Wave 2 MiniLM scores
+3. implement rerank + reason generation while preserving existing route boundaries
+4. validate with real retrieval flow and compare raw-vs-reranked ordering for sample issue queries
+5. document candidate contract and calibration caveats
+
+Validation strategy:
+
+- run Python compile checks for touched modules
+- run a real end-to-end script using the current `SimilarIssuesService.find_similar` flow against a public repo
+- inspect and log raw semantic score vs reranked/final score differences for top candidates
+
+Risks / open questions:
+
+- MiniLM score distributions vary by repository domain; confidence calibration will be heuristic and may need more corpus-specific tuning
+- metadata fields used for lexical overlap can be sparse for low-context issues, limiting reason richness
+- fetching/indexing a repository at request time can be slow for larger repos
+
+Explicitly out of scope:
+
+- unrelated classification/priority changes
+- frontend UI redesign
+- hosted/paid APIs or non-local vector infrastructure
+
 ## Execution Update (2026-04-06): Wave 3 analyze contract + frontend UI alignment
 
 Current goal:
