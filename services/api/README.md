@@ -18,6 +18,8 @@ This folder hosts the FastAPI backend foundation for OpenIssue.
 - local vector indexing/query route support:
   - `POST /api/vectors/index`
   - `POST /api/vectors/query`
+- classification + label suggestion route support:
+  - `POST /api/classification`
 
 ## Vector indexing layer
 
@@ -118,3 +120,35 @@ The index response includes:
 - `cleared_count`
 
 These fields indicate whether stale rows were invalidated before indexing.
+
+## Classify issue type and suggest labels
+
+Classify one issue and return explainable type/label reasoning:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/classification \
+  -H "Content-Type: application/json" \
+  -d '{
+    "owner": "vercel",
+    "repo": "next.js",
+    "k": 5,
+    "target_issue": {
+      "title": "Build crashes on Node 22",
+      "body": "Steps to reproduce: run next build on Node 22. Actual behavior: process exits with error.",
+      "labels": []
+    }
+  }'
+```
+
+Response includes a stable `predicted_type` in:
+
+- `bug`
+- `feature_request`
+- `documentation`
+- `support_question`
+- `spam_or_noise`
+
+Neighbor evidence note:
+
+- retrieval evidence is used for label hints only
+- type classification stays lexical-first for stability and explainability
