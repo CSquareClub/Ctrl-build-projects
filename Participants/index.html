@@ -1,0 +1,37 @@
+<body>
+
+  <div class="bg"></div>
+
+  <div class="container">
+    <h2>Create Your Profile</h2>
+
+    <form id="profileForm">
+      <input type="text" name="name" placeholder="Full Name" required>
+      <input type="email" name="email" placeholder="Email" required>
+      <input type="text" name="skills" placeholder="Skills (React, Node...)">
+
+      <select name="role">
+        <option value="">Select Role</option>
+        <option>Frontend</option>
+        <option>Backend</option>
+        <option>ML</option>
+        <option>Designer</option>
+      </select>
+
+      <input type="number" name="experience" placeholder="Experience (1-5)">
+      <input type="number" name="commitmentHours" placeholder="Commitment Hours">
+      <input type="number" name="confidence" placeholder="Confidence (1-5)">
+      <input type="text" name="location" placeholder="Location">
+      <input type="text" name="availability" placeholder="Availability">
+
+      <button type="submit">Create Profile</button>
+    </form>
+  </div>
+  <div id="resultCard" class="hidden">
+  <h3>Your Reliability Score</h3>
+  <p id="score"></p>
+  <p id="message"></p>
+</div>
+
+  <script src="script.js"></script>
+</body>
