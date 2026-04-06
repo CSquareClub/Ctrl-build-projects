@@ -9,8 +9,7 @@ import shutil
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
-from backend.ai.model import get_resume_score
-from backend.utils.parser import extract_text
+from backend.services.resume_analysis import analyze_uploaded_resume
 
 app = FastAPI(title="ResumeRanker API")
 
@@ -39,15 +38,28 @@ def read_root() -> dict:
 
 
 @app.post("/upload-resume")
-async def upload_resume(file: Annotated[UploadFile, File(...)]) -> dict:
+async def upload_resume(
+    file: Annotated[UploadFile | None, File(None)],
+    job_description: Annotated[str | None, Form(None)] = None,
+) -> dict:
     """
-    Upload a PDF resume, save it, extract text, and keep it in memory.
+    Upload a PDF resume, analyze it with the AI pipeline, and keep it in memory.
     """
+    if file is None:
+        raise HTTPException(status_code=400, detail="Resume file is required.")
+
     if not file.filename:
         raise HTTPException(status_code=400, detail="Filename is missing.")
 
     if file.content_type != "application/pdf":
         raise HTTPException(status_code=400, detail="Only PDF files are allowed.")
+
+    active_job_description = (job_description or job_description_text).strip()
+    if not active_job_description:
+        raise HTTPException(
+            status_code=400,
+            detail="Job description is required. Submit it in the form or upload one first.",
+        )
 
     destination = DATA_DIR / file.filename
 
@@ -55,13 +67,20 @@ async def upload_resume(file: Annotated[UploadFile, File(...)]) -> dict:
         with destination.open("wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
 
-        resume_text = extract_text(str(destination))
+        analysis = await analyze_uploaded_resume(
+            source_path=destination,
+            filename=file.filename,
+            job_description=active_job_description,
+        )
     except ValueError as error:
         destination.unlink(missing_ok=True)
         raise HTTPException(status_code=400, detail=str(error)) from error
+    except ImportError as error:
+        destination.unlink(missing_ok=True)
+        raise HTTPException(status_code=500, detail=str(error)) from error
     except Exception as error:  # pragma: no cover - defensive beginner-friendly error handling
         destination.unlink(missing_ok=True)
-        raise HTTPException(status_code=500, detail="Failed to process the uploaded PDF.") from error
+        raise HTTPException(status_code=500, detail="AI processing failed for the uploaded resume.") from error
     finally:
         await file.close()
 
@@ -70,7 +89,7 @@ async def upload_resume(file: Annotated[UploadFile, File(...)]) -> dict:
         "id": resume_id,
         "filename": file.filename,
         "file_path": str(destination),
-        "text": resume_text,
+        "analysis": analysis,
     }
     uploaded_resumes.append(resume_record)
 
@@ -78,7 +97,7 @@ async def upload_resume(file: Annotated[UploadFile, File(...)]) -> dict:
         "resume_id": resume_id,
         "filename": file.filename,
         "message": "Resume uploaded successfully.",
-        "text_preview": resume_text[:500],
+        "analysis": analysis,
     }
 
 
@@ -100,23 +119,23 @@ def upload_job(job_description: Annotated[str, Form(...)]) -> dict:
 
 @app.get("/rank")
 def rank_resumes() -> dict:
-    """Score all uploaded resumes against the stored job description."""
-    if not job_description_text:
-        raise HTTPException(status_code=400, detail="Upload a job description first.")
-
+    """Return all uploaded resumes ranked by their AI final score."""
     if not uploaded_resumes:
         raise HTTPException(status_code=404, detail="No resumes have been uploaded yet.")
 
     ranked_resumes = []
     for resume in uploaded_resumes:
-        analysis = get_resume_score(resume["text"], job_description_text)
+        analysis = resume["analysis"]
         ranked_resumes.append(
             {
                 "resume_id": resume["id"],
                 "filename": resume["filename"],
-                "score": analysis["score"],
-                "matched_skills": analysis["matched_skills"],
+                "score": analysis["final_score"],
+                "match_score": analysis["match_score"],
+                "fraud_score": analysis["fraud_score"],
+                "skills": analysis["skills"],
                 "missing_skills": analysis["missing_skills"],
+                "fraud_reasons": analysis["fraud_reasons"],
             }
         )
 
@@ -127,18 +146,19 @@ def rank_resumes() -> dict:
 @app.get("/analysis/{resume_id}")
 def get_analysis(resume_id: int) -> dict:
     """Return detailed analysis for one uploaded resume."""
-    if not job_description_text:
-        raise HTTPException(status_code=400, detail="Upload a job description first.")
-
     resume = next((item for item in uploaded_resumes if item["id"] == resume_id), None)
     if not resume:
         raise HTTPException(status_code=404, detail="Resume not found.")
 
-    analysis = get_resume_score(resume["text"], job_description_text)
+    analysis = resume["analysis"]
     return {
         "resume_id": resume["id"],
         "filename": resume["filename"],
-        "score": analysis["score"],
-        "matched_skills": analysis["matched_skills"],
+        "match_score": analysis["match_score"],
+        "fraud_score": analysis["fraud_score"],
+        "final_score": analysis["final_score"],
+        "skills": analysis["skills"],
         "missing_skills": analysis["missing_skills"],
+        "fraud_reasons": analysis["fraud_reasons"],
+        "explanation": analysis["explanation"],
     }
