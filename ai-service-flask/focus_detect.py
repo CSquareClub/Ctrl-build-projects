@@ -62,6 +62,8 @@ def main():
 
     phone_start_time = None
     alert_triggered = False
+    person_missing_start_time = None
+    session_ended = False
 
     try:
         while True:
@@ -74,20 +76,49 @@ def main():
             results = model(frame, classes=TRACK_CLASSES, verbose=False)
 
             # ── Analyse detections ───────────────────────────────
+            person_detected = False
             phone_detected = False
             for result in results:
                 if result.boxes is None:
                     continue
                 for box in result.boxes:
                     cls_id = int(box.cls[0].item())
-                    if cls_id == 67:          # cell phone
+                    if cls_id == 0:          # person
+                        person_detected = True
+                    elif cls_id == 67:       # cell phone
                         phone_detected = True
-                        break
-                if phone_detected:
-                    break
 
             # ── Render YOLOv8 bounding boxes onto frame ──────────
             annotated = results[0].plot()
+
+            # ── Absence Logic ─────────────────────────────────────
+            if not person_detected:
+                if person_missing_start_time is None:
+                    person_missing_start_time = time.time()
+                
+                missing_time = time.time() - person_missing_start_time
+                cv2.putText(
+                    annotated, f"User Missing: {int(missing_time)}s",
+                    (12, 130),
+                    cv2.FONT_HERSHEY_DUPLEX, 0.8,
+                    (255, 0, 0), 2,
+                    cv2.LINE_AA,
+                )
+                
+                if missing_time >= 10:
+                    if not session_ended:
+                        print("🛑 FOCUS SESSION ENDED: User left the desk. 🛑")
+                        session_ended = True
+                    cv2.putText(
+                        annotated, "SESSION ENDED",
+                        (40, 200),
+                        cv2.FONT_HERSHEY_DUPLEX, 2.0,
+                        (0, 0, 255), 4,
+                        cv2.LINE_AA,
+                    )
+            else:
+                person_missing_start_time = None
+                session_ended = False
 
             # ── Distraction alert ─────────────────────────────────
             if phone_detected:
