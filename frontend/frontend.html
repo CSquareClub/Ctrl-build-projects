@@ -196,43 +196,183 @@
       <h1 style="font-size:56px;font-weight:900;letter-spacing:-1px;background:linear-gradient(135deg,var(--text),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:slideDown .8s cubic-bezier(0.34, 1.56, 0.64, 1)">FocusRoom <span style="color:var(--accent)">AI</span></h1>
     </div>
     
-    <!-- Animated subtitle -->
-    <p style="font-size:18px;color:var(--text2);line-height:1.8;margin-bottom:20px;animation:slideDown .8s cubic-bezier(0.34, 1.56, 0.64, 1) .1s both">The complete study enforcement ecosystem. <br><span style="color:var(--accent3);font-weight:600">AI guidance</span>, <span style="color:var(--accent);font-weight:600">real-time monitoring</span>, <span style="color:var(--accent4);font-weight:600">social accountability</span>, and <span style="color:var(--accent);font-weight:600">deep analytics</span> — all in one place.</p>
+    <p style="font-size:14px;color:var(--accent3);font-weight:700;letter-spacing:.8px;text-transform:uppercase;margin-bottom:24px;animation:slideDown .8s cubic-bezier(0.34, 1.56, 0.64, 1) .05s both">The System That Forces You To Focus</p>
     
-    <!-- Animated feature badges -->
-    <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-bottom:40px">
-      <span class="badge badge-purple" style="animation:badge-float .6s cubic-bezier(0.34, 1.56, 0.64, 1) .15s both">🤖 AI Study Planner</span>
-      <span class="badge badge-green" style="animation:badge-float .6s cubic-bezier(0.34, 1.56, 0.64, 1) .25s both">👁 Camera Detection</span>
-      <span class="badge badge-amber" style="animation:badge-float .6s cubic-bezier(0.34, 1.56, 0.64, 1) .35s both">🛡 Site Blocker</span>
-      <span class="badge badge-purple" style="animation:badge-float .6s cubic-bezier(0.34, 1.56, 0.64, 1) .45s both">📊 Analytics</span>
-      <span class="badge badge-green" style="animation:badge-float .6s cubic-bezier(0.34, 1.56, 0.64, 1) .55s both">👥 Virtual Rooms</span>
+    <!-- Animated subtitle -->
+    <p style="font-size:18px;color:var(--text2);line-height:1.8;margin-bottom:28px;animation:slideDown .8s cubic-bezier(0.34, 1.56, 0.64, 1) .1s both">Stop losing focus. <span style="color:var(--accent3);font-weight:600">AI detects distractions</span>, <span style="color:var(--accent);font-weight:600">blocks them instantly</span>, and <span style="color:var(--accent4);font-weight:600">keeps you accountable</span> with your peers.</p>
+    
+    <!-- Reduced core feature badges (only 3) -->
+    <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin-bottom:36px">
+      <span class="badge badge-purple" style="animation:badge-float .6s cubic-bezier(0.34, 1.56, 0.64, 1) .15s both;font-size:13px;padding:8px 16px">🚀 AI-Enforced Focus</span>
+      <span class="badge badge-green" style="animation:badge-float .6s cubic-bezier(0.34, 1.56, 0.64, 1) .25s both;font-size:13px;padding:8px 16px">🔥 Real-Time Detection</span>
+      <span class="badge badge-amber" style="animation:badge-float .6s cubic-bezier(0.34, 1.56, 0.64, 1) .35s both;font-size:13px;padding:8px 16px">🏆 Social Accountability</span>
     </div>
     
     <!-- CTA Buttons -->
-    <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-bottom:24px;animation:slideDown .8s cubic-bezier(0.34, 1.56, 0.64, 1) .3s both">
-      <button class="btn btn-primary" style="font-size:16px;padding:16px 40px;font-weight:700;letter-spacing:.5px;cursor:pointer;transition:all .3s;background:linear-gradient(135deg,var(--accent),#8079ff);border:none;position:relative;overflow:hidden;animation:glow-button 2s ease-in-out infinite" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 20px 40px rgba(108,99,255,.4)'" onmouseout="this.style.transform='translateY(0)';" onclick="goTo('screen-main')">⚡ Start Focusing</button>
-      <button class="btn btn-outline" style="font-size:16px;padding:16px 36px;font-weight:700;letter-spacing:.5px;cursor:pointer;transition:all .3s;border:2px solid rgba(108,99,255,.4)" onmouseover="this.style.borderColor='var(--accent)';this.style.background='rgba(108,99,255,.1)';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='rgba(108,99,255,.4)';this.style.background='transparent';this.style.transform='translateY(0)'" onclick="showLandingDemo()">🎬 Watch Demo</button>
+    <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-bottom:32px;animation:slideDown .8s cubic-bezier(0.34, 1.56, 0.64, 1) .3s both">
+      <button class="btn btn-primary" style="font-size:16px;padding:16px 40px;font-weight:700;letter-spacing:.5px;cursor:pointer;transition:all .3s;background:linear-gradient(135deg,var(--accent),#8079ff);border:none;position:relative;overflow:hidden;animation:glow-button 2s ease-in-out infinite;box-shadow:0 0 30px rgba(108,99,255,.4)" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 20px 50px rgba(108,99,255,.6)'" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 0 30px rgba(108,99,255,.4)'" onclick="triggerLiveDemo()">⚡ Try Live Demo</button>
+      <button class="btn btn-outline" style="font-size:16px;padding:16px 36px;font-weight:700;letter-spacing:.5px;cursor:pointer;transition:all .3s;border:2px solid rgba(108,99,255,.5);color:var(--text)" onmouseover="this.style.borderColor='var(--accent)';this.style.background='rgba(108,99,255,.15)';this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(108,99,255,.25)'" onmouseout="this.style.borderColor='rgba(108,99,255,.5)';this.style.background='transparent';this.style.transform='translateY(0)';this.style.boxShadow='none'" onclick="goTo('screen-main')">→ Full App</button>
     </div>
     
     <!-- Demo alert -->
     <div id="demo-alert" style="display:none;margin-top:20px;animation:slideDown .5s ease-out">
-      <div class="alert alert-info" style="border-left:4px solid var(--accent);box-shadow:0 8px 24px rgba(108,99,255,.15);backdrop-filter:blur(8px);background:rgba(10,15,42,.6)">✨ This is a fully interactive prototype — explore all features and experience the power of FocusRoom AI!</div>
+      <div class="alert alert-info" style="border-left:4px solid var(--accent);box-shadow:0 8px 24px rgba(108,99,255,.15);backdrop-filter:blur(8px);background:rgba(10,15,42,.6);max-width:600px;margin:0 auto">✨ Try the interactive demo below to see FocusRoom in action!</div>
     </div>
     
-    <!-- Feature highlight cards -->
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-top:32px;animation:slideDown .8s cubic-bezier(0.34, 1.56, 0.64, 1) .4s both">
-      <div style="background:rgba(108,99,255,.08);border:1px solid rgba(108,99,255,.2);border-radius:16px;padding:14px;transition:all .3s;cursor:pointer" onmouseover="this.style.background='rgba(108,99,255,.15)';this.style.borderColor='var(--accent)';this.style.transform='translateY(-4px)'" onmouseout="this.style.background='rgba(108,99,255,.08)';this.style.borderColor='rgba(108,99,255,.2)';this.style.transform='translateY(0)'">
-        <div style="font-size:24px;margin-bottom:6px">🎯</div>
-        <div style="font-size:12px;color:var(--text2);font-weight:600">45-Min Focus</div>
+    <!-- LIVE DEMO SECTION -->
+    <div id="live-demo-section" style="margin-top:48px;padding:40px;background:rgba(108,99,255,.05);border:1px solid rgba(108,99,255,.15);border-radius:24px;animation:slideDown .8s cubic-bezier(0.34, 1.56, 0.64, 1) .5s both;display:none">
+      <h2 style="font-size:28px;font-weight:800;margin-bottom:12px;text-align:center">🔥 See It In Action</h2>
+      <p style="text-align:center;color:var(--text2);margin-bottom:28px">Watch how FocusRoom detects distractions and keeps you focused</p>
+      
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;max-width:900px;margin:0 auto">
+        <!-- Left: Text explanation -->
+        <div>
+          <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:20px;margin-bottom:16px">
+            <div style="font-size:13px;color:var(--accent);font-weight:700;margin-bottom:8px">STEP 1: AI DETECTS</div>
+            <div style="color:var(--text2);font-size:14px;line-height:1.6">You get distracted by your phone. AI sees it immediately in your webcam feed.</div>
+          </div>
+          <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:20px;margin-bottom:16px">
+            <div style="font-size:13px;color:var(--accent3);font-weight:700;margin-bottom:8px">STEP 2: SYSTEM RESPONDS</div>
+            <div style="color:var(--text2);font-size:14px;line-height:1.6">Chrome extension instantly blocks YouTube. Timer pauses. You lose focus points.</div>
+          </div>
+          <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:20px">
+            <div style="font-size:13px;color:var(--accent4);font-weight:700;margin-bottom:8px">STEP 3: ACCOUNTABILITY</div>
+            <div style="color:var(--text2);font-size:14px;line-height:1.6">Your room sees \"You got distracted 🚨\". Compete or cooperate with others.</div>
+          </div>
+        </div>
+        
+        <!-- Right: Live UI demo -->
+        <div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);border:1px solid rgba(108,99,255,.3);border-radius:16px;padding:20px;position:relative;overflow:hidden">
+          <div style="position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(circle at top right,rgba(108,99,255,.1),transparent);pointer-events:none"></div>
+          <div style="position:relative;z-index:1">
+            <div style="background:rgba(0,0,0,.4);border-radius:12px;padding:14px;margin-bottom:12px;border-left:3px solid var(--accent)">
+              <div style="font-size:11px;color:var(--text3);margin-bottom:4px;font-family:var(--mono)">TIMER</div>
+              <div style="font-size:22px;font-weight:700;font-family:var(--mono);color:var(--accent)">32:14</div>
+            </div>
+            <div style="background:rgba(0,0,0,.4);border-radius:12px;padding:14px;margin-bottom:12px;border-left:3px solid var(--accent3)">
+              <div style="font-size:11px;color:var(--text3);margin-bottom:4px;font-family:var(--mono)">FOCUS SCORE</div>
+              <div style="font-size:22px;font-weight:700;color:var(--accent3)">🔥 92%</div>
+            </div>
+            <div id="demo-distraction-alert" style="background:rgba(220,53,69,.15);border:1px solid rgba(220,53,69,.4);border-radius:12px;padding:12px;display:none;animation:slideDown .4s ease-out">
+              <div style="font-size:13px;font-weight:700;color:#ff6b6b;margin-bottom:6px">⚠️ Distraction Detected!</div>
+              <div style="font-size:12px;color:var(--text2)">📱 Phone detected</div>
+              <div style="font-size:12px;color:var(--text2)">🚫 YouTube blocked</div>
+              <div style="font-size:12px;color:var(--text2)">-10 focus points</div>
+            </div>
+            <button class="btn btn-primary btn-sm" style="margin-top:16px;width:100%;background:linear-gradient(135deg,var(--accent),#8079ff)" onclick="simulateDemoAlert()">Simulate Alert</button>
+          </div>
+        </div>
       </div>
-      <div style="background:rgba(67,233,123,.08);border:1px solid rgba(67,233,123,.2);border-radius:16px;padding:14px;transition:all .3s;cursor:pointer" onmouseover="this.style.background='rgba(67,233,123,.15)';this.style.borderColor='var(--accent3)';this.style.transform='translateY(-4px)'" onmouseout="this.style.background='rgba(67,233,123,.08)';this.style.borderColor='rgba(67,233,123,.2)';this.style.transform='translateY(0)'">
-        <div style="font-size:24px;margin-bottom:6px">🔥</div>
-        <div style="font-size:12px;color:var(--text2);font-weight:600">Live Tracking</div>
+    </div>
+    
+    <!-- PROBLEM SOLUTION SECTION -->
+    <div style="margin-top:48px;animation:slideDown .8s cubic-bezier(0.34, 1.56, 0.64, 1) .55s both;display:none;max-width:900px;margin-left:auto;margin-right:auto" id="problem-solution-section">
+      <h2 style="font-size:28px;font-weight:800;margin-bottom:8px;text-align:center">The Problem Everyone Faces</h2>
+      <p style="text-align:center;color:var(--text2);margin-bottom:32px;max-width:600px;margin-left:auto;margin-right:auto">You know you should focus. But your phone keeps distracting you. Pomodoro doesn't work. You need actual enforcement.</p>
+      
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px">
+        <div style="background:rgba(220,53,69,.08);border:1px solid rgba(220,53,69,.2);border-radius:16px;padding:20px;text-align:center">
+          <div style="font-size:32px;margin-bottom:12px">😩</div>
+          <div style="font-size:15px;font-weight:700;margin-bottom:8px;color:var(--text)">Constant Distractions</div>
+          <div style="font-size:13px;color:var(--text2)">Phone, social media, YouTube—zero willpower required to fail.</div>
+        </div>
+        <div style="background:rgba(108,99,255,.08);border:1px solid rgba(108,99,255,.2);border-radius:16px;padding:20px;text-align:center;transform:scale(1.05)">
+          <div style="font-size:32px;margin-bottom:12px">⚡</div>
+          <div style="font-size:15px;font-weight:700;margin-bottom:8px;color:var(--accent)">The Solution: AI Enforcement</div>
+          <div style="font-size:13px;color:var(--accent3);font-weight:600">Smart detection → Instant blocking → Real accountability</div>
+        </div>
+        <div style="background:rgba(67,233,123,.08);border:1px solid rgba(67,233,123,.2);border-radius:16px;padding:20px;text-align:center">
+          <div style="font-size:32px;margin-bottom:12px">🏆</div>
+          <div style="font-size:15px;font-weight:700;margin-bottom:8px;color:var(--text)">You Actually Focus</div>
+          <div style="font-size:13px;color:var(--text2)">Compete with friends. Beat distractions. Prove you can focus.</div>
+        </div>
       </div>
-      <div style="background:rgba(255,101,132,.08);border:1px solid rgba(255,101,132,.2);border-radius:16px;padding:14px;transition:all .3s;cursor:pointer" onmouseover="this.style.background='rgba(255,101,132,.15)';this.style.borderColor='var(--accent2)';this.style.transform='translateY(-4px)'" onmouseout="this.style.background='rgba(255,101,132,.08)';this.style.borderColor='rgba(255,101,132,.2)';this.style.transform='translateY(0)'">
-        <div style="font-size:24px;margin-bottom:6px">👥</div>
-        <div style="font-size:12px;color:var(--text2);font-weight:600">Social Drive</div>
+    </div>
+    
+    <!-- HOW IT WORKS SECTION -->
+    <div style="margin-top:48px;animation:slideDown .8s cubic-bezier(0.34, 1.56, 0.64, 1) .6s both;display:none;max-width:1000px;margin-left:auto;margin-right:auto" id="how-it-works-section">
+      <h2 style="font-size:28px;font-weight:800;margin-bottom:8px;text-align:center">How It Works</h2>
+      <p style="text-align:center;color:var(--text2);margin-bottom:32px;max-width:600px;margin-left:auto;margin-right:auto">Simple 4-step process to lock in focus</p>
+      
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;position:relative">
+        <div style="text-align:center;position:relative;z-index:2">
+          <div style="width:60px;height:60px;background:linear-gradient(135deg,var(--accent),#8079ff);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;margin:0 auto 12px;box-shadow:0 8px 24px rgba(108,99,255,.3)">1️⃣</div>
+          <div style="font-size:15px;font-weight:700;margin-bottom:6px">Enter Your Goal</div>
+          <div style="font-size:13px;color:var(--text2)">Tell AI what you want to learn</div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:center;opacity:.4">
+          <div style="font-size:24px">→</div>
+        </div>
+        <div style="text-align:center;position:relative;z-index:2">
+          <div style="width:60px;height:60px;background:linear-gradient(135deg,var(--accent3),#5df59a);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;margin:0 auto 12px;box-shadow:0 8px 24px rgba(67,233,123,.3)">2️⃣</div>
+          <div style="font-size:15px;font-weight:700;margin-bottom:6px">AI Creates Plan</div>
+          <div style="font-size:13px;color:var(--text2)">Personalized 45-min focus session</div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:center;opacity:.4">
+          <div style="font-size:24px">→</div>
+        </div>
+        <div style="text-align:center;position:relative;z-index:2">
+          <div style="width:60px;height:60px;background:linear-gradient(135deg,var(--accent4),#f7c060);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;margin:0 auto 12px;box-shadow:0 8px 24px rgba(247,151,30,.3)">3️⃣</div>
+          <div style="font-size:15px;font-weight:700;margin-bottom:6px">Join Focus Room</div>
+          <div style="font-size:13px;color:var(--text2)">Study with others in real-time</div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:center;opacity:.4">
+          <div style="font-size:24px">→</div>
+        </div>
+        <div style="text-align:center;position:relative;z-index:2">
+          <div style="width:60px;height:60px;background:linear-gradient(135deg,var(--accent2),#ff6b9d);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;margin:0 auto 12px;box-shadow:0 8px 24px rgba(255,101,132,.3)">4️⃣</div>
+          <div style="font-size:15px;font-weight:700;margin-bottom:6px">Stay Accountable</div>
+          <div style="font-size:13px;color:var(--text2)">AI blocks + friends watch + compete</div>
+        </div>
       </div>
+    </div>
+    
+    <!-- WOW FEATURE STRIP -->
+    <div style="margin-top:48px;background:linear-gradient(135deg,rgba(108,99,255,.1),rgba(67,233,123,.05));border:1px solid rgba(108,99,255,.2);border-radius:20px;padding:32px;animation:slideDown .8s cubic-bezier(0.34, 1.56, 0.64, 1) .65s both;display:none;max-width:1000px;margin-left:auto;margin-right:auto" id="wow-strip-section">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:20px">
+        <div style="text-align:center">
+          <div style="font-size:32px;margin-bottom:12px;animation:float 4s ease-in-out infinite">🚨</div>
+          <div style="font-size:13px;font-weight:700;margin-bottom:6px;color:var(--accent)">AI Detects Distraction</div>
+          <div style="font-size:12px;color:var(--text2)">Webcam + behavior analysis</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-size:32px;margin-bottom:12px;animation:float 4s ease-in-out infinite .2s">🔒</div>
+          <div style="font-size:13px;font-weight:700;margin-bottom:6px;color:var(--accent3)">Blocks Distracting Sites</div>
+          <div style="font-size:12px;color:var(--text2)">Chrome extension + instant</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-size:32px;margin-bottom:12px;animation:float 4s ease-in-out infinite .4s">🏆</div>
+          <div style="font-size:13px;font-weight:700;margin-bottom:6px;color:var(--accent4)">Compete with Others</div>
+          <div style="font-size:12px;color:var(--text2)">Leaderboards + real stakes</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-size:32px;margin-bottom:12px;animation:float 4s ease-in-out infinite .6s">📊</div>
+          <div style="font-size:13px;font-weight:700;margin-bottom:6px;color:var(--accent)">Tracks Real Focus Score</div>
+          <div style="font-size:12px;color:var(--text2)">Honest metrics, no gaming</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- TESTIMONIAL SECTION -->
+    <div style="margin-top:48px;text-align:center;max-width:700px;margin-left:auto;margin-right:auto;animation:slideDown .8s cubic-bezier(0.34, 1.56, 0.64, 1) .7s both;display:none" id="testimonial-section">
+      <div style="background:rgba(108,99,255,.08);border:1px solid rgba(108,99,255,.2);border-radius:20px;padding:32px">
+        <div style="font-size:32px;margin-bottom:16px">💬</div>
+        <p style="font-size:16px;color:var(--text);line-height:1.8;margin-bottom:16px;font-style:italic">\"I studied for 2 hours straight without touching my phone for the first time in months. The AI detection is REAL and it works.\"</p>
+        <div style="display:flex;align-items:center;justify-content:center;gap:12px">
+          <div style="width:40px;height:40px;background:linear-gradient(135deg,var(--accent),#8079ff);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px">👨</div>
+          <div style="text-align:left">
+            <div style="font-size:13px;font-weight:700">Alex Chen</div>
+            <div style="font-size:12px;color:var(--text2)">Engineering student, MIT</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- FINAL CTA SECTION -->
+    <div style="margin-top:56px;text-align:center;padding:40px;background:radial-gradient(ellipse 60% 50% at 50% 0%,rgba(108,99,255,.15),transparent);border-radius:20px;animation:slideDown .8s cubic-bezier(0.34, 1.56, 0.64, 1) .75s both;display:none;max-width:600px;margin-left:auto;margin-right:auto" id="final-cta-section">
+      <h2 style="font-size:32px;font-weight:800;margin-bottom:12px">Ready to Actually Focus?</h2>
+      <p style="font-size:16px;color:var(--text2);margin-bottom:28px">Stop losing hours to distractions. Enforce focus with AI. Compare your scores with thousands of students.</p>
+      <button class="btn btn-primary" style="font-size:16px;padding:16px 40px;font-weight:700;letter-spacing:.5px;cursor:pointer;transition:all .3s;background:linear-gradient(135deg,var(--accent),#8079ff);border:none;position:relative;overflow:hidden;animation:glow-button 2s ease-in-out infinite;box-shadow:0 0 40px rgba(108,99,255,.5)" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 20px 60px rgba(108,99,255,.7)'" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 0 40px rgba(108,99,255,.5)'" onclick="goTo('screen-main')">Start Now → 🚀</button>
     </div>
   </div>
 </div>
@@ -796,7 +936,42 @@ function goTo(id){
 
 function showDemo(){document.getElementById('demo-alert').style.display='block';playSound('start');}
 
-function switchTab(name,el){
+// Trigger live demo - show all demo sections
+function triggerLiveDemo(){
+  playSound('start');
+  document.getElementById('demo-alert').style.display='block';
+  document.getElementById('live-demo-section').style.display='block';
+  document.getElementById('problem-solution-section').style.display='block';
+  document.getElementById('how-it-works-section').style.display='block';
+  document.getElementById('wow-strip-section').style.display='block';
+  document.getElementById('testimonial-section').style.display='block';
+  document.getElementById('final-cta-section').style.display='block';
+  // Scroll to first demo section
+  setTimeout(()=>{
+    document.getElementById('live-demo-section').scrollIntoView({behavior:'smooth',block:'center'});
+  },100);
+}
+
+// Simulate distraction alert in demo
+function simulateDemoAlert(){
+  playSound('alert');
+  const alertEl = document.getElementById('demo-distraction-alert');
+  alertEl.style.display='block';
+  // Update the timer display
+  const timerEl = document.querySelector('#live-demo-section div[style*="TIMER"]');
+  if(timerEl) timerEl.innerHTML='<div style="font-size:11px;color:var(--text3);margin-bottom:4px;font-family:var(--mono)">TIMER</div><div style="font-size:22px;font-weight:700;font-family:var(--mono);color:var(--accent)">19:42</div>';
+  
+  // Update focus score
+  const scoreEl = document.querySelector('#live-demo-section div[style*="FOCUS SCORE"]');
+  if(scoreEl) scoreEl.innerHTML='<div style="font-size:11px;color:var(--text3);margin-bottom:4px;font-family:var(--mono)">FOCUS SCORE</div><div style="font-size:22px;font-weight:700;color:var(--accent3)">🔥 80%</div>';
+  
+  // Auto-hide after 3 seconds
+  setTimeout(()=>{
+    alertEl.style.display='none';
+  },3000);
+}
+
+
   document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
   document.getElementById('tab-'+name).classList.add('active');
