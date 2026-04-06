@@ -1,0 +1,31 @@
+{
+  "name": "temp-app",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@liveblocks/client": "^3.17.0",
+    "@liveblocks/react": "^3.17.0",
+    "@liveblocks/yjs": "^3.17.0",
+    "@tldraw/tldraw": "^4.5.7",
+    "next": "14.2.35",
+    "react": "^18",
+    "react-dom": "^18",
+    "yjs": "^13.6.30"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "eslint": "^8",
+    "eslint-config-next": "14.2.35",
+    "postcss": "^8",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5"
+  }
+}

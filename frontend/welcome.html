@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome Screen - Preserved</title>
+    <style>
+        :root {
+            --bg-body: #111111;
+            --text-main: #ededed;
+            --text-sub: #a1a1aa;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .welcome-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 60px 20px;
+            text-align: center;
+            width: 100%;
+            max-width: 900px;
+        }
+
+        .welcome-logo {
+            width: 64px;
+            height: 64px;
+            background: linear-gradient(135deg, #ff9500 0%, #ffcc00 100%);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            margin-bottom: 24px;
+            animation: fadeInUp 0.6s ease;
+            box-shadow: 0 4px 12px rgba(255, 149, 0, 0.3);
+        }
+
+        .welcome-screen h1 {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            letter-spacing: -0.03em;
+            color: var(--text-main);
+            animation: fadeInUp 0.6s ease 0.1s both;
+        }
+
+        .welcome-screen p {
+            font-size: 15px;
+            color: var(--text-sub);
+            margin-bottom: 40px;
+            animation: fadeInUp 0.6s ease 0.2s both;
+        }
+
+        .suggestions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 240px));
+            gap: 12px;
+            max-width: 800px;
+            width: 100%;
+            animation: fadeInUp 0.6s ease 0.3s both;
+        }
+
+        .suggestion-card {
+            padding: 16px;
+            background: #171717;
+            border: 1px solid #333333;
+            border-radius: 12px;
+            text-align: left;
+            font-size: 14px;
+            color: var(--text-main);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .suggestion-card:hover {
+            background: #2a2a2a;
+            border-color: #a1a1aa;
+            transform: translateY(-2px);
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="welcome-screen">
+        <div class="welcome-logo">✨</div>
+        <h1>Welcome to Saivo</h1>
+        <p>Your intelligent AI assistant for any task</p>
+        <div class="suggestions-grid">
+            <div class="suggestion-card" onclick="alert('Help me brainstorm creative ideas')">
+                Help me brainstorm creative ideas
+            </div>
+            <div class="suggestion-card" onclick="alert('Explain complex concepts simply')">
+                Explain complex concepts simply
+            </div>
+            <div class="suggestion-card" onclick="alert('Write and debug code')">
+                Write and debug code
+            </div>
+            <div class="suggestion-card" onclick="alert('Plan and organize tasks')">
+                Plan and organize tasks
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

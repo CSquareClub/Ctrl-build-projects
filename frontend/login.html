@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>System Login</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+	<link rel="stylesheet" href="css/login.css">
+</head>
+<body class="editorial-theme">
+
+	<!-- Header -->
+	<header class="main-header">
+		<nav class="nav-links saivo-brand">
+			<img src="assests/logo.png" alt="Saivo Logo" style="height: 32px; width: auto; object-fit: contain;">
+			<span class="nav-label saivo-text">Saivo</span>
+		</nav>
+		<div class="header-status">
+			<span class="status-dot"></span>
+			SYSTEM LOGIN
+		</div>
+	</header>
+
+	<main class="hero-section">
+		<div class="mesh-background"></div>
+		
+		<div class="login-form-container container-wrapper">
+			<div class="cards-container">
+				<!-- Left Card: Logic/Form -->
+				<div class="login-card glass-panel">
+					<form id="auth-form" class="auth-form">
+						<div class="input-group">
+							<label for="username">USERNAME</label>
+							<input type="text" id="username" placeholder="Enter your username" autocomplete="username" required>
+							<span id="username-hint" class="input-hint"></span>
+						</div>
+
+						<div class="input-group">
+							<label for="password">PASSWORD</label>
+							<input type="password" id="password" placeholder="Enter your password" autocomplete="current-password" required>
+							<span id="password-hint" class="input-hint"></span>
+						</div>
+
+						<button type="submit" id="auth-submit" class="cta-button pulse-btn">
+							<span id="btn-text">INITIALIZE</span>
+							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-icon">
+								<line x1="5" y1="12" x2="19" y2="12"></line>
+								<polyline points="12 5 19 12 12 19"></polyline>
+							</svg>
+						</button>
+
+						<p id="auth-status" class="status"></p>
+					</form>
+
+					<div class="toggle-mode-section">
+						<a href="#" id="toggle-mode" class="mono-link">Need an account? Register</a>
+						<a href="#" id="forgot-password-link" class="mono-link forgot-link">Forgot password?</a>
+					</div>
+				</div> <!-- End of login-card -->
+
+				<!-- Right Card: Intelligence by Design -->
+				<div class="info-card glass-panel tilt-effect" id="info-card-tilt">
+					<h1 class="hero-title">Intelligence<br><em>By Design</em></h1>
+				</div>
+			</div> <!-- End of cards-container -->
+				
+			<div class="terms-footer">
+				<p>By continuing, you agree to our <a href="#" id="terms-link">Terms of Service</a> & <a href="#" id="privacy-link">Privacy Policy</a>.</p>
+			</div>
+		</div>
+
+		<!-- Wave Transition Container -->
+		<div class="wave-container">
+			<div class="wave-curve"></div>
+		</div>
+	</main>
+
+	<!-- Footer -->
+	<footer class="main-footer">
+		<div class="footer-glow"></div>
+		<div class="footer-content">
+			<h2 class="footer-quote">"The future is not <em>written</em>, it is <em>generated.</em>"</h2>
+			
+			<div class="footer-grid">
+				<div class="footer-col">
+					<span class="mono-label">LOCATION</span>
+					<p>San Francisco, CA</p>
+				</div>
+				<div class="footer-col">
+					<span class="mono-label">INQUIRIES</span>
+					<p>hello@superdesign.ai</p>
+				</div>
+				<div class="footer-col">
+					<span class="mono-label">SOCIAL</span>
+					<div class="social-links">
+						<a href="#">Twitter</a>
+						<a href="#">LinkedIn</a>
+						<a href="#">GitHub</a>
+					</div>
+				</div>
+			</div>
+			
+			<div class="footer-copyright">
+				© 2026 INTELLIGENCE SYSTEMS INC.
+			</div>
+		</div>
+	</footer>
+
+	<!-- LEGAL MODAL (Terms & Privacy) -->
+	<div id="legal-modal" class="legal-modal-overlay" aria-hidden="true" role="dialog">
+		<div class="legal-modal-card">
+			<div class="legal-modal-header">
+				<h2 class="legal-modal-title" id="legal-modal-title">Terms of Service</h2>
+				<button class="legal-modal-close" id="legal-modal-close" aria-label="Close modal">
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<line x1="18" y1="6" x2="6" y2="18"></line>
+						<line x1="6" y1="6" x2="18" y2="18"></line>
+					</svg>
+				</button>
+			</div>
+			<div class="legal-modal-body" id="legal-modal-body">
+				<!-- Content loaded dynamically -->
+			</div>
+		</div>
+	</div>
+
+	<!-- FORGOT PASSWORD MODAL -->
+	<div id="forgot-password-modal" class="forgot-modal-overlay" aria-hidden="true" role="dialog">
+		<div class="forgot-modal-card">
+			<div class="forgot-modal-header">
+				<h2 class="forgot-modal-title">Password Reset</h2>
+				<button class="forgot-modal-close" id="forgot-modal-close" aria-label="Close modal">
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<line x1="18" y1="6" x2="6" y2="18"></line>
+						<line x1="6" y1="6" x2="18" y2="18"></line>
+					</svg>
+				</button>
+			</div>
+
+			<!-- Step Indicator -->
+			<div class="forgot-step-indicator">
+				<div class="step-item active" data-step="1">
+					<div class="step-number">1</div>
+					<span class="step-label">[REQUEST]</span>
+				</div>
+				<div class="step-line"></div>
+				<div class="step-item" data-step="2">
+					<div class="step-number">2</div>
+					<span class="step-label">[VERIFY]</span>
+				</div>
+				<div class="step-line"></div>
+				<div class="step-item" data-step="3">
+					<div class="step-number">3</div>
+					<span class="step-label">[RESET]</span>
+				</div>
+			</div>
+
+			<div class="forgot-modal-body">
+				<!-- Existing Request Notice -->
+				<div id="existing-request-notice" class="existing-request-notice" style="display: none;">
+					<p>You have an existing reset request. Continue or start a new request?</p>
+					<div class="notice-buttons">
+						<button type="button" class="cta-button" id="continue-request-btn">CONTINUE</button>
+						<button type="button" class="cta-button secondary" id="new-request-btn">NEW REQUEST</button>
+					</div>
+				</div>
+
+				<!-- Step 1: Request Reset -->
+				<div id="forgot-step-1" class="forgot-step active">
+					<p class="step-description">Enter your username and email to request a password reset.</p>
+					<form id="forgot-request-form">
+						<div class="form-group">
+							<label for="forgot-username">USERNAME</label>
+							<input type="text" id="forgot-username" name="username" placeholder="Enter your username" required>
+						</div>
+						<div class="form-group">
+							<label for="forgot-email">EMAIL ADDRESS</label>
+							<input type="email" id="forgot-email" name="email" placeholder="Enter email address" required>
+						</div>
+						<div class="form-group">
+							<label for="forgot-message">MESSAGE (OPTIONAL)</label>
+							<textarea id="forgot-message" name="message" placeholder="Additional information..." rows="3"></textarea>
+						</div>
+						<div class="forgot-error" id="forgot-error-1"></div>
+						<button type="submit" class="cta-button">SUBMIT REQUEST</button>
+					</form>
+				</div>
+
+				<!-- Step 2: Verify Token -->
+				<div id="forgot-step-2" class="forgot-step">
+					<div id="request-confirmation" class="request-confirmation" style="display: none;">
+						<p class="confirmation-text">We'll email you a reset token. This may take a few minutes.</p>
+					</div>
+					<p class="step-description">Enter your reset token below.</p>
+					<form id="forgot-verify-form">
+						<div class="form-group">
+							<label for="verify-username">USERNAME</label>
+							<input type="text" id="verify-username" name="username" disabled>
+						</div>
+						<div class="form-group">
+							<label for="verify-email">EMAIL</label>
+							<input type="email" id="verify-email" name="email" disabled>
+						</div>
+						<div class="form-group">
+							<label for="verify-hash">RESET TOKEN</label>
+							<input type="text" id="verify-hash" name="hash" placeholder="Enter token" required>
+						</div>
+						<div class="forgot-error" id="forgot-error-2"></div>
+						<div class="forgot-step-buttons" style="display: flex; gap: 10px;">
+							<button type="button" class="cta-button secondary" id="back-to-step-1">BACK</button>
+							<button type="submit" class="cta-button">VERIFY</button>
+						</div>
+					</form>
+				</div>
+
+				<!-- Step 3: Reset Password -->
+				<div id="forgot-step-3" class="forgot-step">
+					<p class="step-description">Token verified. Set your new password.</p>
+					<form id="forgot-reset-form">
+						<div class="form-group">
+							<label for="reset-new-password">NEW PASSWORD</label>
+							<input type="password" id="reset-new-password" name="new_password" required>
+						</div>
+						<div class="form-group">
+							<label for="reset-confirm-password">CONFIRM PASSWORD</label>
+							<input type="password" id="reset-confirm-password" name="confirm_password" required>
+						</div>
+						<div class="forgot-error" id="forgot-error-3"></div>
+						<button type="submit" class="cta-button">RESET PASSWORD</button>
+					</form>
+				</div>
+
+				<!-- Success Message -->
+				<div id="forgot-success" class="forgot-success" style="display: none;">
+					<h3>Password Reset Successful!</h3>
+					<button type="button" class="cta-button" id="back-to-login-btn">BACK TO LOGIN</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- DELETION WARNING MODAL -->
+	<div id="deletion-warning-modal" class="deletion-warning-overlay" aria-hidden="true" role="dialog">
+		<div class="deletion-warning-card">
+			<h2 class="deletion-warning-title">Account Scheduled for Deletion</h2>
+			<p class="deletion-warning-text">This account is scheduled for deletion. Cancel deletion?</p>
+			<div class="deletion-warning-actions">
+				<button type="button" class="cta-button" id="deletion-cancel-btn">CANCEL DELETION</button>
+				<button type="button" class="cta-button secondary" id="deletion-newaccount-btn">DIFFERENT ACCOUNT</button>
+			</div>
+		</div>
+	</div>
+
+	<!-- Loading Screen Overlay -->
+	<div id="loading-screen" class="loading-screen">
+		<div class="loading-content">
+			<div class="loading-spinner"></div>
+			<p id="loading-message" class="loading-message mono-label"></p>
+		</div>
+	</div>
+
+	<script src="js/login.js" defer></script>
+</body>
+</html>

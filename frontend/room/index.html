@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Saivo Rooms</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+	<script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+	<script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+	<link rel="stylesheet" href="../css/style.css">
+	<link rel="stylesheet" href="room.css">
+</head>
+
+<body>
+	<div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+	<aside class="sidebar" id="sidebar">
+		<div class="sidebar-header">
+			<button class="mobile-close-btn" id="mobile-close-btn" aria-label="Close menu">
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<line x1="18" y1="6" x2="6" y2="18"></line>
+					<line x1="6" y1="6" x2="18" y2="18"></line>
+				</svg>
+			</button>
+			<button class="toggle-btn" id="sidebar-toggle" title="Toggle Sidebar">
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+					<line x1="3" y1="12" x2="21" y2="12"></line>
+					<line x1="3" y1="6" x2="21" y2="6"></line>
+					<line x1="3" y1="18" x2="21" y2="18"></line>
+				</svg>
+			</button>
+		</div>
+
+		<button class="btn-new-chat" id="hub-btn">
+			<span class="new-chat-text">Room Hub</span>
+			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+				<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+				<polyline points="9 22 9 12 15 12 15 22"></polyline>
+			</svg>
+		</button>
+
+		<button class="btn-new-chat btn-ghost-nav" id="main-ai-btn">
+			<span class="new-chat-text">Back to AI Chat</span>
+			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+				<path d="M15 18l-6-6 6-6" stroke-linecap="round" stroke-linejoin="round" />
+			</svg>
+		</button>
+
+		<div class="history-list">
+			<div class="history-label text-label">My Rooms</div>
+			<div id="room-list" class="history-items">
+			</div>
+		</div>
+
+		<div class="profile-section">
+			<div class="profile-btn" id="profile-btn">
+				<div class="avatar" id="avatar-initials">--</div>
+				<div class="profile-info" id="sidebar-username">Guest User</div>
+			</div>
+		</div>
+	</aside>
+
+	<main class="main">
+		<header class="main-header">
+			<button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Open menu">
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<line x1="3" y1="6" x2="21" y2="6"></line>
+					<line x1="3" y1="12" x2="21" y2="12"></line>
+					<line x1="3" y1="18" x2="21" y2="18"></line>
+				</svg>
+			</button>
+			<span class="brand-title">Saivo Rooms</span>
+
+			<div class="header-chat-title" id="room-header-title"></div>
+
+			<button class="info-btn room-info-btn-hidden" id="room-info-btn" title="Manage Room">
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<circle cx="12" cy="12" r="10"></circle>
+					<path d="M12 16v-4"></path>
+					<path d="M12 8h.01"></path>
+				</svg>
+			</button>
+		</header>
+
+		<div class="chat-area" id="chatArea">
+			<div class="room-view room-hub-view" id="view-hub">
+				<div class="room-hub-layout">
+					<div class="room-hero-card">
+						<div class="welcome-logo">
+							<img src="../assets/logo.png" alt="Saivo Logo">
+						</div>
+						<h1>Study Room Hub</h1>
+						<p class="room-hub-description">Create rooms fast, send invitations, and manage requests with zero clutter.</p>
+						<div class="room-hero-actions">
+							<button class="primary-btn" id="nav-create-btn">Create Room</button>
+							<button class="secondary-btn" id="nav-join-btn">Request to Join</button>
+						</div>
+						<div id="hub-status" class="form-helper"></div>
+					</div>
+
+					<section class="room-card room-invitations-card">
+						<div class="room-card-header">
+							<h2>Pending Invitations</h2>
+							<button class="secondary-btn small-btn" id="refresh-invitations-btn">Refresh</button>
+						</div>
+						<p class="room-card-subtitle">Accept an invite to join instantly, or reject it.</p>
+						<div id="pending-invitations-list" class="invitation-list"></div>
+						<div id="invitation-error" class="form-error"></div>
+					</section>
+				</div>
+			</div>
+
+			<div class="room-view room-form-view room-hidden" id="view-create">
+				<div class="room-card room-form-card">
+					<h2>Create a New Room</h2>
+					<p class="room-card-subtitle">Set up a room name and optional description. You become admin instantly.</p>
+					<div class="room-form">
+						<input type="text" class="room-input" id="create-room-name" placeholder="Room name">
+						<textarea class="room-input room-textarea" id="create-room-desc" placeholder="Short description (optional)" rows="3"></textarea>
+						<div id="create-error" class="form-error"></div>
+						<button class="primary-btn" id="submit-create-btn">Create and Enter</button>
+						<button class="secondary-btn" id="cancel-create-btn">Back to Hub</button>
+					</div>
+				</div>
+            </div>
+
+			<div class="room-view room-form-view room-hidden" id="view-join">
+				<div class="room-card room-form-card">
+					<h2>Request Room Access</h2>
+					<p class="room-card-subtitle">Enter room code and admin will approve or reject your request.</p>
+					<div class="room-form">
+						<input type="text" class="room-input" id="join-room-code" placeholder="Invite code">
+						<div id="join-error" class="form-error"></div>
+						<button class="primary-btn" id="submit-join-btn">Send Join Request</button>
+						<button class="secondary-btn" id="cancel-join-btn">Back to Hub</button>
+					</div>
+				</div>
+            </div>
+
+			<div class="room-view room-manage-view room-hidden" id="view-invite">
+				<div class="room-manage-grid">
+					<section class="room-card">
+						<h2>Room Access</h2>
+						<p class="room-card-subtitle">Share this invite code so others can join instantly.</p>
+						<div class="invite-code-chip" id="display-invite-code">---</div>
+						<button class="secondary-btn" id="copy-invite-btn">Copy Invite Code</button>
+						<div id="invite-copy-status" class="form-helper"></div>
+					</section>
+
+					<section class="room-card">
+						<h2>Invite Member</h2>
+						<p class="room-card-subtitle">Send invitation to a user. They must accept before joining.</p>
+						<div class="room-form compact-form">
+							<input type="text" class="room-input" id="invite-username" placeholder="Username">
+							<div id="invite-error" class="form-error"></div>
+							<button class="primary-btn" id="submit-invite-btn">Send Invitation</button>
+						</div>
+					</section>
+
+					<section class="room-card room-requests-card">
+						<div class="room-card-header">
+							<h2>Join Requests</h2>
+							<button class="secondary-btn small-btn" id="refresh-requests-btn">Refresh</button>
+						</div>
+						<p class="room-card-subtitle">Admin can approve or reject pending access requests.</p>
+						<div id="join-request-list" class="request-list"></div>
+						<div id="request-error" class="form-error"></div>
+					</section>
+
+					<section class="room-card room-members-card">
+						<div class="room-card-header">
+							<h2>Members</h2>
+							<button class="secondary-btn small-btn" id="refresh-members-btn">Refresh</button>
+						</div>
+						<div id="member-list-panel" class="member-list"></div>
+						<div id="manage-error" class="form-error"></div>
+					</section>
+
+					<section class="room-card danger-zone-card">
+						<h2>Room Actions</h2>
+						<p class="room-card-subtitle">Members can leave. Admin cannot leave and must delete room.</p>
+						<div class="room-action-buttons">
+							<button class="secondary-btn" id="leave-room-btn">Leave Room</button>
+							<button class="danger-btn" id="delete-room-btn">Delete Room</button>
+						</div>
+						<div id="room-action-note" class="form-helper"></div>
+						<div id="action-status" class="form-helper"></div>
+						<button class="secondary-btn" id="cancel-invite-btn">Back to Room</button>
+					</section>
+				</div>
+            </div>
+
+			<div id="view-chat" class="room-view room-chat-view room-hidden">
+				<div class="room-chat-toolbar">
+					<span class="room-chat-badge">Live Room Chat</span>
+					<button class="secondary-btn small-btn" id="open-manage-btn">Manage Room</button>
+				</div>
+
+				<div id="chat-view-messages" class="chat-messages-stack"></div>
+
+                <div class="input-container">
+                    <div class="input-wrapper">
+                        <textarea id="chat-input" placeholder="Message the room..." rows="1" class="chat-input"></textarea>
+						<div id="chat-error" class="form-error"></div>
+						<div class="input-actions room-input-actions">
+							<button class="send-btn action-btn" id="send-msg-btn" title="Send message" aria-label="Send message" disabled>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+		</div>
+	</main>
+
+	<script src="app.js"></script>
+</body>
+</html>
