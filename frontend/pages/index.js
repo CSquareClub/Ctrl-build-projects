@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Head from 'next/head';
 import Navbar from '../components/Navbar';
 import UserProfile from '../components/UserProfile';
 import StatsCard from '../components/StatsCard';
 import ActivitiesCard from '../components/ActivitiesCard';
 import PullRequestsCard from '../components/PullRequestsCard';
+import IssuesCard from '../components/IssuesCard';
+import { Star, GitFork, Eye, CircleDot, Search, X } from 'lucide-react';
 
 export default function Home() {
   const [repoInput, setRepoInput] = useState('torvalds/linux');
@@ -14,17 +16,18 @@ export default function Home() {
   const [error, setError] = useState(null);
   const [showSearchBar, setShowSearchBar] = useState(false);
   const [searchValue, setSearchValue] = useState('');
-  const [activitiesData, setActivitiesData] = useState([]);
+  const [commitsData, setCommitsData] = useState([]);
   const [pullRequestsData, setPullRequestsData] = useState([]);
+  const [issuesData, setIssuesData] = useState([]);
+
+  const searchInputRef = useRef(null);
 
   // Parse repo link to extract owner and repo name
   const parseRepoLink = (input) => {
-    // Handle full GitHub URLs
     if (input.includes('github.com/')) {
       const parts = input.split('github.com/')[1].split('/');
       return { owner: parts[0], repo: parts[1] };
     }
-    // Handle owner/repo format
     const parts = input.split('/');
     if (parts.length === 2) {
       return { owner: parts[0], repo: parts[1] };
@@ -32,45 +35,7 @@ export default function Home() {
     return null;
   };
 
-  // Fetch repository and owner data from GitHub API
-  const fetchRepoData = async (input) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const parsed = parseRepoLink(input);
-      if (!parsed) {
-        throw new Error('Invalid repository format. Use "owner/repo" or full GitHub URL');
-      }
-
-      const { owner, repo } = parsed;
-
-      // Fetch repository data
-      const repoRes = await fetch(
-        `https://api.github.com/repos/${owner}/${repo}`
-      );
-      if (!repoRes.ok) throw new Error('Repository not found');
-      const repoDataResponse = await repoRes.json();
-      setRepoData(repoDataResponse);
-
-      // Fetch repository owner data
-      const ownerRes = await fetch(
-        `https://api.github.com/users/${owner}`
-      );
-      if (!ownerRes.ok) throw new Error('Owner not found');
-      const ownerDataResponse = await ownerRes.json();
-      setRepoOwner(ownerDataResponse);
-
-      // Fetch additional repository-related data (events, PRs)
-      await fetchRepoExtras(owner, repo);
-    } catch (err) {
-      setError(err.message);
-      console.error('Error fetching data:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Convert ISO timestamp to relative time (simple)
+  // Convert ISO timestamp to relative time
   const timeAgo = (iso) => {
     try {
       const delta = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
@@ -78,77 +43,101 @@ export default function Home() {
       if (delta < 3600) return `${Math.floor(delta / 60)}m ago`;
       if (delta < 86400) return `${Math.floor(delta / 3600)}h ago`;
       return `${Math.floor(delta / 86400)}d ago`;
-    } catch (e) {
+    } catch {
       return iso;
     }
   };
 
-  // Fetch events and PRs for the repository and map to UI models
+  const fetchRepoData = async (input) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const parsed = parseRepoLink(input);
+      if (!parsed) throw new Error('Invalid format. Use "owner/repo" or full GitHub URL');
+
+      const { owner, repo } = parsed;
+
+      const [repoRes, ownerRes] = await Promise.all([
+        fetch(`https://api.github.com/repos/${owner}/${repo}`),
+        fetch(`https://api.github.com/users/${owner}`),
+      ]);
+
+      if (!repoRes.ok) throw new Error('Repository not found');
+      if (!ownerRes.ok) throw new Error('Owner not found');
+
+      const [repoJson, ownerJson] = await Promise.all([repoRes.json(), ownerRes.json()]);
+      setRepoData(repoJson);
+      setRepoOwner(ownerJson);
+
+      await fetchRepoExtras(owner, repo);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const fetchRepoExtras = async (owner, repo) => {
     try {
-      // Events (activity)
-      const eventsRes = await fetch(
-        `https://api.github.com/repos/${owner}/${repo}/events?per_page=20`
-      );
-      if (eventsRes.ok) {
-        const eventsJson = await eventsRes.json();
-        const mapped = eventsJson.map((ev) => {
-          const type = ev.type;
-          const repoName = ev.repo?.name || `${owner}/${repo}`;
-          let message = '';
-          if (type === 'PushEvent') {
-            const commits = ev.payload?.commits || [];
-            message = `${commits.length} commit(s) pushed`;
-            if (commits.length && commits[0].message) {
-              message += ` — ${commits[0].message.slice(0, 80)}`;
-            }
-          } else if (type === 'PullRequestEvent') {
-            const pr = ev.payload?.pull_request;
-            message = `${ev.payload?.action || ''} pull request`;
-            if (pr?.title) message += ` — ${pr.title.slice(0, 80)}`;
-          } else if (type === 'IssuesEvent') {
-            const issue = ev.payload?.issue;
-            message = `${ev.payload?.action || ''} issue #${issue?.number || ''}`;
-            if (issue?.title) message += ` — ${issue.title.slice(0, 80)}`;
-          } else {
-            message = type;
-          }
+      const [commitsRes, prsRes, issuesRes] = await Promise.all([
+        fetch(`https://api.github.com/repos/${owner}/${repo}/commits?per_page=25`),
+        fetch(`https://api.github.com/repos/${owner}/${repo}/pulls?state=all&per_page=30`),
+        fetch(`https://api.github.com/repos/${owner}/${repo}/issues?state=all&per_page=50`),
+      ]);
 
-          return {
-            id: ev.id,
-            type,
-            repo: repoName,
-            message,
-            timestamp: timeAgo(ev.created_at),
-          };
-        });
-        setActivitiesData(mapped);
+      // Commits
+      if (commitsRes.ok) {
+        const commitsJson = await commitsRes.json();
+        setCommitsData(
+          commitsJson.map((c) => ({
+            sha: c.sha.slice(0, 7),
+            message: c.commit.message.split('\n')[0],
+            author: c.commit.author?.name || 'Unknown',
+            timestamp: timeAgo(c.commit.author?.date),
+          }))
+        );
       } else {
-        setActivitiesData([]);
+        setCommitsData([]);
       }
 
-      // Pull requests
-      const prsRes = await fetch(
-        `https://api.github.com/repos/${owner}/${repo}/pulls?state=all&per_page=10`
-      );
+      // Pull Requests
       if (prsRes.ok) {
         const prsJson = await prsRes.json();
-        const mappedPRs = prsJson.map((pr) => ({
-          id: pr.id,
-          title: pr.title,
-          state: pr.state,
-          number: pr.number,
-          repo: `${owner}/${repo}`,
-          createdAt: timeAgo(pr.created_at),
-        }));
-        setPullRequestsData(mappedPRs);
+        setPullRequestsData(
+          prsJson.map((pr) => ({
+            id: pr.id,
+            title: pr.title,
+            state: pr.state,
+            number: pr.number,
+            createdAt: timeAgo(pr.created_at),
+          }))
+        );
       } else {
         setPullRequestsData([]);
       }
+
+      // Issues (exclude PRs — GitHub API returns PRs in /issues too)
+      if (issuesRes.ok) {
+        const issuesJson = await issuesRes.json();
+        setIssuesData(
+          issuesJson
+            .filter((issue) => !issue.pull_request)
+            .map((issue) => ({
+              id: issue.id,
+              number: issue.number,
+              title: issue.title,
+              state: issue.state,
+              createdAt: timeAgo(issue.created_at),
+            }))
+        );
+      } else {
+        setIssuesData([]);
+      }
     } catch (err) {
-      console.error('Error fetching extras:', err);
-      setActivitiesData([]);
+      console.error('Error fetching repo extras:', err);
+      setCommitsData([]);
       setPullRequestsData([]);
+      setIssuesData([]);
     }
   };
 
@@ -156,19 +145,31 @@ export default function Home() {
     fetchRepoData(repoInput);
   }, []);
 
+  // Focus input when search bar opens
+  useEffect(() => {
+    if (showSearchBar && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [showSearchBar]);
+
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchValue.trim()) {
-      setRepoInput(searchValue);
-      fetchRepoData(searchValue);
+      setRepoInput(searchValue.trim());
+      fetchRepoData(searchValue.trim());
       setShowSearchBar(false);
       setSearchValue('');
     }
   };
 
   const handleSearchButtonClick = () => {
-    setShowSearchBar(!showSearchBar);
-    if (!showSearchBar) {
+    setShowSearchBar((prev) => !prev);
+    if (showSearchBar) setSearchValue('');
+  };
+
+  const handleOverlayClick = (e) => {
+    if (e.target === e.currentTarget) {
+      setShowSearchBar(false);
       setSearchValue('');
     }
   };
@@ -176,112 +177,123 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>GitHub Repository Viewer</title>
-        <meta
-          name="description"
-          content="View GitHub repository information and statistics"
-        />
+        <title>Synapse — GitHub Repo Viewer</title>
+        <meta name="description" content="View GitHub repository information and statistics" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
 
       <Navbar />
 
-      {/* Dynamic Search Bar - Sticky, Translucent, Blurred */}
+      {/* Floating Search Overlay */}
       {showSearchBar && (
-        <div className="fixed top-0 left-64 right-0 z-40 backdrop-blur-md bg-github-bg bg-opacity-80 border-b border-github-border border-opacity-50 p-4">
-          <div className="max-w-6xl mx-auto">
-            <form onSubmit={handleSearch} className="flex gap-2">
-              <input
-                type="text"
-                value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value)}
-                placeholder="Enter repo (owner/repo)"
-                autoFocus
-                className="flex-1 bg-github-border bg-opacity-40 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-github-muted"
-              />
-              <button
-                type="submit"
-                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition"
-              >
-                Search
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowSearchBar(false)}
-                className="bg-github-border hover:bg-red-600 text-white px-4 py-2 rounded-lg font-medium transition"
-              >
-                Close
-              </button>
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center pt-24"
+          style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)' }}
+          onClick={handleOverlayClick}
+        >
+          <div className="w-full max-w-xl mx-4">
+            <form
+              onSubmit={handleSearch}
+              className="bg-[#161b22] border border-github-border rounded-xl shadow-2xl overflow-hidden"
+            >
+              <div className="flex items-center px-4 py-3 gap-3">
+                <Search size={16} className="text-github-muted flex-shrink-0" />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={searchValue}
+                  onChange={(e) => setSearchValue(e.target.value)}
+                  placeholder="Search repository  (owner/repo or full URL)"
+                  className="flex-1 bg-transparent text-white text-sm focus:outline-none placeholder-github-muted"
+                />
+                <button
+                  type="button"
+                  onClick={() => { setShowSearchBar(false); setSearchValue(''); }}
+                  className="text-github-muted hover:text-white transition flex-shrink-0"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+              <div className="border-t border-github-border px-4 py-2.5 flex items-center justify-between">
+                <span className="text-github-muted text-xs">Press Enter to search</span>
+                <button
+                  type="submit"
+                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-4 py-1.5 rounded-md font-medium transition"
+                >
+                  Search
+                </button>
+              </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* Search Button - Top Right */}
+      {/* Search Icon Button — top right */}
       <button
         onClick={handleSearchButtonClick}
-        className="fixed top-4 right-4 z-50 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition shadow-lg"
+        className="fixed top-4 right-4 z-40 bg-[#161b22] hover:bg-github-border border border-github-border text-github-text hover:text-white p-2.5 rounded-lg transition shadow-lg"
+        title="Search repository"
       >
-        🔍 Search
+        <Search size={18} />
       </button>
 
-      <main className={`ml-64 bg-github-bg min-h-screen p-8 ${showSearchBar ? 'pt-24' : ''}`}>
-        <div className="max-w-6xl">
+      <main className="ml-64 bg-github-bg min-h-screen p-8">
+        <div className="max-w-7xl">
           {error && (
-            <div className="bg-red-900 bg-opacity-30 border border-red-500 text-red-300 px-4 py-3 rounded-lg mb-8">
-              <p>Error: {error}</p>
+            <div className="bg-red-900 bg-opacity-20 border border-red-700 text-red-300 px-4 py-3 rounded-lg mb-6 text-sm">
+              {error}
             </div>
           )}
 
           {loading && (
-            <div className="text-center py-12">
-              <div className="inline-block">
-                <div className="animate-spin border-4 border-github-border border-t-blue-500 rounded-full w-12 h-12"></div>
-                <p className="text-github-text mt-4">Loading repository...</p>
+            <div className="flex items-center justify-center py-20">
+              <div className="text-center">
+                <div className="animate-spin border-4 border-github-border border-t-blue-500 rounded-full w-10 h-10 mx-auto mb-4" />
+                <p className="text-github-muted text-sm">Loading repository...</p>
               </div>
             </div>
           )}
 
           {!loading && repoOwner && repoData && (
             <>
-              {/* Repository Owner Profile Header */}
+              {/* Owner Profile */}
               <UserProfile user={repoOwner} />
 
-              {/* Repository Information Section */}
-              <h2 className="text-2xl font-bold text-white mb-6">
-                Repository Information
-              </h2>
+              {/* Repo name + description */}
+              <div className="mb-5">
+                <h2 className="text-lg font-bold text-white">
+                  {repoData.full_name}
+                </h2>
+                {repoData.description && (
+                  <p className="text-github-muted text-sm mt-1">{repoData.description}</p>
+                )}
+              </div>
 
-              {/* Grid Layout: Stats + Activities + Pull Requests */}
-              <div className="grid grid-cols-3 gap-6 h-96">
-                {/* Left Column: Stars & Forks */}
-                <div className="flex flex-col gap-6">
-                  <StatsCard
-                    title="Stars"
-                    count={repoData.stargazers_count}
-                    icon="⭐"
-                  />
-                  <StatsCard
-                    title="Forks"
-                    count={repoData.forks_count}
-                    icon="🍴"
-                  />
-                </div>
+              {/* Stats Row */}
+              <div className="grid grid-cols-4 gap-4 mb-6">
+                <StatsCard title="Stars" count={repoData.stargazers_count} icon={Star} iconColor="text-yellow-400" />
+                <StatsCard title="Forks" count={repoData.forks_count} icon={GitFork} iconColor="text-blue-400" />
+                <StatsCard title="Watchers" count={repoData.watchers_count} icon={Eye} iconColor="text-green-400" />
+                <StatsCard title="Open Issues" count={repoData.open_issues_count} icon={CircleDot} iconColor="text-orange-400" />
+              </div>
 
-                {/* Middle Column: Activities */}
-                <ActivitiesCard activities={activitiesData} />
-
-                {/* Right Column: Pull Requests & Issues */}
+              {/* Content Row: Commits | PRs | Issues */}
+              <div className="grid grid-cols-3 gap-5" style={{ minHeight: '480px' }}>
+                <ActivitiesCard commits={commitsData} />
                 <PullRequestsCard pullRequests={pullRequestsData} />
+                <IssuesCard issues={issuesData} />
               </div>
             </>
           )}
 
           {!loading && !repoOwner && !error && (
-            <div className="text-center py-12">
-              <p className="text-github-muted text-lg">
-                Click the search button to find a repository
-              </p>
+            <div className="flex items-center justify-center py-20">
+              <div className="text-center">
+                <Search size={32} className="text-github-muted mx-auto mb-3" />
+                <p className="text-github-muted text-sm">
+                  Click the search button to find a repository
+                </p>
+              </div>
             </div>
           )}
         </div>
