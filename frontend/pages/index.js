@@ -23,6 +23,7 @@ export default function Home() {
   const [prsError, setPrsError] = useState(null);
   const [issuesError, setIssuesError] = useState(null);
   const [extrasLoading, setExtrasLoading] = useState(false);
+  const [ghToken, setGhToken] = useState('');
 
   const searchInputRef = useRef(null);
 
@@ -61,9 +62,12 @@ export default function Home() {
 
       const { owner, repo } = parsed;
 
+      const token = localStorage.getItem('gh_token') || '';
+      const headers = authHeaders(token);
+
       const [repoRes, ownerRes] = await Promise.all([
-        fetch(`https://api.github.com/repos/${owner}/${repo}`),
-        fetch(`https://api.github.com/users/${owner}`),
+        fetch(`https://api.github.com/repos/${owner}/${repo}`, { headers }),
+        fetch(`https://api.github.com/users/${owner}`, { headers }),
       ]);
 
       if (!repoRes.ok) {
@@ -90,6 +94,9 @@ export default function Home() {
     }
   };
 
+  const authHeaders = (token) =>
+    token ? { Authorization: `Bearer ${token}` } : {};
+
   const parseApiError = async (res) => {
     try {
       const json = await res.json();
@@ -107,10 +114,13 @@ export default function Home() {
     setPrsError(null);
     setIssuesError(null);
 
+    const token = localStorage.getItem('gh_token') || '';
+    const headers = authHeaders(token);
+
     const [commitsRes, prsRes, issuesRes] = await Promise.all([
-      fetch(`https://api.github.com/repos/${owner}/${repo}/commits?per_page=25`),
-      fetch(`https://api.github.com/repos/${owner}/${repo}/pulls?state=all&per_page=30`),
-      fetch(`https://api.github.com/repos/${owner}/${repo}/issues?state=all&per_page=50`),
+      fetch(`https://api.github.com/repos/${owner}/${repo}/commits?per_page=25`, { headers }),
+      fetch(`https://api.github.com/repos/${owner}/${repo}/pulls?state=all&per_page=30`, { headers }),
+      fetch(`https://api.github.com/repos/${owner}/${repo}/issues?state=all&per_page=50`, { headers }),
     ]);
 
     // Commits
@@ -209,7 +219,7 @@ export default function Home() {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
 
-      <Navbar />
+      <Navbar onTokenChange={setGhToken} />
 
       {/* Floating Search Overlay */}
       {showSearchBar && (
