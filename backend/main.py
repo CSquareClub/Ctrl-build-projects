@@ -5,5 +5,8 @@ Run with:
 """
 
 from app.main import app
+from room import room_router
+
+app.include_router(room_router)
 
 __all__ = ["app"]

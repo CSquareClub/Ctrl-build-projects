@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Saivo Rooms</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+	<script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+	<script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+	<link rel="stylesheet" href="../css/style.css">
+	<link rel="stylesheet" href="room.css">
+</head>
+
+<body>
+	<!-- Sidebar Overlay -->
+	<div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+	<aside class="sidebar" id="sidebar">
+		<div class="sidebar-header">
+			<button class="mobile-close-btn" id="mobile-close-btn" aria-label="Close menu">
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<line x1="18" y1="6" x2="6" y2="18"></line>
+					<line x1="6" y1="6" x2="18" y2="18"></line>
+				</svg>
+			</button>
+			<button class="toggle-btn" id="sidebar-toggle" title="Toggle Sidebar">
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+					<line x1="3" y1="12" x2="21" y2="12"></line>
+					<line x1="3" y1="6" x2="21" y2="6"></line>
+					<line x1="3" y1="18" x2="21" y2="18"></line>
+				</svg>
+			</button>
+		</div>
+
+		<button class="btn-new-chat" id="hub-btn">
+			<span class="new-chat-text">Room Hub</span>
+			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                <polyline points="9 22 9 12 15 12 15 22"></polyline>
+			</svg>
+		</button>
+
+		<button class="btn-new-chat" id="main-ai-btn" style="margin-top: 10px; background: var(--bg-hover); color: var(--text-primary);" onclick="window.location.href='../index.html'">
+			<span class="new-chat-text">Back to AI Chat</span>
+			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+				<path d="M15 18l-6-6 6-6" stroke-linecap="round" stroke-linejoin="round" />
+			</svg>
+		</button>
+
+		<div class="history-list">
+			<div class="history-label text-label">My Rooms</div>
+			<div id="room-list" class="history-items">
+                <!-- Room items generated here -->
+            </div>
+		</div>
+
+		<div class="profile-section">
+			<div class="profile-btn" id="profile-btn">
+				<div class="avatar" id="avatar-initials">--</div>
+				<div class="profile-info" id="sidebar-username">Guest User</div>
+			</div>
+		</div>
+	</aside>
+
+	<main class="main">
+		<header class="main-header">
+			<button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Open menu">
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<line x1="3" y1="6" x2="21" y2="6"></line>
+					<line x1="3" y1="12" x2="21" y2="12"></line>
+					<line x1="3" y1="18" x2="21" y2="18"></line>
+				</svg>
+			</button>
+			<span class="brand-title">Saivo Rooms</span>
+			
+			<div class="header-chat-title" id="room-header-title"></div>
+			
+			<button class="info-btn" id="room-info-btn" style="display: none;" title="Room Info / Invite">
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<circle cx="12" cy="12" r="10"></circle>
+					<path d="M12 16v-4"></path>
+					<path d="M12 8h.01"></path>
+				</svg>
+			</button>
+		</header>
+
+		<div class="chat-area" id="chatArea">
+            
+            <!-- HUB VIEW -->
+			<div class="room-view" id="view-hub">
+				<div class="welcome-logo">
+					<img src="../assests/logo.png" alt="Saivo Logo" onerror="this.style.display='none'">
+				</div>
+				<h1>Saivo Study Rooms</h1>
+				<p style="color: var(--text-secondary); margin-bottom: 30px;">Collaborate with your peers in dedicated spaces</p>
+				<div style="display: flex; gap: 15px;">
+					<button class="primary-btn" id="nav-create-btn">Create Room</button>
+					<button class="secondary-btn" id="nav-join-btn">Join Room</button>
+				</div>
+			</div>
+
+            <!-- CREATE VIEW -->
+            <div class="room-view" id="view-create" style="display: none;">
+                <h2>Create a New Room</h2>
+                <div class="room-form">
+                    <input type="text" class="room-input" id="create-room-name" placeholder="Name your study room...">
+                    <button class="primary-btn" id="submit-create-btn">Create & Enter Room</button>
+                    <button class="secondary-btn" id="cancel-create-btn">Back to Hub</button>
+                </div>
+            </div>
+
+            <!-- JOIN VIEW -->
+            <div class="room-view" id="view-join" style="display: none;">
+                <h2>Join a Room</h2>
+                <div class="room-form">
+                    <input type="text" class="room-input" id="join-room-code" placeholder="Enter Invite Code...">
+                    <button class="primary-btn" id="submit-join-btn">Join Room</button>
+                    <button class="secondary-btn" id="cancel-join-btn">Back to Hub</button>
+                </div>
+            </div>
+
+            <!-- INVITE/INFO VIEW -->
+            <div class="room-view" id="view-invite" style="display: none;">
+                <h2>Room Options</h2>
+                <p style="margin: 10px 0 20px; color: var(--text-secondary);">
+                    Invite Code: <strong style="color: var(--accent);" id="display-invite-code">---</strong>
+                </p>
+                <div class="room-form" style="margin-top: 0;">
+                    <p style="text-align: center; color: var(--text-secondary);">Or invite directly by username:</p>
+                    <input type="text" class="room-input" id="invite-username" placeholder="Target Username">
+                    <button class="primary-btn" id="submit-invite-btn">Send Invite</button>
+                    <button class="secondary-btn" id="cancel-invite-btn">Return to Chat</button>
+                </div>
+            </div>
+
+            <!-- CHAT VIEW -->
+            <div id="view-chat" style="display: none; height: 100%; flex-direction: column;">
+                <div id="chat-view-messages">
+                    <!-- Messages will appear here -->
+                </div>
+
+                <div class="input-container">
+                    <div class="input-wrapper">
+                        <textarea id="chat-input" placeholder="Message the room..." rows="1" class="chat-input"></textarea>
+                        <div class="input-actions" style="margin-top: 12px; display: flex; justify-content: flex-end;">
+                            <button class="send-btn action-btn" id="send-msg-btn" disabled>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+		</div>
+	</main>
+
+	<script src="app.js"></script>
+</body>
+</html>
