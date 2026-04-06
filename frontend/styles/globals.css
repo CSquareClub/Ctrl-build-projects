@@ -1,0 +1,58 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  background-color: #0d1117;
+  color: #22c55e;
+  font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Terminal card hover */
+.terminal-hover {
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.terminal-hover:hover {
+  border-color: #22c55e;
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.15);
+}
+
+/* Scrollbar — green terminal style */
+::-webkit-scrollbar        { width: 6px; height: 6px; }
+::-webkit-scrollbar-track  { background: #000; }
+::-webkit-scrollbar-thumb  { background: #1a3320; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #22c55e; }
+
+/* Blinking cursor */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+.cursor-blink::after {
+  content: '▊';
+  margin-left: 2px;
+  animation: blink 1.1s step-end infinite;
+  color: #22c55e;
+}
+
+/* CRT subtle glow on text */
+.glow {
+  text-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
+}
+
+/* Terminal selection */
+::selection {
+  background: #22c55e;
+  color: #000;
+}
