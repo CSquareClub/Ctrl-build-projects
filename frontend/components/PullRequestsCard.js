@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { GitPullRequest, GitMerge, AlertCircle, Loader2 } from 'lucide-react';
 
 export default function PullRequestsCard({ pullRequests, error, loading }) {
@@ -10,77 +10,74 @@ export default function PullRequestsCard({ pullRequests, error, loading }) {
   const closedCount = list.filter((pr) => pr.state === 'closed').length;
 
   return (
-    <div className="bg-github-bg border border-github-border rounded-lg p-5 flex flex-col h-full overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4 flex-shrink-0">
-        <h2 className="text-sm font-semibold text-white flex items-center gap-2">
-          <GitPullRequest size={15} className="text-purple-400" />
-          Pull Requests
-        </h2>
-        <div className="flex rounded-md overflow-hidden border border-github-border text-xs">
+    <div className="border border-terminal-border rounded bg-terminal-surface flex flex-col h-full overflow-hidden terminal-hover">
+      {/* title bar */}
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-terminal-border flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <span className="text-terminal-bright text-xs">$</span>
+          <span className="text-terminal-text text-xs">gh pr list</span>
+        </div>
+        <div className="flex items-center gap-1 text-xs font-mono">
           <button
             onClick={() => setFilter('open')}
-            className={`px-2.5 py-1 flex items-center gap-1 transition ${
+            className={`px-2 py-0.5 rounded transition ${
               filter === 'open'
-                ? 'bg-green-700 text-white'
-                : 'text-github-muted hover:bg-github-border hover:text-white'
+                ? 'text-terminal-bright border border-terminal-text'
+                : 'text-terminal-muted border border-terminal-border hover:border-terminal-muted hover:text-terminal-text'
             }`}
           >
-            <GitPullRequest size={11} />
-            Open{openCount > 0 && <span className="ml-1 bg-black bg-opacity-20 px-1 rounded">{openCount}</span>}
+            open{openCount > 0 && <span className="ml-1 text-terminal-muted">{openCount}</span>}
           </button>
           <button
             onClick={() => setFilter('closed')}
-            className={`px-2.5 py-1 flex items-center gap-1 transition border-l border-github-border ${
+            className={`px-2 py-0.5 rounded transition ${
               filter === 'closed'
-                ? 'bg-purple-700 text-white'
-                : 'text-github-muted hover:bg-github-border hover:text-white'
+                ? 'text-terminal-bright border border-terminal-text'
+                : 'text-terminal-muted border border-terminal-border hover:border-terminal-muted hover:text-terminal-text'
             }`}
           >
-            <GitMerge size={11} />
-            Closed{closedCount > 0 && <span className="ml-1 bg-black bg-opacity-20 px-1 rounded">{closedCount}</span>}
+            closed{closedCount > 0 && <span className="ml-1 text-terminal-muted">{closedCount}</span>}
           </button>
         </div>
       </div>
 
-      {/* List */}
-      <div className="flex-1 min-h-0 overflow-y-auto space-y-2 pr-1">
+      <div className="flex-1 min-h-0 overflow-y-auto px-3 py-2 space-y-0">
         {loading ? (
-          <div className="flex items-center gap-2 text-github-muted text-xs pt-2">
-            <Loader2 size={13} className="animate-spin" />
-            Loading pull requests...
+          <div className="flex items-center gap-2 text-terminal-muted text-xs pt-3">
+            <Loader2 size={12} className="animate-spin" />
+            fetching pull requests...
           </div>
         ) : error ? (
-          <div className="flex items-start gap-2 text-red-400 text-xs pt-2">
-            <AlertCircle size={13} className="flex-shrink-0 mt-0.5" />
+          <div className="flex items-start gap-2 text-terminal-red text-xs pt-3">
+            <AlertCircle size={12} className="flex-shrink-0 mt-0.5" />
             {error}
           </div>
         ) : filtered.length > 0 ? (
           filtered.map((pr) => (
-            <div
-              key={pr.id}
-              className="flex items-start gap-2 p-2.5 bg-github-border bg-opacity-20 rounded hover:bg-opacity-40 transition cursor-pointer"
-            >
-              <div className="flex-shrink-0 mt-0.5">
-                {pr.state === 'open' ? (
-                  <GitPullRequest size={13} className="text-green-400" />
-                ) : (
-                  <GitMerge size={13} className="text-purple-400" />
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5 mb-1">
-                  <span className="text-github-muted text-xs font-mono bg-github-border px-1.5 py-0.5 rounded">
-                    #{pr.number}
-                  </span>
+            <div key={pr.id}
+              className="py-2.5 border-b border-terminal-border last:border-b-0 cursor-pointer group">
+              <div className="flex items-start gap-2">
+                <span className="flex-shrink-0 mt-0.5">
+                  {pr.state === 'open'
+                    ? <GitPullRequest size={12} className="text-terminal-text" />
+                    : <GitMerge size={12} className="text-terminal-muted" />
+                  }
+                </span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <code className="text-terminal-muted text-xs">#{pr.number}</code>
+                    <span className={`text-xs ${pr.state === 'open' ? 'text-terminal-bright' : 'text-terminal-muted'}`}>
+                      [{pr.state}]
+                    </span>
+                  </div>
+                  <p className="text-terminal-text text-xs truncate group-hover:text-terminal-bright transition">{pr.title}</p>
+                  <p className="text-terminal-muted text-xs mt-0.5">{pr.createdAt}</p>
                 </div>
-                <p className="text-white text-xs font-medium truncate">{pr.title}</p>
-                <p className="text-github-muted text-xs mt-0.5">{pr.createdAt}</p>
               </div>
             </div>
           ))
         ) : (
-          <p className="text-github-muted text-xs pt-2">No {filter} pull requests</p>
+          <p className="text-terminal-muted text-xs pt-3">// no {filter} pull requests</p>
         )}
       </div>
     </div>
