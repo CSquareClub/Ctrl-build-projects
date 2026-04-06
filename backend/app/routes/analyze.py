@@ -28,7 +28,9 @@ async def analyze_issue(issue: IssueInput):
     if embedding is None or len(embedding) == 0:
         raise HTTPException(status_code=500, detail="Failed to generate embedding")
 
-    similar_issues = find_similar_issues(np.array(embedding), k=3)
+    # Get all issues for similarity search
+    all_issues = issue_storage.get_all_issues()
+    similar_issues = find_similar_issues(np.array(embedding), all_issues, top_k=3)
 
     issue_record = Issue(
         id=str(uuid4()),
@@ -81,7 +83,7 @@ async def analyze_batch(data: List[Dict[str, Any]]) -> Dict[str, Any]:
             if embedding is None or len(embedding) == 0:
                 raise ValueError("Failed to generate embedding")
 
-            similar_issues = find_similar_issues(np.array(embedding), k=3)
+            similar_issues = find_similar_issues(np.array(embedding), known_issues, top_k=3)
             issue = Issue(
                 id=str(uuid4()),
                 title=validated_data["title"],
