@@ -1,0 +1,153 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Sora:wght@500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  --bg: #f8fafc;
+  --text: #0f172a;
+  --card: #ffffff;
+  --bg-elev: #f1f5f9;
+  --border: #e2e8f0;
+  --primary: linear-gradient(90deg, #22d3ee, #8b5cf6);
+
+  --muted: #4b5563;
+  --on-primary: #ffffff;
+  --accent: #8b5cf6;
+  --accent-soft: rgba(139, 92, 246, 0.12);
+  --success: #22c55e;
+  --success-soft: rgba(34, 197, 94, 0.14);
+
+  --card-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
+  --hero-glow: 0 0 26px rgba(139, 92, 246, 0.35);
+  --card-glow: 0 0 25px rgba(139, 92, 246, 0.4);
+  --nav-bg: rgba(248, 250, 252, 0.78);
+
+  --mesh-left: rgba(139, 92, 246, 0.08);
+  --mesh-right: rgba(139, 92, 246, 0.13);
+  --mesh-base: #f8fafc;
+  --mesh-mid: #f1f5f9;
+  --mesh-end: #eef2ff;
+}
+
+.dark {
+  color-scheme: dark;
+  --bg: #020617;
+  --text: #e2e8f0;
+  --card: rgba(255, 255, 255, 0.05);
+  --bg-elev: rgba(15, 23, 42, 0.38);
+  --border: rgba(255, 255, 255, 0.1);
+  --primary: linear-gradient(90deg, #22d3ee, #8b5cf6);
+
+  --muted: #94a3b8;
+  --on-primary: #ffffff;
+  --accent: #a78bfa;
+  --accent-soft: rgba(139, 92, 246, 0.18);
+  --success: #4ade80;
+  --success-soft: rgba(34, 197, 94, 0.18);
+
+  --card-shadow: 0 14px 34px rgba(2, 6, 23, 0.45);
+  --hero-glow: 0 0 26px rgba(139, 92, 246, 0.45);
+  --card-glow: 0 0 25px rgba(139, 92, 246, 0.4);
+  --nav-bg: rgba(2, 6, 23, 0.62);
+
+  --mesh-left: rgba(139, 92, 246, 0.05);
+  --mesh-right: rgba(139, 92, 246, 0.15);
+  --mesh-base: #020617;
+  --mesh-mid: #020617;
+  --mesh-end: #020617;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Space Grotesk', sans-serif;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition:
+    background-color 300ms ease,
+    color 300ms ease;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.app-shell {
+  background: var(--bg);
+  color: var(--text);
+}
+
+.mesh-bg {
+  background:
+    radial-gradient(circle at 14% 24%, var(--mesh-left), transparent 34%),
+    radial-gradient(circle at 80% 20%, var(--mesh-right), transparent 38%),
+    linear-gradient(165deg, var(--mesh-base) 0%, var(--mesh-mid) 45%, var(--mesh-end) 100%);
+  filter: saturate(1.05);
+  transition: background 300ms ease;
+}
+
+.primary-gradient-bg {
+  background-image: var(--primary);
+}
+
+.primary-gradient-text {
+  background-image: var(--primary);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.surface-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: var(--card-shadow);
+}
+
+.soft-pill {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border: 1px solid var(--border);
+}
+
+.success-pill {
+  background: var(--success-soft);
+  color: var(--success);
+  border: 1px solid var(--border);
+}
+
+.theme-toggle-btn {
+  background: color-mix(in srgb, var(--card) 74%, transparent);
+  border: 1px solid var(--border);
+  color: var(--text);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--card-shadow);
+}
+
+.icon-soft {
+  color: var(--accent);
+  background: var(--accent-soft);
+  border: 1px solid var(--border);
+}
+
+.font-display {
+  font-family: 'Sora', sans-serif;
+}
