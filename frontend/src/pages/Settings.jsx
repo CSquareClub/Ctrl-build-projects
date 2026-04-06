@@ -1,195 +1,316 @@
-import React, { useState, useEffect } from "react";
+import { useState } from "react";
 
 export default function Settings() {
-  const [settings, setSettings] = useState({
-    projectName: "My Project",
-    autoAnalyze: true,
-    priorityThreshold: "medium",
-    language: "en",
-    theme: "dark",
-  });
-
-  // Load settings from localStorage on mount
-  useEffect(() => {
-    const savedSettings = localStorage.getItem('appSettings');
-    if (savedSettings) {
-      try {
-        setSettings(JSON.parse(savedSettings));
-      } catch (error) {
-        console.error('Error loading settings:', error);
-      }
-    }
-  }, []);
-
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setSettings((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value,
-    }));
-  };
-
-  const handleSave = () => {
-    localStorage.setItem('appSettings', JSON.stringify(settings));
-    alert("Settings saved successfully!");
-  };
+  const [activeTab, setActiveTab] = useState("general");
+  const [showPassword, setShowPassword] = useState(false);
+  const [similarityThreshold, setSimilarityThreshold] = useState(72);
+  const [autoLabeling, setAutoLabeling] = useState(true);
+  const [spamDetection, setSpamDetection] = useState(true);
+  const [webhookIntegration, setWebhookIntegration] = useState(false);
+  const [showToasts, setShowToasts] = useState(true);
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <header className="mb-10">
-        <h1 className="text-4xl font-headline font-bold tracking-tight text-on-background mb-2">
-          Settings & Configuration
-        </h1>
-        <p className="text-outline font-body">
-          Customize your OpenIssue analyzer experience.
-        </p>
-      </header>
-
-      {/* General Settings */}
-      <section className="bg-surface-container-low p-8 rounded-xl border border-outline-variant/20 space-y-6">
-        <div className="flex items-center gap-4 mb-6">
-          <span className="material-symbols-outlined text-primary text-2xl">settings</span>
-          <h2 className="font-label text-xs uppercase tracking-[0.2em] text-primary">General Settings</h2>
-          <div className="h-[1px] flex-1 bg-outline-variant/20"></div>
-        </div>
-
-        {/* Project Name */}
-        <div className="space-y-2">
-          <label className="block font-label text-[10px] uppercase text-outline">Project Name</label>
-          <input
-            type="text"
-            name="projectName"
-            value={settings.projectName}
-            onChange={handleChange}
-            className="w-full bg-surface-container-lowest border border-outline-variant/30 rounded-lg px-4 py-3 text-sm text-on-background terminal-glow outline-none transition-all font-body"
-          />
-        </div>
-
-        {/* Language */}
-        <div className="space-y-2">
-          <label className="block font-label text-[10px] uppercase text-outline">Language</label>
-          <select
-            name="language"
-            value={settings.language}
-            onChange={handleChange}
-            className="w-full bg-surface-container-lowest border border-outline-variant/30 rounded-lg px-4 py-3 text-sm text-on-background terminal-glow outline-none transition-all font-body"
-          >
-            <option value="en">English</option>
-            <option value="es">Spanish</option>
-            <option value="fr">French</option>
-            <option value="de">German</option>
-          </select>
-        </div>
-
-        {/* Theme */}
-        <div className="space-y-2">
-          <label className="block font-label text-[10px] uppercase text-outline">Theme</label>
-          <select
-            name="theme"
-            value={settings.theme}
-            onChange={handleChange}
-            className="w-full bg-surface-container-lowest border border-outline-variant/30 rounded-lg px-4 py-3 text-sm text-on-background terminal-glow outline-none transition-all font-body"
-          >
-            <option value="dark">Dark (Material Design)</option>
-            <option value="light">Light</option>
-            <option value="auto">Auto</option>
-          </select>
-        </div>
-      </section>
-
-      {/* Analysis Settings */}
-      <section className="bg-surface-container-low p-8 rounded-xl border border-outline-variant/20 space-y-6">
-        <div className="flex items-center gap-4 mb-6">
-          <span className="material-symbols-outlined text-primary text-2xl">analytics</span>
-          <h2 className="font-label text-xs uppercase tracking-[0.2em] text-primary">Analysis Settings</h2>
-          <div className="h-[1px] flex-1 bg-outline-variant/20"></div>
-        </div>
-
-        {/* Auto Analyze */}
-        <label className="flex items-center gap-4 cursor-pointer p-4 rounded-lg hover:bg-surface-container-highest/50 transition-colors group">
-          <input
-            type="checkbox"
-            name="autoAnalyze"
-            checked={settings.autoAnalyze}
-            onChange={handleChange}
-            className="w-5 h-5 accent-primary cursor-pointer"
-          />
-          <div className="flex-1">
-            <p className="font-label text-sm text-on-background">Auto-analyze on submit</p>
-            <p className="text-outline text-xs">Automatically analyze issues as they are submitted</p>
+    <div className="flex pt-[52px] min-h-screen">
+      {/* Settings SideNavBar */}
+      <aside className="fixed left-0 top-[52px] h-[calc(100vh-52px)] w-[220px] bg-[#0b0e14] border-r border-white/5 flex flex-col py-8 px-4 z-40">
+        <div className="mb-8">
+          <div className="flex items-center gap-3 px-2 mb-6">
+            <div className="w-8 h-8 bg-surface-container-high rounded flex items-center justify-center">
+              <span className="material-symbols-outlined text-violet-500">settings</span>
+            </div>
+            <div>
+              <div className="text-white font-bold font-headline">Settings</div>
+              <div className="font-mono text-[10px] uppercase tracking-widest text-slate-500">Workspace</div>
+            </div>
           </div>
-          <span className="material-symbols-outlined text-primary text-lg opacity-0 group-hover:opacity-100 transition-opacity">
-            {settings.autoAnalyze ? "check_circle" : "radio_button_unchecked"}
-          </span>
-        </label>
-
-        {/* Priority Threshold */}
-        <div className="space-y-2">
-          <label className="block font-label text-[10px] uppercase text-outline">Priority Threshold</label>
-          <select
-            name="priorityThreshold"
-            value={settings.priorityThreshold}
-            onChange={handleChange}
-            className="w-full bg-surface-container-lowest border border-outline-variant/30 rounded-lg px-4 py-3 text-sm text-on-background terminal-glow outline-none transition-all font-body"
+          <nav className="space-y-1">
+            <button
+              onClick={() => setActiveTab("general")}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-md transition-all ${
+                activeTab === "general"
+                  ? "text-white bg-violet-500/10 border-l-2 border-violet-500"
+                  : "text-slate-500 hover:text-violet-400 hover:bg-white/5"
+              }`}
+            >
+              <span className="material-symbols-outlined text-violet-400">tune</span>
+              <span className="font-mono text-xs uppercase tracking-widest">General</span>
+            </button>
+            <button
+              onClick={() => setActiveTab("ai")}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-md transition-all ${
+                activeTab === "ai"
+                  ? "text-white bg-violet-500/10 border-l-2 border-violet-500"
+                  : "text-slate-500 hover:text-violet-400 hover:bg-white/5"
+              }`}
+            >
+              <span className="material-symbols-outlined">psychology</span>
+              <span className="font-mono text-xs uppercase tracking-widest">AI Config</span>
+            </button>
+            <button
+              onClick={() => setActiveTab("integrations")}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-md transition-all ${
+                activeTab === "integrations"
+                  ? "text-white bg-violet-500/10 border-l-2 border-violet-500"
+                  : "text-slate-500 hover:text-violet-400 hover:bg-white/5"
+              }`}
+            >
+              <span className="material-symbols-outlined">hub</span>
+              <span className="font-mono text-xs uppercase tracking-widest">Integrations</span>
+            </button>
+            <button
+              onClick={() => setActiveTab("danger")}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-md transition-all ${
+                activeTab === "danger"
+                  ? "text-red-400 bg-red-500/10 border-l-2 border-red-500"
+                  : "text-red-400/60 hover:text-red-400 hover:bg-red-500/5"
+              }`}
+            >
+              <span className="material-symbols-outlined">dangerous</span>
+              <span className="font-mono text-xs uppercase tracking-widest">Danger Zone</span>
+            </button>
+          </nav>
+        </div>
+        <div className="mt-auto border-t border-white/5 pt-6 space-y-1">
+          <a
+            href="#"
+            className="flex items-center gap-3 px-3 py-2 text-slate-500 hover:text-violet-400 transition-all"
           >
-            <option value="low">Low</option>
-            <option value="medium">Medium</option>
-            <option value="high">High</option>
-            <option value="critical">Critical</option>
-          </select>
+            <span className="material-symbols-outlined">description</span>
+            <span className="font-mono text-xs uppercase tracking-widest">Docs</span>
+          </a>
         </div>
-      </section>
+      </aside>
 
-      {/* API Settings */}
-      <section className="bg-surface-container-low p-8 rounded-xl border border-outline-variant/20 space-y-6">
-        <div className="flex items-center gap-4 mb-6">
-          <span className="material-symbols-outlined text-primary text-2xl">api</span>
-          <h2 className="font-label text-xs uppercase tracking-[0.2em] text-primary">API Configuration</h2>
-          <div className="h-[1px] flex-1 bg-outline-variant/20"></div>
+      {/* Main Content Canvas */}
+      <main className="ml-[220px] flex-1 px-12 py-12 max-w-5xl">
+        <header className="mb-12">
+          <h1 className="font-headline text-4xl font-bold tracking-tight text-white mb-2">Workspace Settings</h1>
+          <p className="text-on-surface-variant max-w-2xl">
+            Configure your intelligent triage environment and AI processing parameters.
+          </p>
+        </header>
+
+        <div className="grid grid-cols-1 gap-12">
+          {/* General Section */}
+          <section>
+            <div className="flex items-center gap-3 mb-6">
+              <span className="font-mono text-xs text-violet-500 font-bold uppercase tracking-[0.2em]">01</span>
+              <h2 className="font-headline text-xl font-medium text-white">General Configuration</h2>
+            </div>
+            <div className="glass-card rounded-xl p-8 space-y-6 border border-white/5">
+              <div className="grid grid-cols-2 gap-8">
+                <div className="space-y-2">
+                  <label className="font-mono text-[10px] uppercase text-slate-500 tracking-wider">Project Name</label>
+                  <input
+                    className="terminal-input w-full px-4 py-3 rounded-lg text-white font-headline"
+                    type="text"
+                    defaultValue="OpenIssue"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="font-mono text-[10px] uppercase text-slate-500 tracking-wider">
+                    Default Repository
+                  </label>
+                  <input
+                    className="terminal-input w-full px-4 py-3 rounded-lg text-white font-headline"
+                    type="text"
+                    defaultValue="open-source/openissue-core"
+                  />
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* AI Config Section */}
+          <section>
+            <div className="flex items-center gap-3 mb-6">
+              <span className="font-mono text-xs text-violet-500 font-bold uppercase tracking-[0.2em]">02</span>
+              <h2 className="font-headline text-xl font-medium text-white">AI Engine Parameters</h2>
+            </div>
+            <div className="glass-card rounded-xl p-8 space-y-10 border border-white/5">
+              {/* API Key */}
+              <div className="space-y-4">
+                <label className="font-mono text-[10px] uppercase text-slate-500 tracking-wider">
+                  Provider API Key (Anthropic)
+                </label>
+                <div className="relative">
+                  <input
+                    className="terminal-input w-full px-4 py-3 rounded-lg text-violet-300 font-mono text-sm tracking-widest"
+                    readOnly
+                    type={showPassword ? "text" : "password"}
+                    value="sk-ant-••••••••••••••••"
+                  />
+                  <button
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
+                  >
+                    <span className="material-symbols-outlined">
+                      {showPassword ? "visibility_off" : "visibility"}
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Model & Threshold */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                <div className="space-y-4">
+                  <label className="font-mono text-[10px] uppercase text-slate-500 tracking-wider">
+                    Embedding Model
+                  </label>
+                  <div className="relative">
+                    <select className="terminal-input w-full px-4 py-3 rounded-lg text-white appearance-none cursor-pointer">
+                      <option>text-embedding-3-small</option>
+                      <option>text-embedding-3-large</option>
+                      <option>ada-v2</option>
+                    </select>
+                    <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
+                      expand_more
+                    </span>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <label className="font-mono text-[10px] uppercase text-slate-500 tracking-wider">
+                      Similarity Threshold
+                    </label>
+                    <span className="px-2 py-0.5 bg-violet-500/20 text-violet-400 text-[10px] font-bold rounded border border-violet-500/30">
+                      {similarityThreshold}%
+                    </span>
+                  </div>
+                  <input
+                    className="w-full h-1.5 bg-surface-container-highest rounded-lg appearance-none cursor-pointer accent-violet-500"
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={similarityThreshold}
+                    onChange={(e) => setSimilarityThreshold(e.target.value)}
+                  />
+                  <div className="flex justify-between text-[9px] text-slate-600 font-mono">
+                    <span>LOOSE</span>
+                    <span>EXACT</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Toggles Grid */}
+              <div className="grid grid-cols-1 gap-4 pt-4">
+                {/* Toggle Item */}
+                <div className="flex items-center justify-between p-4 rounded-lg bg-white/5 border border-white/5">
+                  <div>
+                    <h4 className="text-sm font-medium text-white">Auto-labeling Engine</h4>
+                    <p className="text-xs text-slate-500">
+                      Automatically categorize incoming issues using vector similarity.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setAutoLabeling(!autoLabeling)}
+                    className="relative inline-flex items-center cursor-pointer"
+                  >
+                    <div className={`w-10 h-5 rounded-full ${autoLabeling ? "bg-violet-600" : "bg-slate-700"}`}></div>
+                    <div
+                      className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${
+                        autoLabeling ? "left-6" : "left-0.5"
+                      }`}
+                    ></div>
+                  </button>
+                </div>
+
+                {/* Toggle Item */}
+                <div className="flex items-center justify-between p-4 rounded-lg bg-white/5 border border-white/5">
+                  <div>
+                    <h4 className="text-sm font-medium text-white">Spam Detection</h4>
+                    <p className="text-xs text-slate-500">
+                      Filter out low-quality reports and duplicate bot messages.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setSpamDetection(!spamDetection)}
+                    className="relative inline-flex items-center cursor-pointer"
+                  >
+                    <div className={`w-10 h-5 rounded-full ${spamDetection ? "bg-violet-600" : "bg-slate-700"}`}></div>
+                    <div
+                      className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${
+                        spamDetection ? "left-6" : "left-0.5"
+                      }`}
+                    ></div>
+                  </button>
+                </div>
+
+                {/* Toggle Item (OFF) */}
+                <div className="flex items-center justify-between p-4 rounded-lg bg-white/5 border border-white/5 opacity-80">
+                  <div>
+                    <h4 className="text-sm font-medium text-white">Webhook Bot Integration</h4>
+                    <p className="text-xs text-slate-500">
+                      Post triage results directly to configured repository webhooks.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setWebhookIntegration(!webhookIntegration)}
+                    className="relative inline-flex items-center cursor-pointer"
+                  >
+                    <div
+                      className={`w-10 h-5 rounded-full ${webhookIntegration ? "bg-violet-600" : "bg-slate-700"}`}
+                    ></div>
+                    <div
+                      className={`absolute top-0.5 w-4 h-4 rounded-full transition-all ${
+                        webhookIntegration ? "left-6 bg-white" : "left-0.5 bg-slate-400"
+                      }`}
+                    ></div>
+                  </button>
+                </div>
+              </div>
+
+              <div className="pt-4">
+                <button
+                  onClick={() => setShowToasts(true)}
+                  className="w-full py-4 bg-violet-600 hover:bg-violet-500 text-white font-bold rounded-lg shadow-[0_0_20px_rgba(124,58,237,0.3)] transition-all hover:scale-[1.01] active:scale-95 font-headline text-sm tracking-wider"
+                >
+                  Save Configuration
+                </button>
+              </div>
+            </div>
+          </section>
+
+          {/* Danger Zone Section */}
+          <section>
+            <div className="flex items-center gap-3 mb-6">
+              <span className="font-mono text-xs text-red-500 font-bold uppercase tracking-[0.2em]">03</span>
+              <h2 className="font-headline text-xl font-medium text-white">System Destructive Actions</h2>
+            </div>
+            <div className="bg-red-500/5 rounded-xl p-8 border border-red-500/20">
+              <h3 className="font-mono text-sm text-red-500 font-bold uppercase tracking-widest mb-4">Danger Zone</h3>
+              <div className="flex flex-col md:flex-row gap-4">
+                <button className="flex-1 px-6 py-3 border border-red-500/30 text-red-400 hover:bg-red-500/10 rounded-lg font-headline text-sm font-medium transition-all">
+                  Clear Vector Embeddings
+                </button>
+                <button className="flex-1 px-6 py-3 border border-red-500/30 text-red-400 hover:bg-red-500/10 rounded-lg font-headline text-sm font-medium transition-all">
+                  Reset All Workspace Data
+                </button>
+              </div>
+              <p className="mt-4 text-xs text-red-400/60 text-center">
+                These actions are irreversible. Please proceed with extreme caution.
+              </p>
+            </div>
+          </section>
         </div>
+      </main>
 
-        <div className="bg-surface-container-lowest p-4 rounded-lg border border-outline-variant/20">
-          <p className="text-outline text-xs uppercase font-label mb-2">Backend URL</p>
-          <p className="font-monospace text-sm text-primary">http://localhost:5000</p>
+      {/* Floating Toasts Container */}
+      {showToasts && (
+        <div className="fixed bottom-6 right-6 z-[100] flex flex-col gap-3 pointer-events-none">
+          {/* Success Toast */}
+          <div className="glass-card w-[320px] rounded-lg border-l-4 border-violet-500 p-4 shadow-2xl pointer-events-auto flex gap-4 animate-in slide-in-from-right duration-300">
+            <span className="material-symbols-outlined text-violet-400">check_circle</span>
+            <div className="flex-1">
+              <div className="text-sm font-bold text-white font-headline">Success</div>
+              <div className="text-xs text-slate-400">Configuration saved successfully.</div>
+            </div>
+            <button onClick={() => setShowToasts(false)} className="text-slate-600 hover:text-white">
+              <span className="material-symbols-outlined text-sm">close</span>
+            </button>
+          </div>
         </div>
-
-        <div className="bg-surface-container-lowest p-4 rounded-lg border border-outline-variant/20">
-          <p className="text-outline text-xs uppercase font-label mb-2">API Version</p>
-          <p className="font-monospace text-sm text-primary">v1.0.0</p>
-        </div>
-      </section>
-
-      {/* Danger Zone */}
-      <section className="bg-surface-container-low p-8 rounded-xl border border-error/20 space-y-6">
-        <div className="flex items-center gap-4 mb-6">
-          <span className="material-symbols-outlined text-error text-2xl">warning</span>
-          <h2 className="font-label text-xs uppercase tracking-[0.2em] text-error">Danger Zone</h2>
-          <div className="h-[1px] flex-1 bg-outline-variant/20"></div>
-        </div>
-
-        <button className="w-full bg-error/10 border border-error/30 text-error hover:bg-error/20 font-label uppercase py-3 rounded-lg font-bold text-xs tracking-widest transition-all">
-          Clear All Data
-        </button>
-
-        <button className="w-full bg-error/10 border border-error/30 text-error hover:bg-error/20 font-label uppercase py-3 rounded-lg font-bold text-xs tracking-widest transition-all">
-          Reset to Defaults
-        </button>
-      </section>
-
-      {/* Save Button */}
-      <div className="flex gap-4 pt-4">
-        <button
-          onClick={handleSave}
-          className="flex-1 bg-gradient-to-br from-primary to-primary-container text-on-primary-container font-label uppercase py-4 rounded-xl font-bold text-sm tracking-widest shadow-xl shadow-primary/5 hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-        >
-          <span className="material-symbols-outlined">save</span>
-          Save Changes
-        </button>
-        <button className="flex-1 bg-surface-container border border-outline-variant/30 text-on-background hover:bg-surface-container-highest font-label uppercase py-4 rounded-xl font-bold text-sm tracking-widest transition-all">
-          Cancel
-        </button>
-      </div>
+      )}
     </div>
   );
 }
