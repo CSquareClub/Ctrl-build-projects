@@ -79,6 +79,13 @@ export default function Home() {
     setError(null);
     setRepoData(null);
     setRepoOwner(null);
+    // clear stale data immediately so old repo's data doesn't linger
+    setCommitsData([]);
+    setPullRequestsData([]);
+    setIssuesData([]);
+    setCommitsError(null);
+    setPrsError(null);
+    setIssuesError(null);
     try {
       const parsed = parseRepoLink(input);
       if (!parsed) throw new Error('Invalid format. Use "owner/repo" or full GitHub URL');
@@ -125,12 +132,20 @@ export default function Home() {
 
     const headers = authHeaders();
 
-    const [commitsRes, prsRes, issuesRes] = await Promise.all([
-      fetch(`https://api.github.com/repos/${owner}/${repo}/commits?per_page=25`, { headers }),
-      fetch(`https://api.github.com/repos/${owner}/${repo}/pulls?state=all&per_page=30`, { headers }),
-      fetch(`https://api.github.com/repos/${owner}/${repo}/issues?state=all&per_page=50`, { headers }),
+    // Fetch open and closed separately so both tabs always have data
+    const [
+      commitsRes,
+      prsOpenRes, prsClosedRes,
+      issuesOpenRes, issuesClosedRes,
+    ] = await Promise.all([
+      fetch(`https://api.github.com/repos/${owner}/${repo}/commits?per_page=30`, { headers }),
+      fetch(`https://api.github.com/repos/${owner}/${repo}/pulls?state=open&per_page=30`, { headers }),
+      fetch(`https://api.github.com/repos/${owner}/${repo}/pulls?state=closed&per_page=30`, { headers }),
+      fetch(`https://api.github.com/repos/${owner}/${repo}/issues?state=open&per_page=30`, { headers }),
+      fetch(`https://api.github.com/repos/${owner}/${repo}/issues?state=closed&per_page=30`, { headers }),
     ]);
 
+    // Commits
     if (commitsRes.ok) {
       const json = await commitsRes.json();
       setCommitsData(
@@ -146,10 +161,13 @@ export default function Home() {
       setCommitsError(await parseApiError(commitsRes));
     }
 
-    if (prsRes.ok) {
-      const json = await prsRes.json();
+    // Pull Requests — merge open + closed
+    const prsOk = prsOpenRes.ok || prsClosedRes.ok;
+    if (prsOk) {
+      const openPRs   = prsOpenRes.ok   ? await prsOpenRes.json()   : [];
+      const closedPRs = prsClosedRes.ok ? await prsClosedRes.json() : [];
       setPullRequestsData(
-        json.map((pr) => ({
+        [...openPRs, ...closedPRs].map((pr) => ({
           id: pr.id,
           title: pr.title,
           state: pr.state,
@@ -157,15 +175,20 @@ export default function Home() {
           createdAt: timeAgo(pr.created_at),
         }))
       );
+      if (!prsOpenRes.ok)   setPrsError(await parseApiError(prsOpenRes));
+      if (!prsClosedRes.ok) setPrsError(await parseApiError(prsClosedRes));
     } else {
       setPullRequestsData([]);
-      setPrsError(await parseApiError(prsRes));
+      setPrsError(await parseApiError(prsOpenRes));
     }
 
-    if (issuesRes.ok) {
-      const json = await issuesRes.json();
+    // Issues — merge open + closed, exclude PRs
+    const issuesOk = issuesOpenRes.ok || issuesClosedRes.ok;
+    if (issuesOk) {
+      const openIssues   = issuesOpenRes.ok   ? await issuesOpenRes.json()   : [];
+      const closedIssues = issuesClosedRes.ok ? await issuesClosedRes.json() : [];
       setIssuesData(
-        json
+        [...openIssues, ...closedIssues]
           .filter((issue) => !issue.pull_request)
           .map((issue) => ({
             id: issue.id,
@@ -175,9 +198,11 @@ export default function Home() {
             createdAt: timeAgo(issue.created_at),
           }))
       );
+      if (!issuesOpenRes.ok)   setIssuesError(await parseApiError(issuesOpenRes));
+      if (!issuesClosedRes.ok) setIssuesError(await parseApiError(issuesClosedRes));
     } else {
       setIssuesData([]);
-      setIssuesError(await parseApiError(issuesRes));
+      setIssuesError(await parseApiError(issuesOpenRes));
     }
 
     setExtrasLoading(false);
