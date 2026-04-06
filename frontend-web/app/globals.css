@@ -1,0 +1,90 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-inter, system-ui, sans-serif);
+  --font-mono: var(--font-space-mono, monospace);
+  --color-slate-950: #020617;
+}
+
+@layer base {
+  :root {
+    --glow-green: 0 0 40px rgba(74, 222, 128, 0.4), 0 0 80px rgba(74, 222, 128, 0.15);
+    --glow-red: 0 0 40px rgba(239, 68, 68, 0.5), 0 0 80px rgba(239, 68, 68, 0.2);
+    --glow-yellow: 0 0 40px rgba(234, 179, 8, 0.4), 0 0 80px rgba(234, 179, 8, 0.15);
+    --glow-purple: 0 0 40px rgba(168, 85, 247, 0.4), 0 0 80px rgba(168, 85, 247, 0.15);
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html,
+  body {
+    height: 100%;
+    overflow-x: hidden;
+  }
+
+  body {
+    background-color: #020617;
+    color: white;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.1);
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(255,255,255,0.2);
+  }
+}
+
+@layer utilities {
+  .glass {
+    background: rgba(255, 255, 255, 0.04);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .glass-hover:hover {
+    background: rgba(255, 255, 255, 0.07) !important;
+    border-color: rgba(255, 255, 255, 0.15) !important;
+  }
+
+  .glow-green  { box-shadow: var(--glow-green); }
+  .glow-red    { box-shadow: var(--glow-red); }
+  .glow-yellow { box-shadow: var(--glow-yellow); }
+  .glow-purple { box-shadow: var(--glow-purple); }
+
+  .text-glow-green { text-shadow: 0 0 20px rgba(74, 222, 128, 0.8); }
+  .text-glow-red   { text-shadow: 0 0 20px rgba(239, 68, 68, 0.9); }
+
+  .animate-breathe   { animation: breathe 3s ease-in-out infinite; }
+  .animate-spin-slow { animation: spin-slow 4s linear infinite; }
+  .animate-float     { animation: float-y 3s ease-in-out infinite; }
+  .animate-pulse-ring { animation: pulse-ring 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite; }
+}
+
+/* Keyframes */
+@keyframes breathe {
+  0%, 100% { transform: scale(1); opacity: 0.6; }
+  50%       { transform: scale(1.08); opacity: 1; }
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes float-y {
+  0%, 100% { transform: translateY(0px); }
+  50%      { transform: translateY(-8px); }
+}
+
+@keyframes pulse-ring {
+  0%   { transform: scale(0.8); opacity: 1; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
