@@ -1,0 +1,42 @@
+body{
+font-family:'DM Sans',sans-serif;
+background:#faf7f2;
+color:#1a1510;
+padding:40px;
+}
+
+h1{
+font-family:'Playfair Display',serif;
+margin-bottom:20px;
+}
+
+textarea{
+width:100%;
+height:120px;
+padding:10px;
+font-size:14px;
+border-radius:8px;
+border:1px solid #ccc;
+}
+
+button{
+background:#1a1510;
+color:white;
+border:none;
+padding:10px 20px;
+border-radius:6px;
+cursor:pointer;
+}
+
+button:hover{
+background:#3d342a;
+}
+
+#outputBody{
+margin-top:20px;
+padding:15px;
+background:white;
+border-radius:8px;
+border:1px solid #ddd;
+min-height:100px;
+}
