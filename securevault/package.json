@@ -5,7 +5,8 @@
     "crypto-js": "^4.2.0",
     "dotenv": "^17.4.1",
     "express": "^5.2.1",
-    "mongoose": "^9.4.1"
+    "mongoose": "^9.4.1",
+    "nedb": "^1.8.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"

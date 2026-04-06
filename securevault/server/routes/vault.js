@@ -2,30 +2,24 @@ const express = require('express');
 const router = express.Router();
 const Vault = require('../models/Vault');
 
-// POST /api/vault/store - Store encrypted password
 router.post('/store', async (req, res) => {
   try {
     const { userId, website, username, encryptedPassword } = req.body;
-
-    const entry = new Vault({
-      userId,
-      website,
-      username,
-      encryptedPassword
+    Vault.save({ userId, website, username, encryptedPassword }, (err, doc) => {
+      if (err) return res.status(500).json({ success: false, error: err.message });
+      res.json({ success: true, message: 'Password stored successfully' });
     });
-
-    await entry.save();
-    res.json({ success: true, message: 'Password stored successfully' });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// GET /api/vault/retrieve/:userId - Retrieve all passwords for a user
 router.get('/retrieve/:userId', async (req, res) => {
   try {
-    const entries = await Vault.find({ userId: req.params.userId });
-    res.json({ success: true, data: entries });
+    Vault.find({ userId: req.params.userId }, (err, docs) => {
+      if (err) return res.status(500).json({ success: false, error: err.message });
+      res.json({ success: true, data: docs });
+    });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
