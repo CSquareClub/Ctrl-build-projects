@@ -1,0 +1,31 @@
+# Frontend dependencies
+frontend/node_modules/
+frontend/.DS_Store
+frontend/*.log
+frontend/dist/
+
+# Backend
+backend/__pycache__/
+backend/*.pyc
+backend/venv/
+backend/.venv/
+backend/.env
+backend/*.egg-info/
+backend/dist/
+backend/build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Environment
+.env.local
+.env.*.local

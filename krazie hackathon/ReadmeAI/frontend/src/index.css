@@ -1,0 +1,60 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: #020617;
+  color: #e2e8f0;
+  font-family: 'Inter', 'Poppins', sans-serif;
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-gradient-to-r from-sky via-purple to-pink text-white font-semibold py-3 px-8 rounded-2xl shadow-xl transition-all duration-300 hover:scale-105 hover:shadow-glow-blue active:scale-95 focus:outline-none focus:ring-2 focus:ring-sky/40;
+    backdrop-filter: blur(6px);
+  }
+
+  .btn-secondary {
+    @apply bg-glass text-sky border border-sky/30 font-semibold py-2 px-6 rounded-xl shadow-md transition-all duration-300 hover:bg-card/80 hover:shadow-glow-purple active:scale-95 focus:outline-none focus:ring-2 focus:ring-purple/30;
+    backdrop-filter: blur(6px);
+  }
+
+  .card-base {
+    @apply bg-glass border border-slate-700/40 rounded-2xl shadow-xl backdrop-blur-lg transition-all duration-300;
+  }
+
+  .input-base {
+    @apply w-full bg-glass border border-sky/20 rounded-xl py-3 px-4 text-white placeholder-slate-400 focus:outline-none focus:border-sky/50 focus:ring-2 focus:ring-sky/20 transition-all duration-300 shadow-inner;
+    backdrop-filter: blur(4px);
+  }
+
+  .tab-btn {
+    @apply px-5 py-2 rounded-xl font-medium transition-all duration-200 bg-transparent border border-transparent hover:bg-sky/10 hover:border-sky/30 text-slate-300 hover:text-sky focus:outline-none focus:ring-2 focus:ring-sky/30;
+  }
+
+  .tab-btn-active {
+    @apply bg-gradient-to-r from-sky to-purple text-white border-sky/40 shadow-glow-blue;
+  }
+
+  .gradient-text {
+    @apply bg-gradient-to-r from-sky via-purple to-pink bg-clip-text text-transparent;
+  }
+
+  .glass {
+    @apply bg-glass backdrop-blur-lg;
+  }
+
+  .animate-fade-in {
+    @apply animate-fade-in;
+  }
+}
