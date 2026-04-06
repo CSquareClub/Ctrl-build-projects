@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { BookMarked, Star, Users, Bell, Settings, GitBranch, KeyRound, Eye, EyeOff, Check, X } from 'lucide-react';
 
 export default function Navbar({ onTokenChange }) {
@@ -129,12 +129,6 @@ export default function Navbar({ onTokenChange }) {
         </p>
       </div>
 
-      {/* Sign out */}
-      <div className="p-3 border-t border-terminal-border">
-        <button className="w-full border border-terminal-border text-terminal-muted hover:border-terminal-text hover:text-terminal-text text-xs py-2 rounded font-mono transition">
-          [ sign_out ]
-        </button>
-      </div>
     </aside>
   );
 }
