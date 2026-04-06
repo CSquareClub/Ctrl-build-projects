@@ -658,6 +658,7 @@ let totalSeconds=45*60;
 let chatHistory=[];
 let timerInterval=null;
 let blockedCount=12;
+let lastPlanText='';
 
 function goTo(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
@@ -753,27 +754,47 @@ function generatePlan(topic){
 }
 
 function startSessionFromPlan(){
-  function startSessionFromPlan() {
-  startWebcam(); // ← ADD THIS LINE at the top
-  // ... rest of your existing code unchanged
-}
-  switchTab('room',document.querySelectorAll('.nav-tab')[1]);
-  document.querySelectorAll('.nav-tab')[1].classList.add('active');
-  document.querySelectorAll('.nav-tab')[0].classList.remove('active');
+  startWebcam();
+  timerSeconds = totalSeconds;
+  timerRunning = true;
+  startTimerLoop();
+  const roomTab = document.querySelectorAll('.nav-tab')[1];
+  if (roomTab) switchTab('room', roomTab);
   document.getElementById('session-badge').style.display='flex';
-  const feed=document.getElementById('activity-feed');
-  const a=document.createElement('div');
-  a.className='alert alert-success';
-  a.textContent='🚀 New session started from your AI plan!';
+  const feed = document.getElementById('activity-feed');
+  const a = document.createElement('div');
+  a.className = 'alert alert-success';
+  a.textContent = '🚀 New session started from your AI plan!';
   feed.prepend(a);
 }
 
 function exportPlan(){
-  const a=document.createElement('div');
-  a.className='alert alert-info';
-  a.textContent='📤 Plan copied to clipboard!';
-  document.getElementById('plan-card').prepend(a);
-  setTimeout(()=>a.remove(),2500);
+  if(!lastPlanText){
+    lastPlanText = 'Your study plan is ready! Open the AI Planner to generate a plan first.';
+  }
+  const copyText = lastPlanText;
+  if(navigator.clipboard && window.isSecureContext){
+    navigator.clipboard.writeText(copyText).then(()=>{
+      showTemporaryAlert('📤 Plan copied to clipboard!', 'info');
+    });
+  } else {
+    const textarea = document.createElement('textarea');
+    textarea.value = copyText;
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    textarea.remove();
+    showTemporaryAlert('📤 Plan copied to clipboard!', 'info');
+  }
+}
+
+function showTemporaryAlert(message, type){
+  const container = document.createElement('div');
+  container.className = 'alert alert-' + (type || 'info');
+  container.textContent = message;
+  container.style.cssText='position:fixed;top:80px;right:20px;z-index:9999;padding:12px 20px;border-radius:10px';
+  document.body.appendChild(container);
+  setTimeout(()=>container.remove(),2500);
 }
 
 // TIMER
@@ -798,6 +819,41 @@ function updateTimerDisplay(){
     const dashLen=515;
     circ.setAttribute('stroke-dashoffset',Math.round(dashLen*pct));
   }
+
+  const phaseLabel = getTimerPhase(timerSeconds);
+  document.getElementById('timer-phase-label').textContent = phaseLabel.label;
+  document.getElementById('phase-bar').innerHTML = phaseLabel.barHTML;
+}
+
+function getTimerPhase(seconds){
+  if(seconds > 40*60){
+    return {
+      label:'WARM-UP',
+      barHTML:'<div style="height:4px;width:100%;background:var(--accent);border-radius:2px"></div>'
+    };
+  }
+  if(seconds > 25*60){
+    return {
+      label:'DEEP FOCUS 1',
+      barHTML:'<div style="height:4px;width:60%;background:var(--accent);border-radius:2px"></div><div style="height:4px;width:20%;background:var(--bg4);border-radius:2px"></div><div style="height:4px;width:20%;background:var(--bg4);border-radius:2px"></div>'
+    };
+  }
+  if(seconds > 20*60){
+    return {
+      label:'BREAK',
+      barHTML:'<div style="height:4px;width:40%;background:var(--bg4);border-radius:2px"></div><div style="height:4px;width:40%;background:var(--accent4);border-radius:2px"></div><div style="height:4px;width:20%;background:var(--bg4);border-radius:2px"></div>'
+    };
+  }
+  if(seconds > 5*60){
+    return {
+      label:'DEEP FOCUS 2',
+      barHTML:'<div style="height:4px;width:20%;background:var(--bg4);border-radius:2px"></div><div style="height:4px;width:60%;background:var(--accent3);border-radius:2px"></div><div style="height:4px;width:20%;background:var(--bg4);border-radius:2px"></div>'
+    };
+  }
+  return {
+    label:'REVIEW',
+    barHTML:'<div style="height:4px;width:20%;background:var(--bg4);border-radius:2px"></div><div style="height:4px;width:20%;background:var(--bg4);border-radius:2px"></div><div style="height:4px;width:60%;background:var(--accent);border-radius:2px"></div>'
+  };
 }
 
 function toggleTimer(){
@@ -918,21 +974,20 @@ function switchAnalytics(period,el){
 }
 
 function copyCode(){
-  const a=document.createElement('div');
-  a.className='alert alert-success';
-  a.textContent='✅ Room code SW-4472 copied!';
-  a.style.cssText='position:fixed;top:80px;right:20px;z-index:9999;padding:12px 20px;border-radius:10px';
-  document.body.appendChild(a);
-  setTimeout(()=>a.remove(),2000);
+  navigator.clipboard.writeText('SW-4472').then(()=>{
+    showTemporaryAlert('✅ Room code SW-4472 copied!', 'success');
+  }).catch(()=>{
+    showTemporaryAlert('✅ Room code copied!', 'success');
+  });
 }
 
 function inviteFriend(){
-  const a=document.createElement('div');
-  a.className='alert alert-info';
-  a.textContent='📤 Invite link copied to clipboard!';
-  a.style.cssText='position:fixed;top:80px;right:20px;z-index:9999;padding:12px 20px;border-radius:10px;background:var(--bg2);border:1px solid var(--border2)';
-  document.body.appendChild(a);
-  setTimeout(()=>a.remove(),2000);
+  const inviteUrl = window.location.origin + window.location.pathname + '?room=SW-4472';
+  navigator.clipboard.writeText(inviteUrl).then(()=>{
+    showTemporaryAlert('📤 Invite link copied to clipboard!', 'info');
+  }).catch(()=>{
+    showTemporaryAlert('📤 Invite link copied!', 'info');
+  });
 }
 
 window.onload=()=>{buildCharts();};
