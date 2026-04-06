@@ -111,6 +111,54 @@ Explicitly out of scope:
 - paid/proprietary embedding APIs
 - frontend retrieval UX changes
 
+## Execution Update (2026-04-06): Wave 2 similarity contract alignment
+
+Current goal:
+
+- align backend similar-issues candidate contract with the existing frontend issue surfaces using thin compatibility layers only
+
+Exact scope:
+
+- inspect frontend issue-related surfaces (issue list card, page orchestration, search/side shell) for where similar candidates can be consumed later
+- inspect backend triage/similarity schema currently implemented in `services/api`
+- document concrete contract mismatches between frontend expectations and backend similarity payload
+- add minimal frontend adapter/types/helpers for mapping backend similar candidates into a frontend-friendly view model without adding new UI
+- add contract-level tests using a faithfully mocked backend similarity payload
+- ensure score handling is resilient to MiniLM-driven retrieval variability (non-deterministic distribution, non-placeholder semantics)
+
+Files/components likely affected:
+
+- `frontend/lib/*` (similar-issues adapter helpers)
+- `frontend/tests/*` (contract mapping tests)
+- `frontend/docs/*` (alignment findings)
+- `PLAN.md` (scope/validation/risk update)
+
+Sequencing:
+
+1. inspect frontend issue/analysis surfaces and backend similarity schema
+2. document exact mismatch points and forward-compatible mapping
+3. implement minimal adapter utility + lightweight type guards
+4. add tests for backend-shaped payload mapping and edge cases
+5. run targeted frontend contract tests and report remaining breakages/risks
+
+Validation strategy:
+
+- run `npm run test:contract` in `frontend`
+- confirm existing issue-list contract tests still pass
+- confirm new similarity adapter tests pass against mocked backend-shaped payloads
+
+Risks / open questions:
+
+- backend similarity contract currently exists as schema (`app/schemas/triage.py`) but no public HTTP route is wired yet; adapter can only validate shape compatibility, not full end-to-end fetch path
+- frontend currently has no issue-detail/analysis panel surface to render similar candidates, so integration remains staged until UI ownership branch lands
+- MiniLM-backed scores may not match any previous placeholder/hash-derived value ranges; frontend must not treat any fixed threshold or exact score values as contract guarantees
+
+Explicitly out of scope:
+
+- building or redesigning issue detail / triage analysis UI
+- adding triage backend endpoint implementation
+- changing team-owned frontend architecture beyond compatibility helpers
+
 ## Execution Update (2026-04-06): Wave 0 backend foundation
 
 Current goal:
