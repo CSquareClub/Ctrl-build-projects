@@ -1,43 +1,60 @@
-document.getElementById("profileForm").addEventListener("submit", function(e) {
-  e.preventDefault();
+// NAVIGATION
+function goToDashboard() {
+  window.location.href = "dashboard.html";
+}
 
-  const formData = new FormData(this);
-
-  let data = {};
-  formData.forEach((value, key) => {
-    data[key] = value;
-  });
-
-  // Convert values to numbers
-  let commitment = Number(data.commitmentHours);
-  let experience = Number(data.experience);
-  let confidence = Number(data.confidence);
-
-  // Reliability Score Formula
-  let score =
-    (commitment * 0.4) +
-    (experience * 10 * 0.3) +
-    (confidence * 10 * 0.3);
-
-  score = Math.round(score);
-
-  // Display
-  document.getElementById("resultCard").classList.remove("hidden");
-  document.getElementById("score").innerText = score + "%";
-
-  // Message logic
-  let message = "";
-
-  if (score > 75) {
-    message = "🔥 Highly Reliable - Strong Teammate!";
-  } else if (score > 50) {
-    message = "⚡ Moderately Reliable - Good Potential";
-  } else {
-    message = "⚠️ Needs Improvement - Low Commitment";
-  }
-
-  document.getElementById("message").innerText = message;
-});
 function goToProfile() {
   window.location.href = "index.html";
+}
+
+function goToSearch() {
+  window.location.href = "search.html";
+}
+
+function goToTeam() {
+  window.location.href = "team.html";
+}
+
+// RELIABILITY SCORE
+function calculateScore() {
+  const exp = document.getElementById("experience").value;
+  const commit = document.getElementById("commitment").value;
+  const conf = document.getElementById("confidence").value;
+
+  const score = (commit * 0.4) + (exp * 10 * 0.3) + (conf * 10 * 0.3);
+
+  document.getElementById("result").innerText = "Score: " + score;
+}
+
+// SEARCH
+function searchHackathon() {
+  const input = document.getElementById("searchInput").value;
+  const results = document.getElementById("results");
+
+  results.innerHTML = `
+    <div class="card">
+      <h3>${input} Hackathon</h3>
+      <p>Status: Open</p>
+    </div>
+  `;
+}
+
+// TEAM GENERATION
+function generateTeam() {
+  const team = document.getElementById("teamResults");
+
+  team.innerHTML = `
+    <div class="card">
+      <h3>Frontend Dev</h3>
+      <p>Score: 85</p>
+    </div>
+    <div class="card">
+      <h3>Backend Dev</h3>
+      <p>Score: 90</p>
+    </div>
+    <div class="card">
+      <h3>Designer</h3>
+      <p>Score: 80</p>
+    </div>
+  `;
 }

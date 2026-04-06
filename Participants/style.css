@@ -1,116 +1,46 @@
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  font-family: "Poppins", sans-serif;
-}
-
 body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: linear-gradient(135deg, #00c6ff, #0072ff);
   height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
 }
 
-/* Gradient Background */
-.bg {
-  position: fixed;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(135deg, #1e3c72, #2a5298, #ff7e5f);
-  z-index: -1;
-}
-
-/* Glass Card */
-.container {
-  width: 420px;
-  padding: 25px;
-  border-radius: 15px;
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(15px);
-  color: white;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-}
-
-.container h2 {
+/* CENTER CONTAINERS */
+.container, .dashboard, .search-container {
   text-align: center;
-  margin-bottom: 20px;
+  color: white;
+  padding-top: 50px;
 }
 
-/* Inputs */
-form input, form select {
-  width: 100%;
+/* INPUTS */
+input {
   padding: 10px;
-  margin: 8px 0;
-  border-radius: 8px;
+  border-radius: 10px;
   border: none;
-  outline: none;
+  margin: 10px;
 }
 
-/* Button */
+/* BUTTON */
 button {
-  width: 100%;
-  padding: 12px;
-  border: none;
+  padding: 10px 20px;
   border-radius: 10px;
-  background: linear-gradient(90deg, #ff7e5f, #feb47b);
+  border: none;
+  cursor: pointer;
+  background: orange;
   color: white;
   font-weight: bold;
-  cursor: pointer;
-  margin-top: 10px;
-  transition: 0.3s;
 }
 
-button:hover {
-  transform: scale(1.05);
-}
-/* Hidden initially */
-.hidden {
-  display: none;
-}
-
-/* Result Card */
-#resultCard {
-  margin-top: 20px;
-  padding: 20px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #00c9ff, #92fe9d);
-  color: black;
-  text-align: center;
-  animation: fadeIn 0.6s ease-in-out;
-}
-
-/* Animation */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-/* Dashboard Layout */
-.dashboard {
-  text-align: center;
-  color: white;
-}
-
-.dashboard h1 {
-  margin-bottom: 30px;
-}
-
-/* Cards container */
+/* CARDS */
 .cards {
   display: flex;
   justify-content: center;
   gap: 20px;
+  margin-top: 30px;
 }
 
-/* Individual card */
 .card {
-  width: 200px;
+  width: 220px;
   padding: 20px;
   border-radius: 15px;
   background: rgba(255,255,255,0.1);
@@ -119,12 +49,11 @@ button:hover {
   transition: 0.3s;
 }
 
-/* Hover animation */
 .card:hover {
   transform: translateY(-10px) scale(1.05);
 }
 
-/* Text */
-.card h3 {
-  margin-bottom: 10px;
+/* RESULTS */
+#results {
+  margin-top: 20px;
 }
