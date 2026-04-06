@@ -46,11 +46,7 @@ export function mapIssueListPayloadToCardIssues(payload, timeAgo) {
 export function buildIssueListUrl(apiBaseUrl, owner, repo) {
   const base = (apiBaseUrl || '').replace(/\/$/, '');
   const path = '/api/issues';
-  const searchParams = new URLSearchParams({ owner, repo });
-  const token = typeof window !== 'undefined' ? localStorage.getItem('gh_token') : '';
-  if (token) searchParams.set('token', token);
-
-  const search = searchParams.toString();
+  const search = new URLSearchParams({ owner, repo }).toString();
   if (!base) return `${path}?${search}`;
   return `${base}${path}?${search}`;
 }

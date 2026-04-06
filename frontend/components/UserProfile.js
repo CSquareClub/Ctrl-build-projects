@@ -1,4 +1,5 @@
 import { Building2, MapPin, Link2, Users, UserCheck } from 'lucide-react';
+import Image from 'next/image';
 
 export default function UserProfile({ user }) {
   const defaultUser = {
@@ -26,7 +27,14 @@ export default function UserProfile({ user }) {
         {/* avatar with green ring */}
         <div className="flex-shrink-0 relative">
           <div className="w-16 h-16 rounded border-2 border-terminal-text p-0.5" style={{ boxShadow: '0 0 12px rgba(34,197,94,0.3)' }}>
-            <img src={p.avatar_url} alt={p.login} className="w-full h-full rounded object-cover" />
+            <Image
+              src={p.avatar_url}
+              alt={p.login}
+              width={64}
+              height={64}
+              unoptimized
+              className="w-full h-full rounded object-cover"
+            />
           </div>
         </div>
 

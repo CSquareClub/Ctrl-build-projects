@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { CircleDot, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 
-export default function IssuesCard({ issues, error, loading }) {
+export default function IssuesCard({ issues, error, loading, onIssueSelect, selectedIssueId = null }) {
   const [filter, setFilter] = useState('open');
 
   const list = issues || [];
@@ -53,9 +53,18 @@ export default function IssuesCard({ issues, error, loading }) {
             {error}
           </div>
         ) : filtered.length > 0 ? (
-          filtered.map((issue) => (
-            <div key={issue.id}
-              className="py-2.5 border-b border-terminal-border last:border-b-0 cursor-pointer group">
+          filtered.map((issue) => {
+            const isSelected = selectedIssueId != null && String(selectedIssueId) === String(issue.id);
+
+            return (
+            <button
+              key={issue.id}
+              type="button"
+              onClick={() => onIssueSelect && onIssueSelect(issue)}
+              className={`w-full text-left py-2.5 border-b border-terminal-border last:border-b-0 group transition ${
+                isSelected ? 'bg-terminal-dim/30' : 'cursor-pointer hover:bg-terminal-dim/10'
+              }`}
+            >
               <div className="flex items-start gap-2">
                 <span className="flex-shrink-0 mt-0.5">
                   {issue.state === 'open'
@@ -69,13 +78,14 @@ export default function IssuesCard({ issues, error, loading }) {
                     <span className={`text-xs ${issue.state === 'open' ? 'text-terminal-bright' : 'text-terminal-muted'}`}>
                       [{issue.state}]
                     </span>
+                    {isSelected && <span className="text-terminal-bright text-xs">[selected]</span>}
                   </div>
                   <p className="text-terminal-text text-xs truncate group-hover:text-terminal-bright transition">{issue.title}</p>
                   <p className="text-terminal-muted text-xs mt-0.5">{issue.createdAt}</p>
                 </div>
               </div>
-            </div>
-          ))
+            </button>
+          )})
         ) : (
           <p className="text-terminal-muted text-xs pt-3">{`// no ${filter} issues`}</p>
         )}

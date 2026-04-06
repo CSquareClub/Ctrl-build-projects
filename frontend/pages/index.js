@@ -7,8 +7,9 @@ import ActivitiesCard from '../components/ActivitiesCard';
 import PullRequestsCard from '../components/PullRequestsCard';
 import IssuesCard from '../components/IssuesCard';
 import SearchModal from '../components/SearchModal';
+import AnalyzePanel from '../components/AnalyzePanel';
 import { buildIssueListUrl, mapIssueListPayloadToCardIssues } from '../lib/issueListContract';
-import { getAuthHeaders, parseApiError, parseRepoInput, timeAgo } from '../lib/repoHelpers';
+import { buildAnalyzeUrl, mapAnalyzePayload } from '../lib/analyzeContract';
 import { Star, GitFork, Eye, CircleDot, Search } from 'lucide-react';
 
 export default function Home() {
@@ -24,6 +25,10 @@ export default function Home() {
   const [prsError, setPrsError] = useState(null);
   const [issuesError, setIssuesError] = useState(null);
   const [extrasLoading, setExtrasLoading] = useState(false);
+  const [selectedIssue, setSelectedIssue] = useState(null);
+  const [analyzeLoading, setAnalyzeLoading] = useState(false);
+  const [analyzeError, setAnalyzeError] = useState(null);
+  const [analyzeData, setAnalyzeData] = useState(null);
 
   // Ctrl+K global shortcut
   useEffect(() => {
@@ -37,6 +42,45 @@ export default function Home() {
     return () => window.removeEventListener('keydown', handler);
   }, []);
 
+  const parseRepoLink = (input) => {
+    if (input.includes('github.com/')) {
+      const parts = input.split('github.com/')[1].split('/');
+      return { owner: parts[0], repo: parts[1] };
+    }
+    const parts = input.split('/');
+    if (parts.length === 2) return { owner: parts[0], repo: parts[1] };
+    return null;
+  };
+
+  const timeAgo = (iso) => {
+    try {
+      const delta = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+      if (delta < 60) return `${delta}s ago`;
+      if (delta < 3600) return `${Math.floor(delta / 60)}m ago`;
+      if (delta < 86400) return `${Math.floor(delta / 3600)}h ago`;
+      return `${Math.floor(delta / 86400)}d ago`;
+    } catch {
+      return iso;
+    }
+  };
+
+  const authHeaders = () => {
+    const token = localStorage.getItem('gh_token') || '';
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  };
+
+  const parseApiError = async (res) => {
+    try {
+      const json = await res.json();
+      if (json.message) {
+        if (json.message.toLowerCase().includes('rate limit'))
+          return 'GitHub API rate limit exceeded. Add a token in the sidebar to get 5,000 req/hr.';
+        return json.message;
+      }
+    } catch {}
+    return `Request failed (HTTP ${res.status})`;
+  };
+
   const fetchRepoData = async (input) => {
     setLoading(true);
     setError(null);
@@ -46,15 +90,19 @@ export default function Home() {
     setCommitsData([]);
     setPullRequestsData([]);
     setIssuesData([]);
+    setSelectedIssue(null);
+    setAnalyzeLoading(false);
+    setAnalyzeError(null);
+    setAnalyzeData(null);
     setCommitsError(null);
     setPrsError(null);
     setIssuesError(null);
     try {
-      const parsed = parseRepoInput(input);
+      const parsed = parseRepoLink(input);
       if (!parsed) throw new Error('Invalid format. Use "owner/repo" or full GitHub URL');
 
       const { owner, repo } = parsed;
-      const headers = getAuthHeaders();
+      const headers = authHeaders();
 
       const [repoRes, ownerRes] = await Promise.all([
         fetch(`https://api.github.com/repos/${owner}/${repo}`, { headers }),
@@ -93,7 +141,7 @@ export default function Home() {
     setPrsError(null);
     setIssuesError(null);
 
-    const headers = getAuthHeaders();
+    const headers = authHeaders();
     const backendIssuesUrl = buildIssueListUrl(process.env.NEXT_PUBLIC_API_BASE_URL, owner, repo);
 
     const [
@@ -171,6 +219,54 @@ export default function Home() {
     setExtrasLoading(false);
   };
 
+  const fetchAnalyzeData = async (issue, owner, repo) => {
+    if (!issue || !owner || !repo) return;
+
+    setAnalyzeLoading(true);
+    setAnalyzeError(null);
+    setAnalyzeData(null);
+
+    try {
+      const analyzeUrl = buildAnalyzeUrl(process.env.NEXT_PUBLIC_API_BASE_URL);
+      const token = localStorage.getItem('gh_token') || null;
+
+      const response = await fetch(analyzeUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          owner,
+          repo,
+          issue_number: issue.number,
+          token,
+          k: 5,
+          state: 'all',
+          include_pull_requests: false,
+        }),
+      });
+
+      if (!response.ok) {
+        const err = await parseApiError(response);
+        throw new Error(err);
+      }
+
+      const payload = await response.json();
+      setAnalyzeData(mapAnalyzePayload(payload));
+    } catch (err) {
+      setAnalyzeError(err.message || 'Analyze request failed');
+    } finally {
+      setAnalyzeLoading(false);
+    }
+  };
+
+  const handleIssueSelect = (issue) => {
+    setSelectedIssue(issue);
+    if (!repoData?.full_name) return;
+    const [owner, repo] = repoData.full_name.split('/');
+    fetchAnalyzeData(issue, owner, repo);
+  };
+
   return (
     <>
       <Head>
@@ -205,7 +301,7 @@ export default function Home() {
   </button>
 </div>
 
-      <main className="ml-64 bg-terminal-bg h-screen overflow-hidden flex flex-col p-6">
+      <main className="ml-64 bg-terminal-bg h-screen overflow-y-auto flex flex-col p-6">
         <div className="flex flex-col flex-1 min-h-0 max-w-7xl w-full">
 
           {error && (
@@ -246,10 +342,25 @@ export default function Home() {
                 <StatsCard title="open_issues" count={repoData.open_issues_count} icon={CircleDot} />
               </div>
 
-              <div className="grid grid-cols-3 gap-4 flex-1 min-h-0 overflow-hidden">
+              <div className="grid grid-cols-3 gap-4 flex-1 min-h-0 overflow-hidden mb-4">
                 <ActivitiesCard commits={commitsData} error={commitsError} loading={extrasLoading} />
                 <PullRequestsCard pullRequests={pullRequestsData} error={prsError} loading={extrasLoading} />
-                <IssuesCard issues={issuesData} error={issuesError} loading={extrasLoading} />
+                <IssuesCard
+                  issues={issuesData}
+                  error={issuesError}
+                  loading={extrasLoading}
+                  onIssueSelect={handleIssueSelect}
+                  selectedIssueId={selectedIssue?.id}
+                />
+              </div>
+
+              <div className="flex-shrink-0">
+                <AnalyzePanel
+                  issue={selectedIssue}
+                  analysis={analyzeData}
+                  loading={analyzeLoading}
+                  error={analyzeError}
+                />
               </div>
             </>
           )}

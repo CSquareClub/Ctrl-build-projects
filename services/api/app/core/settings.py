@@ -1,4 +1,5 @@
 from functools import lru_cache
+import json
 from typing import Optional
 
 from pydantic import Field
@@ -30,6 +31,49 @@ class Settings(BaseSettings):
         alias="OPENISSUE_GITHUB_TIMEOUT_SECONDS",
     )
     github_token: Optional[str] = Field(default=None, alias="OPENISSUE_GITHUB_TOKEN")
+
+    embedding_provider: str = Field(
+        default="minilm-local",
+        alias="OPENISSUE_EMBEDDING_PROVIDER",
+    )
+    embedding_model_name: str = Field(
+        default="sentence-transformers/all-MiniLM-L6-v2",
+        alias="OPENISSUE_EMBEDDING_MODEL_NAME",
+    )
+    embedding_vector_dim: int = Field(
+        default=256,
+        alias="OPENISSUE_EMBEDDING_VECTOR_DIM",
+    )
+
+    vector_store_provider: str = Field(
+        default="sqlite-local",
+        alias="OPENISSUE_VECTOR_STORE_PROVIDER",
+    )
+    vector_store_path: str = Field(
+        default=".openissue/openissue_vectors.db",
+        alias="OPENISSUE_VECTOR_STORE_PATH",
+    )
+
+    cors_allowed_origins_raw: str = Field(
+        default='["http://127.0.0.1:3000", "http://localhost:3000", "http://127.0.0.1:3001", "http://localhost:3001"]',
+        alias="OPENISSUE_CORS_ALLOWED_ORIGINS",
+    )
+
+    @property
+    def cors_allowed_origins(self) -> list[str]:
+        raw = (self.cors_allowed_origins_raw or "").strip()
+        if not raw:
+            return []
+
+        if raw.startswith("["):
+            try:
+                parsed = json.loads(raw)
+                if isinstance(parsed, list):
+                    return [str(item).strip() for item in parsed if str(item).strip()]
+            except json.JSONDecodeError:
+                pass
+
+        return [item.strip() for item in raw.split(",") if item.strip()]
 
 
 @lru_cache(maxsize=1)
