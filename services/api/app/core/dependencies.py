@@ -7,6 +7,7 @@ from app.embeddings.service import (
     MiniLMEmbeddingProvider,
     UnimplementedEmbeddingProvider,
 )
+from app.services.analyze import AnalyzeService
 from app.services.classification import ClassificationService
 from app.services.similar_issues import SimilarIssuesService
 from app.vectorindex.contracts import IssueVectorIndexer
@@ -57,4 +58,12 @@ def get_classification_service() -> ClassificationService:
     return ClassificationService(
         embedding_provider=get_embedding_provider(),
         vector_store=get_vector_store(),
+    )
+
+
+@lru_cache(maxsize=1)
+def get_analyze_service() -> AnalyzeService:
+    return AnalyzeService(
+        classification_service=get_classification_service(),
+        similar_issues_service=get_similar_issues_service(),
     )

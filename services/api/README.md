@@ -21,6 +21,8 @@ This folder hosts the FastAPI backend foundation for OpenIssue.
   - `POST /api/similar-issues`
 - classification + label suggestion route support:
   - `POST /api/classification`
+- unified analyze route support:
+  - `POST /api/analyze`
 - explainable Wave 3 classification + label suggestion primitives:
   - `app/triage/classification.py`
   - `ClassificationLabelingService` in `app/triage/service.py`
@@ -156,6 +158,47 @@ Neighbor evidence note:
 
 - retrieval evidence is used for label hints only
 - type classification stays lexical-first for stability and explainability
+
+## Analyze issue (Wave 4 integration)
+
+`POST /api/analyze` now returns the canonical analyze payload used by frontend contract helpers.
+
+Example request:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/analyze \
+  -H "Content-Type: application/json" \
+  -d '{
+    "owner": "vercel",
+    "repo": "next.js",
+    "k": 5,
+    "target_issue": {
+      "title": "Build crashes on Node 22",
+      "body": "Steps to reproduce: run next build on Node 22. Actual behavior: process exits with error.",
+      "labels": []
+    }
+  }'
+```
+
+Response shape uses canonical nested sections:
+
+- `predicted_type`
+- `suggested_labels`
+- `duplicate_candidates`
+- `priority`
+- `missing_information`
+- `explanation`
+
+This route does not introduce an alternate envelope; it returns `AnalyzeResponse` at the root.
+
+## Issue list query compatibility
+
+`GET /api/issues` accepts either:
+
+- `owner` + `repo` query params
+- `repo=owner/repo` (frontend-compatible shorthand)
+
+If both are omitted or malformed, the endpoint returns HTTP `422` with a clear contract error message.
 
 ## Duplicate candidate reranking (Wave 3)
 

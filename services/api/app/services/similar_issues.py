@@ -135,7 +135,9 @@ class SimilarIssuesService:
         for issue, issue_vector in zip(normalized_issues, issue_vectors):
             issue_id = str(issue.id)
             metadata = {
+                "repository": repo_key,
                 "repo": repo_key,
+                "issue_number": issue.number,
                 "number": issue.number,
                 "title": issue.title,
                 "state": issue.state,
@@ -170,7 +172,7 @@ class SimilarIssuesService:
             vector=target_vector,
             k=min(max(request.k * 4, request.k + 4), 60),
             embedding_signature=embedding_signature,
-            filters={"repo": repo_key},
+            filters={"repository": repo_key},
         )
 
         target_issue_id = str(target_issue.id)
