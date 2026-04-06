@@ -47,7 +47,7 @@
   --radius:    12px;
   --radius-sm: 8px;
   --shadow:    0 8px 32px rgba(30,8,0,0.35);
-  --trans:     0.18s ease;
+  --trans:     0.25s ease;
 
   /* Sidebar */
   --sidebar-w: 240px;
@@ -71,6 +71,7 @@ h1, h2, h3, h4 {
   font-family: 'Syne', sans-serif;
   font-weight: 700;
   letter-spacing: -0.02em;
+  animation: fadeIn 1s ease-in;
 }
 
 a { text-decoration: none; cursor: pointer; }
@@ -86,7 +87,12 @@ textarea { resize: vertical; }
 
 /* ── Pages ── */
 .page { display: none; }
-.page.active { display: flex; }
+.page.active { display: flex; animation: fadePage 0.4s ease; }
+
+@keyframes fadePage {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
 
 /* ════════════════════════════════
    AUTH BACKGROUND
@@ -311,15 +317,15 @@ select option { background: var(--bg3); color: #ffffff; }
 
 /* Buttons */
 .btn-primary {
-  background: var(--accent);
+  background: linear-gradient(135deg, #c8651a, #8b4513);
   color: #fff;
-  font-weight: 700;
+  font-weight: 600;
   font-size: 0.88rem;
   padding: 0.65rem 1.4rem;
   border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: opacity var(--trans), box-shadow var(--trans), transform var(--trans);
-  letter-spacing: 0.02em;
+  transition: all var(--trans);
+  letter-spacing: 0.5px;
   white-space: nowrap;
   display: inline-flex;
   align-items: center;
@@ -338,7 +344,7 @@ select option { background: var(--bg3); color: #ffffff; }
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
   cursor: pointer;
-  transition: border-color var(--trans), color var(--trans);
+  transition: all var(--trans);
 }
 .btn-ghost:hover { border-color: var(--border2); color: var(--text); }
 
@@ -581,7 +587,7 @@ select option { background: var(--bg3); color: #ffffff; }
 .tab { display: none; }
 .tab.active { display: block; animation: fadeIn 0.25s ease; }
 
-@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
 /* Page header */
 .page-header {
@@ -669,9 +675,10 @@ select option { background: var(--bg3); color: #ffffff; }
   margin-bottom: 1.6rem;
 }
 .stat-card {
-  background: linear-gradient(145deg, #f5ede0, #eeddd0);
+  background: rgba(245, 233, 208, 0.95);
+  backdrop-filter: blur(10px);
   border: 1px solid rgba(180,100,40,0.18);
-  border-radius: var(--radius);
+  border-radius: 16px;
   padding: 1.5rem 1.4rem;
   position: relative;
   overflow: hidden;
@@ -689,8 +696,8 @@ select option { background: var(--bg3); color: #ffffff; }
 }
 .stat-card:hover {
   border-color: rgba(200,101,26,0.35);
-  transform: translateY(-4px);
-  box-shadow: 0 12px 32px rgba(100,40,0,0.18);
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.25), 0 0 10px rgba(200,101,26,0.2);
 }
 .stat-card:hover::before { opacity: 1; }
 .stat-icon { font-size: 1.3rem; color: var(--accent); margin-bottom: 0.8rem; opacity: 0.85; }
@@ -703,9 +710,10 @@ select option { background: var(--bg3); color: #ffffff; }
   gap: 1.2rem;
 }
 .dash-card {
-  background: linear-gradient(145deg, #f5ede0, #eeddd0);
+  background: rgba(245, 233, 208, 0.95);
+  backdrop-filter: blur(10px);
   border: 1px solid rgba(180,100,40,0.18);
-  border-radius: var(--radius);
+  border-radius: 16px;
   padding: 1.4rem;
 }
 .full-span { grid-column: 1 / -1; }
@@ -829,9 +837,10 @@ select option { background: var(--bg3); color: #ffffff; }
   gap: 1rem;
 }
 .hk-card {
-  background: var(--surface);
+  background: rgba(245, 233, 208, 0.95);
+  backdrop-filter: blur(10px);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: 16px;
   padding: 1.3rem;
   display: flex;
   flex-direction: column;
@@ -839,7 +848,7 @@ select option { background: var(--bg3); color: #ffffff; }
   transition: border-color var(--trans), transform var(--trans), box-shadow var(--trans);
   cursor: default;
 }
-.hk-card:hover { border-color: var(--border2); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(30,8,0,0.2); }
+.hk-card:hover { border-color: var(--border2); transform: translateY(-6px) scale(1.02); box-shadow: 0 10px 30px rgba(0,0,0,0.25), 0 0 10px rgba(200,101,26,0.2); }
 .hk-card.registered { border-color: rgba(45,122,58,0.3); }
 
 .hk-card-top { display: flex; align-items: center; justify-content: space-between; }
@@ -916,9 +925,10 @@ select option { background: var(--bg3); color: #ffffff; }
    MY TEAM
 ════════════════════════════════ */
 .team-card {
-  background: var(--surface);
+  background: rgba(245, 233, 208, 0.95);
+  backdrop-filter: blur(10px);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: 16px;
   padding: 1.8rem;
 }
 .team-card-header {

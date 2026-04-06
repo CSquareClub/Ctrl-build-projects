@@ -4,7 +4,7 @@ const User = require("./models/User");
 
 const app = express();
 
-/* -------------------- MIDDLEWARE -------------------- */
+
 app.use(express.json());
 
 /* -------------------- TEST ROUTE -------------------- */
