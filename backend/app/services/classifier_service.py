@@ -242,17 +242,15 @@ def triage_issue(title: str, description: str) -> Dict[str, Any]:
             "priority_confidence": 0.95,
             "source": "gemini",
         }
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"[Gemini] Fallback triggered: {e}")
     
     # Heuristic fallback
     label, classification_confidence = _heuristic_classify(title, description)
     priority, priority_confidence = assign_priority(label, title, description)
     labels = _generate_labels(label, title, description)
 
-    fallback_reason = (
-        "Heuristic triage was used because Gemini API was unavailable."
-    )
+    fallback_reason = f"Classified as '{label}' with {priority} priority based on keyword analysis."
     return {
         "label": label,
         "priority": priority,
