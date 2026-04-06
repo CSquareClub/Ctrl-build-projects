@@ -1,3 +1,5 @@
+from functools import lru_cache
+
 from app.core.settings import Settings, get_settings
 from app.embeddings.contracts import EmbeddingProvider
 from app.embeddings.service import (
@@ -5,6 +7,7 @@ from app.embeddings.service import (
     MiniLMEmbeddingProvider,
     UnimplementedEmbeddingProvider,
 )
+from app.services.similar_issues import SimilarIssuesService
 from app.vectorindex.contracts import IssueVectorIndexer
 from app.vectorindex.service import DefaultIssueVectorIndexer
 from app.vectorstore.contracts import VectorStore
@@ -37,4 +40,12 @@ def get_issue_vector_indexer() -> IssueVectorIndexer:
     return DefaultIssueVectorIndexer(
         embedding_provider=embedding_provider,
         vector_store=vector_store,
+    )
+
+
+@lru_cache(maxsize=1)
+def get_similar_issues_service() -> SimilarIssuesService:
+    return SimilarIssuesService(
+        embedding_provider=get_embedding_provider(),
+        vector_store=get_vector_store(),
     )

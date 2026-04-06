@@ -39,6 +39,9 @@ class SqliteVectorStore(VectorStore):
     def provider_name(self) -> str:
         return "sqlite-local"
 
+    def index_name(self) -> str:
+        return "sqlite-cosine-v1"
+
     def _ensure_parent_dir(self) -> None:
         parent = Path(self.db_path).expanduser().resolve().parent
         parent.mkdir(parents=True, exist_ok=True)
@@ -226,6 +229,9 @@ def _metadata_matches_filters(
 
 class UnimplementedVectorStore(VectorStore):
     def provider_name(self) -> str:
+        return "unimplemented"
+
+    def index_name(self) -> str:
         return "unimplemented"
 
     def ensure_schema(self) -> None:
