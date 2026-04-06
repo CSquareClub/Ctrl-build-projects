@@ -1,5 +1,56 @@
 # PLAN.md
 
+## Execution Update (2026-04-06): Wave 2 embedding provider layer
+
+Current goal:
+
+- implement a swappable open-source embedding provider layer for backend analysis workflows
+
+Exact scope:
+
+- define a clean embedding provider abstraction with `embed_one` and `embed_many`
+- implement `BAAI/bge-small-en-v1.5` as primary provider
+- implement `sentence-transformers/all-MiniLM-L6-v2` as lightweight fallback provider
+- expose discoverable provider identity and vector dimension metadata
+- add settings/docs for local model loading and runtime expectations
+
+Files/components likely affected:
+
+- `services/api/app/embeddings/contracts.py`
+- `services/api/app/embeddings/providers.py`
+- `services/api/app/embeddings/service.py`
+- `services/api/app/embeddings/__init__.py`
+- `services/api/app/core/settings.py`
+- `services/api/requirements.txt`
+- `services/api/.env.example`
+- `services/api/README.md`
+
+Sequencing:
+
+1. inspect existing backend contracts and embedding placeholders
+2. define provider interface + concrete sentence-transformer-backed providers
+3. add provider factory + configuration wiring
+4. document runtime/setup assumptions for local development
+5. validate both providers through sample embedding calls
+
+Validation strategy:
+
+- run Python compile check on backend package
+- run a small Python command that instantiates configured provider and calls `embed_one`
+- run a small Python command that instantiates fallback provider and verifies shared contract behavior
+
+Risks / open questions:
+
+- first model load requires network download from Hugging Face and may be slow
+- local environment may not have enough RAM/CPU acceleration for fast embedding generation
+- if dependency install fails locally, runtime checks may be limited to compile-level validation
+
+Explicitly out of scope:
+
+- vector store integration details
+- duplicate detection or priority-scoring logic
+- hosted/proprietary embedding APIs
+
 ## Execution Update (2026-04-06): Wave 0 backend foundation
 
 Current goal:

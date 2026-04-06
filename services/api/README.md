@@ -16,7 +16,10 @@ This folder hosts the FastAPI backend foundation for OpenIssue.
   - `app/vectorstore`
   - `app/triage`
 
-Implementation placeholders raise `NotImplementedError` by design so later branches can add real behavior without fake completion.
+Embedding providers now support open-source local inference with:
+
+- primary: `BAAI/bge-small-en-v1.5`
+- fallback: `sentence-transformers/all-MiniLM-L6-v2`
 
 ## Quick start
 
@@ -55,3 +58,23 @@ Expected response shape:
   "environment": "development"
 }
 ```
+
+## Embeddings configuration
+
+Use `.env` to select providers:
+
+```env
+OPENISSUE_EMBEDDINGS_PROVIDER=bge-small
+OPENISSUE_EMBEDDINGS_FALLBACK_PROVIDER=minilm-l6
+```
+
+Provider keys:
+
+- `bge-small` -> `BAAI/bge-small-en-v1.5`
+- `minilm-l6` -> `sentence-transformers/all-MiniLM-L6-v2`
+
+## Runtime assumptions
+
+- first provider load downloads model files from Hugging Face and caches locally
+- local dev requires Python environment that can install `sentence-transformers` and its torch dependency
+- embedding calls are synchronous and CPU-compatible; GPU acceleration is optional
