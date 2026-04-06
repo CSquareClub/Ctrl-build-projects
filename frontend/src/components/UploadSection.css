@@ -7,8 +7,54 @@
 
 .upload-container {
   max-width: 800px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 10;
+}
+
+.jd-input-wrapper {
+  margin: 2rem 0;
+  text-align: left;
+}
+
+.jd-input-wrapper label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--accent-secondary);
+  margin-bottom: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.jd-textarea {
   width: 100%;
-  text-align: center;
+  height: 120px;
+  background: rgba(17, 24, 39, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 1.25rem;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 1rem;
+  line-height: 1.6;
+  resize: none;
+  transition: all 0.3s ease;
+  outline: none;
+}
+
+.jd-textarea:focus {
+  border-color: var(--accent-main);
+  background: rgba(17, 24, 39, 0.6);
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.25);
+}
+
+.jd-tip {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-top: 0.75rem;
+  font-style: italic;
+  opacity: 0.7;
 }
 
 .section-title {

@@ -5,6 +5,7 @@ import './UploadSection.css';
 const UploadSection = ({ onUploadComplete }) => {
   const [isDragActive, setIsDragActive] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [jobDescription, setJobDescription] = useState("We are looking for a Senior Frontend Engineer with expertize in React, CSS, and modern UI design.");
   const fileInputRef = useRef(null);
 
   const handleDragEnter = (e) => {
@@ -36,26 +37,36 @@ const UploadSection = ({ onUploadComplete }) => {
   };
 
   const handleFile = async (file) => {
+    if (!jobDescription || jobDescription.trim().length < 10) {
+      alert("Please provide a more detailed Job Description first.");
+      return;
+    }
+
     setIsUploading(true);
     
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('job_description', jobDescription);
 
     try {
-      const response = await fetch('http://10.224.213.198:8000/upload', {
+      const response = await fetch('http://10.224.213.198:8000/upload-resume', {
         method: 'POST',
         body: formData,
       });
 
-      if (!response.ok) throw new Error('Upload failed');
-      
       const data = await response.json();
+      console.log("upload response:", data);
+
+      if (!response.ok) {
+        throw new Error(data.detail || "Upload failed");
+      }
+      
       setIsUploading(false);
       onUploadComplete(data);
     } catch (error) {
       console.error('Error uploading file:', error);
       setIsUploading(false);
-      alert('Network Error: Could not connect to http://10.224.213.198:8000/upload. Verify backend is running.');
+      alert(`Backend Error: ${error.message}. Verify the server at http://10.224.213.198:8000/upload-resume is active.`);
     }
   };
 
@@ -65,6 +76,17 @@ const UploadSection = ({ onUploadComplete }) => {
         <h2 className="section-title">Initiate Analysis</h2>
         <p className="section-subtitle">Securely process resumes through our quantum-grade AI models</p>
         
+        <div className="jd-input-wrapper fade-in-up">
+            <label>Target Job Role & Description</label>
+            <textarea 
+              className="jd-textarea glass-panel"
+              placeholder="Paste the job requirements here..."
+              value={jobDescription}
+              onChange={(e) => setJobDescription(e.target.value)}
+            />
+            <p className="jd-tip">Higher detail leads to more accurate AI alignment scores</p>
+        </div>
+
         <div 
           className={`drop-zone premium-glass ${isDragActive ? 'drag-active' : ''}`}
           onDragEnter={handleDragEnter}
