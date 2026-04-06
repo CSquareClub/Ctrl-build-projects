@@ -1,859 +1,402 @@
 # PLAN.md
 
-## Project
+## Execution Update (2026-04-06): Wave 0 backend foundation
 
-OpenIssue
+Current goal:
 
-## Objective
+- establish a clean FastAPI backend foundation on `chore/w1-backend-foundation`
 
-Build a convincing, end-to-end GitHub issue triage assistant that helps maintainers process noisy issues faster through:
+Exact scope:
 
-- issue classification
-- duplicate detection
-- priority scoring
-- label suggestion
-- missing-information detection
+- scaffold `services/api` with app bootstrap, route wiring, and health endpoint
+- define explicit config/env loading path
+- create stable module boundaries for `schemas`, `core`, `github`, `embeddings`, `vectorstore`, and `triage`
+- add lightweight backend run documentation for follow-on branches
 
-This plan assumes a **fully open-source model path** for the current phase.
-
----
-
-# 1) Product framing
-
-## 1.1 Core problem
-
-Maintainers waste time on:
-
-- duplicate issues
-- vague bug reports
-- unprioritized issue queues
-- missing labels
-- noisy low-quality reports
-
-## 1.2 Core promise
-
-Given a GitHub issue, OpenIssue should help answer:
-
-- What kind of issue is this?
-- How urgent is it?
-- Is it likely a duplicate?
-- What labels should be applied?
-- What information is missing?
-
-## 1.3 Primary target user
-
-Repository maintainers.
-
-## 1.4 Non-goals for MVP
-
-Out of scope unless explicitly re-added later:
-
-- generic GitHub profile analytics
-- contributor social graphs
-- broad repo health dashboards
-- complex RBAC systems
-- enterprise audit/logging platforms
-- multi-provider issue systems beyond GitHub
-
----
-
-# 2) Locked technical decisions
-
-## 2.1 Frontend
-
-- Next.js
-- TypeScript
-- dashboard-style triage UX
-
-## 2.2 Backend
-
-- Python
-- FastAPI
-- modular analysis pipeline
-
-## 2.3 Embeddings
-
-Primary:
-
-- `BAAI/bge-small-en-v1.5`
-
-Fallback:
-
-- `sentence-transformers/all-MiniLM-L6-v2`
-
-## 2.4 Vector search
-
-Use a free/local vector solution with persistent storage.
-Keep the vector layer swappable behind an interface.
-
-## 2.5 Analysis strategy
-
-Hybrid, not embedding-only:
-
-- semantic retrieval for candidate recall
-- heuristics for classification and priority
-- heuristic reranking for duplicate precision
-- optional reranker model later if needed
-
-## 2.6 API style
-
-Structured JSON contracts between frontend and backend.
-The frontend should never contain hidden business logic for analysis.
-
----
-
-# 3) System design
-
-## 3.1 High-level flow
-
-1. ingest GitHub issues from a repository
-2. normalize issue text
-3. generate/store embeddings for historical issues
-4. analyze a target issue
-5. retrieve similar historical issues
-6. classify issue type
-7. compute priority score
-8. generate label suggestions
-9. detect missing information
-10. return structured triage result to frontend
-
-## 3.2 Architecture
-
-Frontend (Next.js)
-→ Backend API (FastAPI)
-→ Issue ingestion layer
-→ Embedding provider
-→ Vector retrieval layer
-→ Heuristic analysis layer
-→ Result formatter
-→ Frontend render
-
----
-
-# 4) Core modules
-
-## 4.1 GitHub ingestion module
-
-Responsibilities:
-
-- fetch issues for a repo
-- fetch issue details
-- normalize issue payloads
-- filter out pull requests if needed
-- cache issue metadata for analysis
-
-Inputs:
-
-- repo owner
-- repo name
-- optional auth token
-
-Outputs:
-
-- normalized issue records
-
-## 4.2 Normalization module
-
-Responsibilities:
-
-- construct canonical issue text
-- strip obvious noise
-- preserve important lexical cues
-- extract structured metadata
-
-Canonical text default:
-
-- title
-- body
-
-Extracted metadata examples:
-
-- labels
-- created_at
-- updated_at
-- state
-- comment_count
-- author
-- whether template fields exist
-
-## 4.3 Embedding provider module
-
-Responsibilities:
-
-- create embeddings for issue text
-- support provider swapping without changing callers
-
-Initial provider:
-
-- BGE small
-
-Fallback provider:
-
-- MiniLM
-
-Suggested interface:
-
-- `embed_one(text) -> vector`
-- `embed_many(texts) -> vectors`
-- `provider_name() -> str`
-- `vector_dim() -> int`
-
-## 4.4 Vector index module
-
-Responsibilities:
-
-- upsert issue vectors
-- retrieve top-k similar issues
-- support metadata filtering
-- expose similarity scores
-
-Suggested interface:
-
-- `upsert(issue_id, vector, metadata)`
-- `query(vector, k, filters=None)`
-- `delete(issue_id)`
-
-## 4.5 Duplicate analysis module
-
-Responsibilities:
-
-- generate candidate duplicates
-- rerank candidates
-- assign duplicate confidence
-- explain why candidates are similar
-
-Pipeline:
-
-1. retrieve top-k by vector similarity
-2. compute rerank features
-3. produce final ordered duplicate list
-
-Rerank features may include:
-
-- title token overlap
-- shared stack trace fragments
-- shared error code / exception name
-- shared filenames / modules
-- shared version strings
-- shared labels / components
-- recency / status adjustments
-
-## 4.6 Classification module
-
-Responsibilities:
-
-- predict issue type
-- suggest labels
-- explain evidence
-
-Initial categories:
-
-- bug
-- feature_request
-- documentation
-- support_question
-- spam_or_noise
-
-Classification signals:
-
-- lexical phrases
-- template completeness
-- historical nearest labeled issues
-- issue structure quality
-- metadata clues
-
-## 4.7 Priority scoring module
-
-Responsibilities:
-
-- assign a numeric score
-- map score to priority band
-- return reasons
-
-Example score bands:
-
-- 0–24: low
-- 25–49: medium
-- 50–74: high
-- 75–100: critical
-
-Initial score signal groups:
-
-- severity indicators
-- user impact indicators
-- regression indicators
-- duplication density
-- report quality
-- reproduction quality
-- security/auth/data-loss/crash markers
-
-## 4.8 Missing-info detector
-
-Responsibilities:
-
-- detect when an issue is too vague
-- suggest what the reporter should add
-
-Checks:
-
-- reproduction steps missing
-- expected vs actual behavior missing
-- logs/screenshots absent
-- environment/version absent
-- overly short / generic body
-
-## 4.9 Result formatting module
-
-Responsibilities:
-
-- convert analysis outputs into stable API responses
-- keep response contracts frontend-friendly
-
----
-
-# 5) Suggested data contracts
-
-## 5.1 NormalizedIssue
-
-Fields:
-
-- `id`
-- `number`
-- `title`
-- `body`
-- `state`
-- `labels`
-- `created_at`
-- `updated_at`
-- `html_url`
-- `author`
-- `comment_count`
-- `canonical_text`
-- `metadata`
-
-## 5.2 SimilarIssueCandidate
-
-Fields:
-
-- `issue_id`
-- `issue_number`
-- `title`
-- `html_url`
-- `similarity_score`
-- `rerank_score`
-- `final_score`
-- `reasons`
-
-## 5.3 TriageResult
-
-Fields:
-
-- `issue_id`
-- `predicted_type`
-- `type_confidence`
-- `priority_score`
-- `priority_band`
-- `priority_reasons`
-- `duplicate_confidence`
-- `similar_issues`
-- `suggested_labels`
-- `missing_information`
-- `summary`
-- `analysis_version`
-
----
-
-# 6) API plan
-
-## 6.1 `POST /api/repos/index`
-
-Purpose:
-
-- ingest and index issues for a repository
-
-Input:
-
-- owner
-- repo
-- token (optional or server-managed)
-- reindex mode (optional)
-
-Output:
-
-- total issues seen
-- total indexed
-- skipped count
-- provider used
-- warnings
-
-## 6.2 `POST /api/issues/analyze`
-
-Purpose:
-
-- analyze a single target issue
-
-Input:
-
-- repo reference
-- issue number or normalized issue payload
-
-Output:
-
-- `TriageResult`
-
-## 6.3 `GET /api/issues/similar`
-
-Purpose:
-
-- fetch similar issues for a target issue
-
-Input:
-
-- repo
-- issue number
-- k
-
-Output:
-
-- ordered similar issue candidates
-
-## 6.4 `GET /api/issues`
-
-Purpose:
-
-- list available issues for the frontend
-
-Input:
-
-- repo
-- filters
-
-Output:
-
-- issue summaries
-
-## 6.5 Optional later: `POST /api/webhooks/github`
-
-Purpose:
-
-- react to newly opened issues
-- auto-run triage
-
-Not required for MVP.
-
----
-
-# 7) Directory target
-
-Suggested repo structure:
-
-- `apps/web/` → Next.js frontend
-- `services/api/` → FastAPI backend
-- `services/api/app/core/` → config, settings, shared infra
-- `services/api/app/github/` → ingestion + normalization
-- `services/api/app/embeddings/` → provider abstraction + model loading
-- `services/api/app/vectorstore/` → vector DB adapter
-- `services/api/app/triage/` → duplicate, classification, priority, missing-info logic
-- `services/api/app/schemas/` → pydantic models / contracts
-- `docs/` → architecture notes, API examples, evaluation notes
-- `PLAN.md` → living execution plan
-- `AGENTS.md` → agent operating rules
-
-If a different structure is chosen later, keep the same separation of concerns.
-
----
-
-# 8) Wave plan
-
-## Wave 0 — Foundation and contracts
-
-Goal:
-
-- lock architecture and interfaces before coding deep logic
-
-Deliverables:
-
-- repo structure
-- backend/frontend boundary
-- API schemas
-- env var contract
-- initial docs
-
-Exit criteria:
-
-- everyone can point to the same architecture
-- no ambiguity about model policy or MVP scope
-
-## Wave 1 — GitHub ingestion
-
-Goal:
-
-- fetch and normalize real repository issues
-
-Deliverables:
-
-- repo connection flow
-- issue fetcher
-- normalization logic
-- issue listing endpoint
-
-Exit criteria:
-
-- real issues can be loaded and viewed
-- canonical issue text exists
-
-## Wave 2 — Embedding + vector indexing
-
-Goal:
-
-- generate embeddings and retrieve nearest issues
-
-Deliverables:
-
-- embedding provider abstraction
-- BGE provider
-- MiniLM fallback provider
-- vector store adapter
-- indexing endpoint or workflow
-- top-k retrieval working
-
-Exit criteria:
-
-- a target issue returns semantically similar candidates
-
-## Wave 3 — Brain layer v1
-
-Goal:
-
-- implement analysis logic beyond raw similarity
-
-Deliverables:
-
-- duplicate rerank heuristics
-- classification heuristics
-- priority scoring
-- missing-information detector
-- structured result object
-
-Exit criteria:
-
-- analysis output looks meaningfully useful, not just numeric
-
-## Wave 4 — Frontend integration
-
-Goal:
-
-- surface real backend results in a usable triage UX
-
-Deliverables:
-
-- issue list
-- issue detail panel
-- analysis panel
-- similar issue cards
-- priority explanation
-- suggested labels section
-
-Exit criteria:
-
-- user can click an issue and see real analysis
-
-## Wave 5 — Polish and hackathon readiness
-
-Goal:
-
-- improve credibility and demo quality
-
-Deliverables:
-
-- README setup
-- screenshots / demo prep
-- better empty/loading/error states
-- clearer explanations
-- optional webhook or auto-comment draft if time permits
-
-Exit criteria:
-
-- app is demoable end-to-end
-- mandatory deliverables are ready
-
----
-
-# 9) Backend-first implementation sequence
-
-This section is the preferred work order when backend/brain work is prioritized.
-
-## Step 1
-
-Define normalized issue schema and canonical text builder.
-
-## Step 2
-
-Implement GitHub ingestion + list endpoint.
-
-## Step 3
-
-Implement embedding provider abstraction.
-
-## Step 4
-
-Integrate BGE embedding generation.
-
-## Step 5
-
-Implement vector upsert/query path.
-
-## Step 6
-
-Return top-k similar issues for one issue.
-
-## Step 7
-
-Add duplicate reranking heuristics.
-
-## Step 8
-
-Add classification heuristics.
-
-## Step 9
-
-Add priority scoring heuristics.
-
-## Step 10
-
-Add missing-info detection.
-
-## Step 11
-
-Unify all analysis outputs under one response contract.
-
-## Step 12
-
-Integrate frontend panel against real API output.
-
----
-
-# 10) Heuristic design notes
-
-## 10.1 Duplicate detection heuristics
-
-Candidate features:
-
-- title n-gram overlap
-- body keyword overlap
-- exception/error token overlap
-- filename/module overlap
-- version overlap
-- label overlap
-- semantic similarity
-- issue state/recency adjustments
-
-Output should include reasons such as:
-
-- “same exception name”
-- “same module path”
-- “very similar title phrasing”
-- “same version range mentioned”
-
-## 10.2 Classification heuristics
-
-Examples:
-
-- bug → words like error, crash, broken, expected/actual, reproduce
-- feature_request → request, proposal, add support, enhancement
-- documentation → docs, typo, readme, guide, example
-- support_question → how do I, help, usage question, configuration question
-- spam_or_noise → very short, off-topic, promotional, incoherent
-
-Historical nearest neighbors can strengthen category evidence.
-
-## 10.3 Priority heuristics
-
-High-value positive signals:
-
-- crash
-- auth failure
-- security issue
-- regression
-- data loss
-- production broken
-- many similar issues
-- strong repro steps
-
-Negative or dampening signals:
-
-- low-information request
-- support-style question
-- vague issue with no evidence
-- cosmetic/non-blocking language
-
-## 10.4 Missing-info heuristics
-
-Flags:
-
-- no repro steps
-- no expected/actual split
-- no environment info
-- no version info
-- no logs/screenshots for error issue
-- body too short
-
----
-
-# 11) Evaluation plan
-
-## 11.1 What “good” means for MVP
-
-The system should be judged on whether it helps a maintainer make a faster decision.
-
-A good result should:
-
-- identify a plausible type
-- surface useful duplicate candidates
-- assign a reasonable urgency
-- explain itself
-- feel actionable
-
-## 11.2 Manual evaluation checklist
-
-For sample issues, ask:
-
-- are top duplicate candidates reasonable?
-- is the priority band defensible?
-- are suggested labels plausible?
-- does the system catch weak issue reports?
-- do explanations feel trustworthy?
-
-## 11.3 Demo-quality threshold
-
-Do not chase benchmark purity at the cost of shipping.
-A believable, explainable, usable system beats an overbuilt one.
-
----
-
-# 12) Risks and mitigations
-
-## Risk 1: embedding quality is not enough
-
-Mitigation:
-
-- use heuristic reranking
-- preserve lexical anchors
-- tune candidate generation
-- keep model swappable
-
-## Risk 2: GitHub issues are noisy
-
-Mitigation:
-
-- normalize input
-- strip obvious clutter
-- focus on title + body first
-- detect low-information issues explicitly
-
-## Risk 3: too much time spent on infra
-
-Mitigation:
-
-- keep stack minimal
-- avoid overbuilding auth or deployment
-- choose local-first free tooling
-
-## Risk 4: frontend becomes a fake shell
-
-Mitigation:
-
-- integrate only against real backend responses
-- prefer one real panel over many fake pages
-
-## Risk 5: scope drift
-
-Mitigation:
-
-- return to the three MVP pillars
-- classify
-- detect duplicates
-- score priority
-
----
-
-# 13) Definition of success for the hackathon
-
-Success is not “we built a lot.”
-
-Success is:
-
-- real GitHub issue ingestion
-- real analysis path
-- real similar-issue retrieval
-- real priority scoring
-- real triage UI
-- clean README and setup
-- convincing demo story
-
----
-
-# 14) Open follow-ups for later
-
-Not for current implementation unless explicitly prioritized:
-
-- webhook-triggered auto triage
-- auto-comment suggestion generator
-- reranker model beyond heuristics
-- feedback loops from maintainer label corrections
-- multi-repo indexing
-- better issue-template parsing
-- auth polish
-- hosted deployment hardening
-
----
-
-# 15) Active execution update (Wave 1: GitHub ingestion)
-
-## Current goal
-
-Implement the real backend issue-ingestion path for `feat/w1-github-ingestion` by fetching repository issues from GitHub, normalizing to a stable internal contract, and exposing a list endpoint.
-
-## Exact scope
-
-- build a GitHub API client for issue listing
-- normalize GitHub issue payloads into `NormalizedIssue`
-- build canonical text from title + body
-- filter pull requests from the issues feed by default
-- expose `GET /api/issues` to return normalized issues for a repo
-
-## Files/components likely affected
+Files/components likely affected:
 
 - `services/api/app/main.py`
-- `services/api/app/github/client.py`
-- `services/api/app/github/normalization.py`
-- `services/api/app/routes/issues.py`
-- `services/api/app/schemas/issues.py`
-- backend dependency/config docs as needed
+- `services/api/app/core/*`
+- `services/api/app/api/*`
+- `services/api/app/schemas/*`
+- `services/api/app/github/*`
+- `services/api/app/embeddings/*`
+- `services/api/app/vectorstore/*`
+- `services/api/app/triage/*`
+- `services/api/.env.example`
+- `services/api/requirements.txt`
+- `services/api/README.md`
 
-## Sequencing
+Sequencing:
 
-1. scaffold backend API structure and schemas
-2. implement GitHub API client with robust error handling
-3. implement normalization and PR filtering behavior
-4. expose `GET /api/issues` using normalized output
-5. run backend and verify endpoint on a sample public repo
+1. create backend directory structure and package markers
+2. implement settings/config and app bootstrap
+3. wire API router and health route
+4. add boundary interfaces/stubs for future ingestion, embeddings, vectorstore, and triage logic
+5. validate import/startup/health behavior with local commands
 
-## Validation strategy
+Validation strategy:
 
-- run FastAPI server locally
-- call `GET /api/issues` for a real public repository
-- verify canonical text shape and required metadata fields
-- verify pull requests in the issues response are filtered/handled correctly
+- run Python bytecode compile for backend package
+- run FastAPI app startup command if dependencies are available
+- call health route via local HTTP request
 
-## Risks / open questions
+Risks / open questions:
 
-- GitHub rate limiting for unauthenticated requests
-- pagination limits (single page vs multi-page fetch) for large repositories
-- choosing a stable URL representation while preserving raw metadata
+- local environment may not have FastAPI dependencies installed yet
+- avoid overcommitting to long-term interfaces before Wave 1/2 implementation details settle
 
-## Explicitly out of scope
+Explicitly out of scope:
 
-- full auth system or OAuth flows
-- embeddings, duplicate detection, classification, or priority logic
-- frontend analytics and non-triage dashboards
+- real GitHub ingestion implementation
+- real embedding generation/indexing
+- triage heuristic logic and scoring internals
+- deployment/infra automation
+
+## Project
+
+OpenIssue (current repo still uses some legacy `Synapse` naming in frontend UI)
+
+## Goal for this branch
+
+Freeze Wave 1 contracts against the repository as it exists **today**, with a strong focus on:
+
+- repo input contract
+- normalized issue list contract
+- frontend-to-backend mapping
+- explicit mismatch documentation
+
+This branch is contract/documentation alignment only. No deep feature implementation.
+
+---
+
+## 1) Repo reality check (source of truth: current code)
+
+### 1.1 Current structure in repo
+
+- `frontend/` (Next.js + React + Tailwind, JavaScript)
+- `AGENTS.md` (agent operating contract)
+- `PLAN.md` (this file)
+- `openSource-1.md` (hackathon prompt)
+- root `README.MD` (minimal)
+
+### 1.2 What is implemented right now
+
+The app in `frontend/pages/index.js` is a GitHub repository viewer that fetches directly from GitHub REST API in the browser:
+
+- repo metadata: `GET /repos/{owner}/{repo}`
+- owner profile: `GET /users/{owner}`
+- commit list: `GET /repos/{owner}/{repo}/commits`
+- pull request list: `GET /repos/{owner}/{repo}/pulls`
+- issue list: `GET /repos/{owner}/{repo}/issues` filtered to non-PRs
+
+No backend service exists yet in this repository.
+
+### 1.3 Frontend data surfaces actually consumed
+
+From `frontend/pages/index.js` and child components:
+
+- `repoData` fields used: `full_name`, `description`, `stargazers_count`, `forks_count`, `watchers_count`, `open_issues_count`
+- `repoOwner` fields used via `UserProfile`: `login`, `avatar_url`, `followers`, `following`, `bio`, `company`, `location`, `blog`
+- commit item shape used by `ActivitiesCard`: `sha`, `message`, `author`, `timestamp` (already relative time string)
+- pull request item shape used by `PullRequestsCard`: `id`, `number`, `title`, `state`, `createdAt` (already relative time string)
+- issue item shape used by `IssuesCard`: `id`, `number`, `title`, `state`, `createdAt` (already relative time string)
+
+This is the real baseline for Wave 1 contract alignment.
+
+---
+
+## 2) Wave 1 scope lock (contracts only)
+
+### 2.1 In scope
+
+- define stable repo input contract for issue listing
+- define stable normalized issue list contract
+- define mapping from backend payload to current frontend issue list expectations
+- document current mismatches and compatibility rules
+
+### 2.2 Out of scope
+
+- classification logic
+- duplicate detection logic
+- priority scoring logic
+- embedding/vector implementation
+- paid API integration
+- frontend redesign/rebuild
+
+---
+
+## 3) Contract freeze: repo input
+
+Wave 1 issue-list requests will use a simple repo locator input.
+
+### 3.1 Canonical input contract
+
+`RepoRefInput`
+
+```json
+{
+  "owner": "string",
+  "repo": "string",
+  "token": "string|null",
+  "source": "github"
+}
+```
+
+Rules:
+
+- `owner`: required GitHub owner/org name
+- `repo`: required repository name
+- `token`: optional personal access token (or omitted if server-side token strategy is used)
+- `source`: fixed to `github` for Wave 1
+
+### 3.2 Accepted frontend entry forms
+
+Frontend currently accepts:
+
+- `owner/repo`
+- full URL containing `github.com/{owner}/{repo}`
+
+Backend contract remains normalized to `{ owner, repo }`.
+
+---
+
+## 4) Contract freeze: normalized issue list
+
+Wave 1 canonical list item shape for backend responses:
+
+### 4.1 `NormalizedIssueListItem`
+
+```json
+{
+  "id": "number",
+  "number": "number",
+  "title": "string",
+  "state": "open|closed",
+  "created_at": "ISO-8601 string",
+  "updated_at": "ISO-8601 string",
+  "author_login": "string|null",
+  "html_url": "string",
+  "labels": [
+    {
+      "name": "string",
+      "color": "string|null"
+    }
+  ],
+  "comment_count": "number",
+  "is_pull_request": false,
+  "canonical_text": "string",
+  "metadata": {
+    "repository": "owner/repo",
+    "source": "github"
+  }
+}
+```
+
+Wave 1 list endpoint returns:
+
+```json
+{
+  "repo": {
+    "owner": "string",
+    "name": "string",
+    "full_name": "string"
+  },
+  "issues": ["NormalizedIssueListItem"],
+  "total": "number"
+}
+```
+
+### 4.2 Canonical text rule (locked)
+
+`canonical_text` is built from:
+
+- `title`
+- `body` (if present)
+
+Comments are not included in Wave 1 canonical text.
+
+---
+
+## 5) Mapping: current frontend expectations vs backend payload
+
+Current `IssuesCard` expects this lightweight shape:
+
+```json
+{
+  "id": 123,
+  "number": 42,
+  "title": "Issue title",
+  "state": "open",
+  "createdAt": "2h ago"
+}
+```
+
+Backend should return normalized issues (Section 4). Frontend adapter mapping for list card:
+
+- `id` <- `issues[i].id`
+- `number` <- `issues[i].number`
+- `title` <- `issues[i].title`
+- `state` <- `issues[i].state`
+- `createdAt` <- derived client/server display string from `issues[i].created_at`
+
+Compatibility note:
+
+- frontend currently uses preformatted relative time (`createdAt`)
+- normalized contract stores source-of-truth timestamp (`created_at`)
+- rendering layer should compute relative label to avoid data drift and locale issues
+
+---
+
+## 6) Explicit mismatches (frontend vs backend target)
+
+### 6.1 Data source boundary mismatch
+
+- Current: frontend calls GitHub API directly from browser.
+- Target: frontend calls backend issue-list endpoint using normalized contracts.
+
+Impact:
+
+- token handling currently client-side (`localStorage`)
+- rate-limit behavior tied to client token state
+- no stable backend-owned contract yet
+
+### 6.2 Time field mismatch
+
+- Current UI list items expect `createdAt` already humanized (`2h ago`).
+- Contract target uses `created_at` ISO timestamp.
+
+Impact:
+
+- adapter needed when integrating list endpoint
+
+### 6.3 Scope mismatch in current UI vs triage product direction
+
+- Current UI surfaces commit history and pull requests alongside issues.
+- Wave 1 contract focus is issue ingestion/listing for triage.
+
+Impact:
+
+- commits/PR payloads should not block issue-list contract rollout
+- keep them optional/separate from issue-list contract
+
+### 6.4 Naming mismatch
+
+- Current frontend branding and package naming still reference `Synapse` / `github-profile-frontend`.
+- Product/docs target `OpenIssue` triage assistant.
+
+Impact:
+
+- documentation must continue to state canonical product intent; rename work can be separate
+
+### 6.5 Runtime stack mismatch with long-term architecture target
+
+- Current repo has no Python/FastAPI service yet.
+- AGENTS target architecture includes Python backend.
+
+Impact:
+
+- contracts must remain language-agnostic JSON and swappable
+
+---
+
+## 7) Simple swappable architecture boundary (Wave 1)
+
+Keep boundary minimal and replaceable:
+
+- frontend consumes HTTP JSON only
+- backend owns GitHub ingestion + normalization
+- normalization output is stable, independent of embedding/scoring modules
+
+Do not couple Wave 1 contract to:
+
+- any specific embedding provider implementation
+- vector database schema
+- downstream analysis score fields
+
+---
+
+## 8) Suggested endpoint for Wave 1 handoff
+
+Primary list endpoint contract for later branches:
+
+`POST /api/repos/issues`
+
+Request:
+
+```json
+{
+  "owner": "vercel",
+  "repo": "next.js",
+  "token": null,
+  "source": "github"
+}
+```
+
+Response:
+
+```json
+{
+  "repo": {
+    "owner": "vercel",
+    "name": "next.js",
+    "full_name": "vercel/next.js"
+  },
+  "issues": [
+    {
+      "id": 1,
+      "number": 123,
+      "title": "Build fails on arm64",
+      "state": "open",
+      "created_at": "2026-04-01T10:00:00Z",
+      "updated_at": "2026-04-01T12:00:00Z",
+      "author_login": "octocat",
+      "html_url": "https://github.com/vercel/next.js/issues/123",
+      "labels": [{ "name": "bug", "color": "d73a4a" }],
+      "comment_count": 4,
+      "is_pull_request": false,
+      "canonical_text": "Build fails on arm64\n...",
+      "metadata": {
+        "repository": "vercel/next.js",
+        "source": "github"
+      }
+    }
+  ],
+  "total": 1
+}
+```
+
+---
+
+## 9) Sequencing for next branches
+
+1. Implement backend endpoint that returns Section 4 shape exactly.
+2. Add frontend adapter from `created_at` -> `createdAt` for current `IssuesCard`.
+3. Switch issue list source from direct GitHub call to backend endpoint.
+4. Keep PR/commit panels unchanged until dedicated contracts are defined.
+
+---
+
+## 10) Validation strategy for this contract phase
+
+For this branch (docs/contracts only):
+
+- verify all contracts are internally consistent in this file
+- verify mapping fields match currently consumed frontend props
+- verify mismatches are explicitly listed (no hidden assumptions)
+
+For implementation branches:
+
+- add contract tests or response-shape assertions
+- run frontend build and lint after wiring adapter
+- smoke-test with at least one public repository
+
+---
+
+## 11) Risks / open follow-ups
+
+- root docs and frontend docs still describe profile-viewer behavior; triage-focused docs consolidation needed in a later docs pass
+- token strategy is currently browser-local; backend auth/token handling needs a secure approach before production
+- if frontend switches to TypeScript later, define shared runtime schema validation to prevent drift
+
+This file is now the Wave 1 contract baseline and should be treated as canonical unless explicitly changed by human instruction.

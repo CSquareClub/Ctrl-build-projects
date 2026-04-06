@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Query
 from typing import Optional
+
+from fastapi import APIRouter, HTTPException, Query
 
 from app.github.client import (
     GitHubAPIClient,
@@ -12,7 +13,7 @@ from app.github.client import (
 from app.github.normalization import normalize_github_issue
 from app.schemas.issues import ListIssuesResponse
 
-router = APIRouter(prefix="/api/issues", tags=["issues"])
+router = APIRouter(prefix="/issues", tags=["issues"])
 
 
 @router.get("", response_model=ListIssuesResponse)

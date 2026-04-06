@@ -1,0 +1,1 @@
+"""OpenIssue API application package."""

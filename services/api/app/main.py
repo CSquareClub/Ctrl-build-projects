@@ -1,13 +1,20 @@
 from fastapi import FastAPI
 
-from app.routes.issues import router as issues_router
-
-app = FastAPI(title="OpenIssue API", version="0.1.0")
-
-
-@app.get("/health")
-async def health_check() -> dict[str, str]:
-    return {"status": "ok"}
+from app.api.router import build_api_router
+from app.core.logging import configure_logging
+from app.core.settings import get_settings
 
 
-app.include_router(issues_router)
+def create_app() -> FastAPI:
+    settings = get_settings()
+    configure_logging(settings)
+
+    app = FastAPI(
+        title=settings.api_name,
+        version=settings.api_version,
+    )
+    app.include_router(build_api_router(settings))
+    return app
+
+
+app = create_app()

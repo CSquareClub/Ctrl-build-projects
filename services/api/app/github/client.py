@@ -5,7 +5,7 @@ from typing import Optional
 
 import httpx
 
-from app.core.settings import settings
+from app.core.settings import get_settings
 
 
 class GitHubClientError(Exception):
@@ -22,7 +22,9 @@ class GitHubRateLimitError(GitHubClientError):
 
 class GitHubAPIClient:
     def __init__(self, token: Optional[str] = None) -> None:
+        settings = get_settings()
         self.base_url = settings.github_api_base_url.rstrip("/")
+        self.timeout_seconds = settings.github_timeout_seconds
         self.token = token or settings.github_token
 
     def _headers(self) -> dict[str, str]:
@@ -44,7 +46,7 @@ class GitHubAPIClient:
     ) -> list[Mapping]:
         issues: list[Mapping] = []
 
-        async with httpx.AsyncClient(timeout=settings.github_timeout_seconds) as client:
+        async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
             for page in range(1, max_pages + 1):
                 response = await client.get(
                     f"{self.base_url}/repos/{owner}/{repo}/issues",
