@@ -21,13 +21,20 @@ class IssueIntelligence {
         // Clear hardcoded placeholder values on page load
         const classificationResult = document.getElementById('classification-result');
         const priorityResult = document.getElementById('priority-result');
+        const priorityDot = document.getElementById('priority-dot');
+        const priorityPill = document.getElementById('priority-pill');
         const confidenceResult = document.getElementById('confidence-result');
         const labelsResult = document.getElementById('labels-result');
         const similarIssues = document.getElementById('similar-issues');
         const knowledgeObservation = document.getElementById('knowledge-observation');
 
         if (classificationResult) classificationResult.textContent = 'Awaiting Analysis';
-        if (priorityResult) priorityResult.textContent = 'Not Analyzed';
+        if (priorityResult) {
+            priorityResult.textContent = 'Not Analyzed';
+            priorityResult.className = 'font-label text-sm text-on-surface-variant font-bold uppercase tracking-wider';
+        }
+        if (priorityDot) priorityDot.className = 'h-2 w-2 rounded-full bg-on-surface-variant';
+        if (priorityPill) priorityPill.className = 'inline-flex items-center gap-2 px-4 py-2 bg-surface-variant/20 border border-outline/20 rounded-full';
         if (confidenceResult) confidenceResult.textContent = '0.0';
         if (labelsResult) labelsResult.innerHTML = '<span class="text-on-surface-variant text-sm">No labels yet</span>';
         if (similarIssues) similarIssues.innerHTML = '<div class="text-center py-8 text-on-surface-variant"><p class="font-body">Analyze an issue to find similar ones</p></div>';
@@ -190,33 +197,31 @@ class IssueIntelligence {
             classificationIconContainer.className = `p-3 bg-${classConfig.bgColor}/20 rounded-full`;
         }
 
-        // Map priority to color
-        const priorityMap = {
-            'high': { color: 'error', bgColor: 'error-container' },
-            'medium': { color: 'tertiary', bgColor: 'tertiary-container' },
-            'low': { color: 'secondary', bgColor: 'secondary-container' }
+        // Update Priority with dynamic colors
+        const priorityResult = document.getElementById('priority-result');
+        const priorityDot = document.getElementById('priority-dot');
+        const priorityPill = document.getElementById('priority-pill');
+
+        // Add critical to the map
+        const priorityColorMap = {
+            'critical': { color: 'error', bgColor: 'error-container' },
+            'high':     { color: 'error', bgColor: 'error-container' },
+            'medium':   { color: 'tertiary', bgColor: 'tertiary-container' },
+            'low':      { color: 'secondary', bgColor: 'secondary-container' }
         };
 
         const priority = result.priority ? result.priority.toLowerCase() : 'medium';
-        const priorityConfig = priorityMap[priority] || priorityMap['medium'];
+        const priorityConfig = priorityColorMap[priority] || priorityColorMap['medium'];
 
-        // Update Priority with dynamic colors
-        const priorityResult = document.getElementById('priority-result');
-        const priorityDot = priorityResult?.previousElementSibling;
-        const priorityContainer = priorityResult?.parentElement;
-        
         if (priorityResult && result.priority) {
-            const priorityText = result.priority.charAt(0).toUpperCase() + result.priority.slice(1) + ' Severity';
-            priorityResult.textContent = priorityText;
+            priorityResult.textContent = result.priority.charAt(0).toUpperCase() + result.priority.slice(1) + ' Severity';
             priorityResult.className = `font-label text-sm text-${priorityConfig.color} font-bold uppercase tracking-wider`;
         }
-        
         if (priorityDot) {
             priorityDot.className = `h-2 w-2 rounded-full bg-${priorityConfig.color}`;
         }
-        
-        if (priorityContainer) {
-            priorityContainer.className = `inline-flex items-center gap-2 px-4 py-2 bg-${priorityConfig.bgColor}/20 border border-${priorityConfig.color}/20 rounded-full`;
+        if (priorityPill) {
+            priorityPill.className = `inline-flex items-center gap-2 px-4 py-2 bg-${priorityConfig.bgColor}/20 border border-${priorityConfig.color}/20 rounded-full`;
         }
 
         // Update Confidence (backend returns object with classification and priority)
@@ -226,14 +231,15 @@ class IssueIntelligence {
             confidenceResult.textContent = (confValue * 100).toFixed(1);
         }
 
-        // Update Labels - generate from classification
+        // Update Labels - use backend labels first, fallback to generating from classification
         const labelsResult = document.getElementById('labels-result');
         if (labelsResult && result.label) {
-            const labels = [result.label];
-            if (result.priority === 'high') labels.push('urgent');
-            if (this.selectedRepo) labels.push(this.selectedRepo.name.split('-')[0]);
+            const backendLabels = (result.labels && result.labels.length > 0) ? result.labels : [result.label];
+            if (result.priority === 'high' || result.priority === 'critical') backendLabels.push('urgent');
+            if (this.selectedRepo) backendLabels.push(this.selectedRepo.name.split('-')[0]);
+            const uniqueLabels = [...new Set(backendLabels)];
             
-            labelsResult.innerHTML = labels.map(label => 
+            labelsResult.innerHTML = uniqueLabels.map(label => 
                 `<span class="px-4 py-1.5 bg-secondary-container/30 rounded-full text-secondary text-xs font-label font-bold uppercase tracking-wider">${label}</span>`
             ).join('');
         }
@@ -250,13 +256,14 @@ class IssueIntelligence {
                 `;
             } else {
                 similarIssues.innerHTML = result.similar_issues.map((issue, index) => {
-                    const similarity = issue[1] || issue.similarity || 0;
+                    const similarity = issue.similarity_score || 0;
                     const matchPercentage = (similarity * 100).toFixed(0);
+                    const issueId = issue.id ? issue.id.substring(0, 8) : (index + 1024);
                     
                     return `
                         <div class="group bg-surface-container-lowest rounded-DEFAULT p-4 flex items-center justify-between hover:bg-surface-variant/40 transition-all cursor-pointer">
                             <div class="flex items-center gap-4">
-                                <div class="font-label text-primary font-bold">#${issue[0] || issue.id || (index + 1024)}</div>
+                                <div class="font-label text-primary font-bold">#${issueId}</div>
                                 <h4 class="font-body font-medium text-on-surface group-hover:text-primary transition-colors">${issue.title || 'Similar Issue'}</h4>
                             </div>
                             <div class="flex items-center gap-4">
