@@ -1,5 +1,56 @@
 # PLAN.md
 
+## Execution Update (2026-04-06): Wave 3 classification + label suggestion layer
+
+Current goal:
+
+- implement explainable issue type classification and label suggestion that can consume Wave 2 similar-issue retrieval evidence without coupling classification correctness to retrieval volatility
+
+Exact scope:
+
+- add a backend classification endpoint with a stable `predicted_type` over the agreed category set
+- implement lexical-first, heuristic classification and confidence scoring from issue title/body/labels
+- optionally consume nearest-neighbor evidence from current MiniLM-backed vector store for defensible label hints
+- return frontend-friendly explanation fields for both type and label suggestions
+- preserve existing Wave 2 schemas/routes and avoid changing priority/duplicate ownership
+
+Files/components likely affected:
+
+- `services/api/app/schemas/classification.py` (new)
+- `services/api/app/services/classification.py` (new)
+- `services/api/app/routes/classification.py` (new)
+- `services/api/app/core/dependencies.py`
+- `services/api/app/api/router.py`
+- `services/api/README.md`
+
+Sequencing:
+
+1. inspect Wave 2 similarity/vector metadata and schema surfaces that classification may reuse
+2. design request/response schema for classification with stable type + explainability fields
+3. implement lexical-first classification + lightweight confidence + label suggestion heuristics
+4. integrate optional neighbor evidence from MiniLM retrieval as label-vote hints only
+5. wire route/dependencies and document endpoint contract
+6. run compile and sample analysis calls across mixed issue types
+
+Validation strategy:
+
+- run Python compile checks
+- run local classification API calls for representative bug/feature/docs/question/spam-like payloads
+- verify reason strings remain readable and highlight whether neighbor evidence was used or intentionally ignored
+
+Risks / open questions:
+
+- similarity score thresholds may need calibration per repository domain and issue-writing style
+- nearest-neighbor labels may be noisy in repositories with inconsistent historical labeling
+- lexical cues can misclassify edge cases (for example docs bugs vs product bugs) and need iterative tuning
+
+Explicitly out of scope:
+
+- priority scoring logic
+- duplicate confidence/reranking logic
+- frontend UI implementation for classification output
+- proprietary or paid model dependencies
+
 ## Execution Update (2026-04-06): Wave 2 semantic embedding correction (MiniLM)
 
 Current goal:
