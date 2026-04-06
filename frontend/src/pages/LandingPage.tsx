@@ -8,12 +8,14 @@ import {
   CheckCircle,
   Star,
   GitPullRequest,
+  X,
 } from 'lucide-react';
 import { GithubIcon } from '../components/GithubIcon';
+import { loginUrl } from '../lib/api';
 
-interface LandingPageProps {
-  onLogin: () => void;
-}
+const handleLogin = () => {
+  window.location.href = loginUrl();
+};
 
 const FEATURES = [
   {
@@ -71,20 +73,34 @@ const HOW_IT_WORKS = [
     step: '03',
     title: 'AI works in the background',
     description:
-      'Every event — new issue, PR opened, commit pushed, comment posted — is processed by gpt-oss-120B asynchronously. Results appear in the dashboard instantly.',
+      'Every event — new issue, PR opened, commit pushed, comment posted — is processed by Qwen2.5 72B asynchronously. Results appear in the dashboard instantly.',
   },
 ];
 
 const STATS = [
-  { value: '120B', label: 'Parameter open-source model' },
+  { value: '72B', label: 'Parameter open-source model' },
   { value: '0¢', label: 'Per-token cost — ever' },
   { value: '5s', label: 'Avg. triage time per issue' },
   { value: '4', label: 'Core problems solved in one platform' },
 ];
 
-export function LandingPage({ onLogin }: LandingPageProps) {
+interface LandingPageProps {
+  authError?: string | null;
+  onDismissError?: () => void;
+}
+
+export function LandingPage({ authError, onDismissError }: LandingPageProps = {}) {
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-200">
+      {/* Auth error banner */}
+      {authError && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-3 bg-zinc-900 border border-amber-500/30 text-amber-300 text-sm px-4 py-3 rounded-2xl shadow-2xl shadow-black/60 max-w-sm w-full mx-4">
+          <span className="flex-1">{authError}</span>
+          <button onClick={onDismissError} className="text-amber-500 hover:text-amber-300 transition-colors flex-shrink-0">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
       {/* Navbar */}
       <nav className="border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
@@ -95,9 +111,9 @@ export function LandingPage({ onLogin }: LandingPageProps) {
             <span className="font-bold text-white tracking-tight text-lg">GitWise AI</span>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-xs text-zinc-500 hidden sm:block">Powered by gpt-oss-120B · Free to run</span>
+            <span className="text-xs text-zinc-500 hidden sm:block">Powered by Qwen2.5 72B · Free to run</span>
             <button
-              onClick={onLogin}
+              onClick={handleLogin}
               className="flex items-center gap-2 bg-white text-zinc-900 text-sm font-semibold px-4 py-2 rounded-xl hover:bg-zinc-100 transition-colors"
             >
               <GithubIcon className="w-4 h-4" />
@@ -125,12 +141,12 @@ export function LandingPage({ onLogin }: LandingPageProps) {
         <p className="text-xl text-zinc-400 max-w-2xl mx-auto mb-10 leading-relaxed">
           GitWise AI triages noisy issues, catches faulty PRs before they merge, helps newcomers find their first contribution,
           and writes your README — all powered by{' '}
-          <code className="text-violet-400 bg-violet-500/10 px-1.5 py-0.5 rounded text-sm">gpt-oss-120B</code>. No paid APIs. Ever.
+          <code className="text-violet-400 bg-violet-500/10 px-1.5 py-0.5 rounded text-sm">Qwen2.5 72B</code>. No paid APIs. Ever.
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
           <button
-            onClick={onLogin}
+            onClick={handleLogin}
             className="flex items-center gap-3 bg-white text-zinc-900 font-bold text-base px-8 py-4 rounded-2xl hover:bg-zinc-100 transition-all hover:scale-105 shadow-xl shadow-white/10 w-full sm:w-auto justify-center"
           >
             <GithubIcon className="w-5 h-5" />
@@ -145,10 +161,10 @@ export function LandingPage({ onLogin }: LandingPageProps) {
           </a>
         </div>
 
-        {/* Mini-demo indicator */}
+        {/* Status indicator */}
         <div className="mt-12 inline-flex items-center gap-2 text-xs text-zinc-500 bg-zinc-900 border border-zinc-800 rounded-full px-4 py-2">
           <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          Demo mode — all data is mocked. Connect GitHub to use live features.
+          AI inference live — connect GitHub to start monitoring your repositories.
         </div>
       </section>
 
@@ -225,7 +241,7 @@ export function LandingPage({ onLogin }: LandingPageProps) {
                 <p className="text-violet-400 underline cursor-pointer">
                   → View: src/config/database.js#L42
                 </p>
-                <p className="text-zinc-500 text-xs mt-4">— GitWise AI (gpt-oss-120B)</p>
+                <p className="text-zinc-500 text-xs mt-4">— GitWise AI (Qwen2.5 72B)</p>
               </div>
             </div>
 
@@ -277,7 +293,7 @@ export function LandingPage({ onLogin }: LandingPageProps) {
             Connect your repositories and let GitWise AI take over the noise — free, forever.
           </p>
           <button
-            onClick={onLogin}
+            onClick={handleLogin}
             className="inline-flex items-center gap-3 bg-white text-zinc-900 font-bold text-base px-8 py-4 rounded-2xl hover:bg-zinc-100 transition-all hover:scale-105 shadow-xl shadow-white/5"
           >
             <GithubIcon className="w-5 h-5" />
@@ -297,8 +313,8 @@ export function LandingPage({ onLogin }: LandingPageProps) {
             GitWise AI — MIT License
           </div>
           <div className="flex items-center gap-6">
-            <span>gpt-oss-120B</span>
-            <span>FastAPI · Supabase · Qdrant</span>
+            <span>Qwen2.5 72B</span>
+            <span>FastAPI · Supabase · FAISS</span>
             <span>React · Tailwind CSS</span>
           </div>
         </div>

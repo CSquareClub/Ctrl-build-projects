@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Sparkles,
   RefreshCw,
@@ -10,8 +10,9 @@ import {
   Filter,
 } from 'lucide-react';
 import { cn } from '../utils/cn';
-import { MOCK_TRIAGED_ISSUES } from '../data/mockData';
 import type { IssueClassification, TriagedIssue } from '../types';
+import { analyzeIssue, getIssues, getRepos } from '../lib/api';
+import type { ApiRepo } from '../lib/api';
 
 interface AnalysisResult {
   classification: IssueClassification;
@@ -49,50 +50,9 @@ const LABEL_COLORS: Record<string, string> = {
   dashboard: 'bg-indigo-500/15 text-indigo-400',
 };
 
-function simulateAnalysis(title: string, body: string): AnalysisResult {
-  const text = (title + ' ' + body).toLowerCase();
-
-  let classification: IssueClassification = 'FEATURE_REQUEST';
-  if (text.includes('bug') || text.includes('fix') || text.includes('error') || text.includes('crash') || text.includes('fail') || text.includes('broken')) {
-    classification = 'BUG';
-  } else if (text.includes('doc') || text.includes('readme') || text.includes('guide') || text.includes('update')) {
-    classification = 'DOCUMENTATION';
-  } else if (text.includes('how') || text.includes('?') || text.includes('question') || text.includes('why')) {
-    classification = 'QUESTION';
-  } else if (text.length < 15 || text.includes('spam') || text.includes('crypto') || text.includes('click')) {
-    classification = 'SPAM';
-  } else if (text.length < 30) {
-    classification = 'UNCLEAR';
-  }
-
-  const priority = Math.min(98, Math.max(15, 40 + Math.floor(Math.random() * 50) + (body.length > 100 ? 15 : 0) + (classification === 'BUG' ? 10 : 0)));
-
-  const labels: string[] = [];
-  if (classification === 'BUG') labels.push('bug', 'needs triage');
-  else if (classification === 'FEATURE_REQUEST') labels.push('enhancement', 'feature');
-  else if (classification === 'DOCUMENTATION') labels.push('documentation');
-  else if (classification === 'QUESTION') labels.push('question');
-  else if (classification === 'SPAM') labels.push('spam', 'invalid');
-  else labels.push('unclear', 'needs more info');
-
-  if (Math.random() > 0.55 && classification !== 'SPAM') labels.push('good first issue');
-
-  const similar = [
-    { title: 'Similar rendering issue in component lifecycle', repo: 'facebook/react', similarity: 84, url: 'https://github.com/facebook/react/issues/1' },
-    { title: 'State update causes unexpected re-render', repo: 'vercel/next.js', similarity: 71, url: 'https://github.com/vercel/next.js/issues/2' },
-    { title: 'Memory leak after unmounting component', repo: 'mui/material-ui', similarity: 65, url: 'https://github.com/mui/material-ui/issues/3' },
-  ];
-
-  const isDuplicate = similar[0].similarity > 88;
-
-  return {
-    classification,
-    priorityScore: priority,
-    labels,
-    similarIssues: similar,
-    explanation: `This issue appears to be a ${classification.toLowerCase().replace('_', ' ')}. ${classification === 'BUG' ? 'It describes unexpected behaviour with reproduction context.' : classification === 'SPAM' ? 'The content matches known spam patterns.' : 'The request is well-formed and actionable.'}`,
-    isDuplicate,
-  };
+function simulateAnalysis(_title: string, _body: string): AnalysisResult {
+  // Kept as fallback shape — real data comes from API
+  return { classification: 'UNCLEAR', priorityScore: 0, labels: [], similarIssues: [], explanation: '', isDuplicate: false };
 }
 
 const ALL_CLASSIFICATIONS: IssueClassification[] = [
@@ -105,33 +65,74 @@ const ALL_CLASSIFICATIONS: IssueClassification[] = [
 ];
 
 export function IssueTriagePage() {
+  const [repoFullName, setRepoFullName] = useState('');
+  const [issueNumber, setIssueNumber] = useState('');
   const [issueTitle, setIssueTitle] = useState('');
   const [issueBody, setIssueBody] = useState('');
   const [loading, setLoading] = useState(false);
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [analyzedTitle, setAnalyzedTitle] = useState('');
   const [filterClass, setFilterClass] = useState<IssueClassification | 'ALL'>('ALL');
+  const [triageHistory, setTriageHistory] = useState<TriagedIssue[]>([]);
+  const [apiError, setApiError] = useState<string | null>(null);
+  const [repos, setRepos] = useState<ApiRepo[]>([]);
+
+  const loadHistory = () => {
+    getIssues()
+      .then((issues) => setTriageHistory(issues as unknown as TriagedIssue[]))
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    loadHistory();
+    getRepos()
+      .then((r) => setRepos(r.filter((repo: ApiRepo) => repo.isMonitored)))
+      .catch(() => {});
+  }, []);
 
   const handleAnalyze = async () => {
     if (!issueTitle.trim()) return;
     setLoading(true);
+    setApiError(null);
     setAnalyzedTitle(issueTitle);
-    await new Promise((r) => setTimeout(r, 1200));
-    setAnalysis(simulateAnalysis(issueTitle, issueBody));
-    setLoading(false);
+    try {
+      const result = await analyzeIssue({
+        repoFullName: repoFullName || 'unknown/unknown',
+        issueNumber: parseInt(issueNumber, 10) || 1,
+        issueTitle,
+        issueBody,
+      });
+      setAnalysis({
+        classification: result.classification as IssueClassification,
+        priorityScore: result.priorityScore,
+        labels: result.labels,
+        similarIssues: result.similarIssues,
+        explanation: result.explanation,
+        isDuplicate: result.isDuplicate,
+      });
+    } catch (e: unknown) {
+      setApiError(e instanceof Error ? e.message : 'Analysis failed');
+      setAnalysis(simulateAnalysis(issueTitle, issueBody));
+    } finally {
+      setLoading(false);
+      loadHistory();
+    }
   };
 
   const handleReset = () => {
+    setRepoFullName('');
+    setIssueNumber('');
     setIssueTitle('');
     setIssueBody('');
     setAnalysis(null);
     setAnalyzedTitle('');
+    setApiError(null);
   };
 
   const filteredIssues: TriagedIssue[] =
     filterClass === 'ALL'
-      ? MOCK_TRIAGED_ISSUES
-      : MOCK_TRIAGED_ISSUES.filter((i) => i.classification === filterClass);
+      ? triageHistory
+      : triageHistory.filter((i) => i.classification === filterClass);
 
   return (
     <div className="max-w-6xl mx-auto space-y-8">
@@ -142,6 +143,46 @@ export function IssueTriagePage() {
           <div className="flex items-center gap-2 mb-2">
             <Sparkles className="w-4 h-4 text-violet-400" />
             <span className="text-sm font-semibold text-white">Analyse a New Issue</span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[10px] font-semibold uppercase tracking-wider text-zinc-500 mb-2">
+                Repo (owner/repo)
+              </label>
+              {repos.length > 0 ? (
+                <select
+                  value={repoFullName}
+                  onChange={(e) => setRepoFullName(e.target.value)}
+                  className="w-full bg-zinc-950 border border-zinc-700 focus:border-violet-500 rounded-xl px-4 py-3 text-sm outline-none text-zinc-200 transition-colors appearance-none cursor-pointer"
+                >
+                  <option value="">Select a repo…</option>
+                  {repos.map((r) => (
+                    <option key={r.id} value={r.fullName}>{r.fullName}</option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  type="text"
+                  value={repoFullName}
+                  onChange={(e) => setRepoFullName(e.target.value)}
+                  className="w-full bg-zinc-950 border border-zinc-700 focus:border-violet-500 rounded-xl px-4 py-3 text-sm outline-none text-zinc-200 placeholder:text-zinc-600 transition-colors"
+                  placeholder="facebook/react"
+                />
+              )}
+            </div>
+            <div>
+              <label className="block text-[10px] font-semibold uppercase tracking-wider text-zinc-500 mb-2">
+                Issue #
+              </label>
+              <input
+                type="number"
+                value={issueNumber}
+                onChange={(e) => setIssueNumber(e.target.value)}
+                className="w-full bg-zinc-950 border border-zinc-700 focus:border-violet-500 rounded-xl px-4 py-3 text-sm outline-none text-zinc-200 placeholder:text-zinc-600 transition-colors"
+                placeholder="42"
+              />
+            </div>
           </div>
 
           <div>
@@ -195,6 +236,11 @@ export function IssueTriagePage() {
               <RotateCcw className="w-4 h-4" />
             </button>
           </div>
+          {apiError && (
+            <p className="text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2 mt-3">
+              AI API unavailable — showing local estimate. {apiError}
+            </p>
+          )}
         </div>
 
         {/* Result */}
@@ -207,7 +253,7 @@ export function IssueTriagePage() {
                 </div>
                 <div className="text-sm text-zinc-500">Analysis results will appear here</div>
                 <div className="text-xs text-zinc-700 mt-1">
-                  Powered by gpt-oss-120B embedded inference
+                  Powered by Qwen2.5 72B embedded inference
                 </div>
               </div>
             </div>

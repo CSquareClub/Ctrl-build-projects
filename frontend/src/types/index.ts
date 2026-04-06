@@ -5,7 +5,8 @@ export type Page =
   | 'triage'
   | 'moderation'
   | 'recommender'
-  | 'readme';
+  | 'readme'
+  | 'settings';
 
 export type EventDecision = 'PASS' | 'FLAG' | 'BLOCK';
 export type EventType =

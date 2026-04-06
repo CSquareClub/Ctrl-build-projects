@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   GitPullRequest,
   GitCommit,
@@ -13,10 +13,11 @@ import {
   ShieldCheck,
   Undo2,
   Filter,
+  RefreshCw,
 } from 'lucide-react';
 import { cn } from '../utils/cn';
-import { MOCK_MODERATION_EVENTS } from '../data/mockData';
 import type { EventDecision, EventType, ModerationEvent, Severity } from '../types';
+import { getModeration, overrideModeration } from '../lib/api';
 
 const DECISION_CONFIG: Record<
   EventDecision,
@@ -73,19 +74,40 @@ type DecisionFilter = EventDecision | 'ALL';
 type TypeFilter = EventType | 'ALL';
 
 export function ModerationPage() {
-  const [events, setEvents] = useState<ModerationEvent[]>(MOCK_MODERATION_EVENTS);
+  const [events, setEvents] = useState<ModerationEvent[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [decisionFilter, setDecisionFilter] = useState<DecisionFilter>('ALL');
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('ALL');
+  const [loading, setLoading] = useState(true);
+
+  const fetchEvents = () => {
+    setLoading(true);
+    getModeration()
+      .then((data) => setEvents(data as unknown as ModerationEvent[]))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => { fetchEvents(); }, []);
 
   const toggleExpand = (id: string) => setExpanded(expanded === id ? null : id);
 
-  const handleOverride = (id: string) => {
-    setEvents((prev) =>
-      prev.map((e) =>
-        e.id === id ? { ...e, overridden: true, overriddenBy: 'krypthos-dev' } : e
-      )
-    );
+  const handleOverride = async (id: string) => {
+    try {
+      await overrideModeration(id, 'Manual override by maintainer');
+      setEvents((prev) =>
+        prev.map((e) =>
+          e.id === id ? { ...e, overridden: true, overriddenBy: 'maintainer' } : e
+        )
+      );
+    } catch {
+      // optimistic update anyway
+      setEvents((prev) =>
+        prev.map((e) =>
+          e.id === id ? { ...e, overridden: true, overriddenBy: 'maintainer' } : e
+        )
+      );
+    }
   };
 
   const filtered = events.filter((e) => {
@@ -100,8 +122,14 @@ export function ModerationPage() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
+      {loading && (
+        <div className="flex items-center justify-center py-16 text-zinc-600 text-sm gap-2">
+          <RefreshCw className="w-4 h-4 animate-spin" /> Loading moderation events…
+        </div>
+      )}
+      {!loading && (<>
+      <div className="flex items-center justify-between">
+        <div className="grid grid-cols-3 gap-4 flex-1">
         {[
           { label: 'Blocked', count: blockCount, color: 'text-red-400', bg: 'bg-red-500/10', border: 'border-red-800/30', icon: XCircle },
           { label: 'Flagged', count: flagCount, color: 'text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-800/30', icon: AlertTriangle },
@@ -115,6 +143,10 @@ export function ModerationPage() {
             </div>
           </div>
         ))}
+        </div>
+        <button onClick={fetchEvents} className="ml-4 p-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white transition-colors flex-shrink-0" title="Refresh">
+          <RefreshCw className="w-4 h-4" />
+        </button>
       </div>
 
       {/* Filters */}
@@ -340,10 +372,11 @@ export function ModerationPage() {
         {filtered.length === 0 && (
           <div className="text-center py-16 text-zinc-600">
             <ShieldCheck className="w-10 h-10 mx-auto mb-3 opacity-40" />
-            <div className="text-sm">No events match the current filters</div>
+            <div className="text-sm">{events.length === 0 ? 'No moderation events yet — data will appear as webhooks are processed.' : 'No events match the current filters'}</div>
           </div>
         )}
       </div>
+      </>)}
     </div>
   );
 }

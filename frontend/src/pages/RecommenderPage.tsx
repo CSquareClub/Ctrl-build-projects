@@ -10,8 +10,8 @@ import {
   MessageCircle,
 } from 'lucide-react';
 import { cn } from '../utils/cn';
-import { MOCK_RECOMMENDATIONS } from '../data/mockData';
 import type { RecommendedIssue } from '../types';
+import { savePrefs, getRecommendations, addBookmark, removeBookmark } from '../lib/api';
 
 const SKILL_OPTIONS = [
   'JavaScript',
@@ -57,9 +57,7 @@ export function RecommenderPage() {
   const [issues, setIssues] = useState<RecommendedIssue[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
-  const [bookmarked, setBookmarked] = useState<Set<string>>(
-    new Set(MOCK_RECOMMENDATIONS.filter((i) => i.bookmarked).map((i) => i.id))
-  );
+  const [bookmarked, setBookmarked] = useState<Set<string>>(new Set());
 
   const toggleSkill = (skill: string) => {
     setSelectedSkills((prev) =>
@@ -73,36 +71,45 @@ export function RecommenderPage() {
     );
   };
 
-  const toggleBookmark = (id: string) => {
+  const toggleBookmark = async (id: string) => {
+    const isBookmarked = bookmarked.has(id);
+    // optimistic
     setBookmarked((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
+    try {
+      if (isBookmarked) await removeBookmark(id);
+      else await addBookmark(id);
+    } catch {
+      // revert on error
+      setBookmarked((prev) => {
+        const next = new Set(prev);
+        if (isBookmarked) next.add(id);
+        else next.delete(id);
+        return next;
+      });
+    }
   };
 
   const handleFind = async () => {
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 1100));
-
-    const scored = MOCK_RECOMMENDATIONS.map((issue) => {
-      const skillBonus = issue.languages.filter((l) =>
-        selectedSkills.some(
-          (s) => l.toLowerCase().includes(s.toLowerCase()) || s.toLowerCase().includes(l.toLowerCase())
-        )
-      ).length;
-      const experienceAdj = experience === 'beginner' ? (issue.difficulty === 'Easy' ? 10 : -15) : experience === 'advanced' ? (issue.difficulty === 'Hard' ? 10 : 0) : 0;
-      const adjusted = Math.min(99, issue.matchScore + skillBonus * 5 + experienceAdj);
-      return { ...issue, matchScore: adjusted };
-    }).sort((a, b) => b.matchScore - a.matchScore);
-
-    setIssues(scored);
-    setHasSearched(true);
-    setLoading(false);
+    try {
+      await savePrefs({ skills: selectedSkills, domains: selectedDomains, experience });
+      const results = await getRecommendations();
+      setIssues(results as unknown as RecommendedIssue[]);
+    } catch {
+      // fallback: empty list with error message
+      setIssues([]);
+    } finally {
+      setHasSearched(true);
+      setLoading(false);
+    }
   };
 
-  const bookmarkedIssues = MOCK_RECOMMENDATIONS.filter((i) => bookmarked.has(i.id));
+  const bookmarkedIssues = issues.filter((i) => bookmarked.has(i.id));
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -260,6 +267,14 @@ export function RecommenderPage() {
                   Scoring: 40% skill · 25% difficulty · 20% labels · 10% freshness · 5% interest
                 </div>
               </div>
+
+              {issues.length === 0 && (
+                <div className="border border-dashed border-zinc-700 rounded-2xl py-16 flex flex-col items-center justify-center">
+                  <Compass className="w-8 h-8 text-zinc-700 mb-3" />
+                  <p className="text-sm text-zinc-500">No matching issues found.</p>
+                  <p className="text-xs text-zinc-600 mt-1">Try selecting different skills or domains and search again.</p>
+                </div>
+              )}
 
               {issues.map((issue, idx) => (
                 <IssueCard

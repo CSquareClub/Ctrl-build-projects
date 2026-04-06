@@ -10,6 +10,7 @@ const PAGE_TITLES: Record<Page, string> = {
   moderation: 'Moderation',
   recommender: 'First Issue Recommender',
   readme: 'README Generator',
+  settings: 'Settings',
 };
 
 interface LayoutProps {

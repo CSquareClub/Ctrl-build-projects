@@ -1,15 +1,8 @@
-import { LayoutDashboard, GitBranch, Tag, Shield, Compass, FileText, Zap } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { LayoutDashboard, GitBranch, Tag, Shield, Compass, FileText, Zap, Settings } from 'lucide-react';
 import { cn } from '../utils/cn';
 import type { Page } from '../types';
-
-const NAV_ITEMS: { page: Page; label: string; icon: React.ComponentType<{ className?: string }>; badge?: string }[] = [
-  { page: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { page: 'repositories', label: 'Repositories', icon: GitBranch, badge: '4' },
-  { page: 'triage', label: 'Issue Triage', icon: Tag, badge: '6' },
-  { page: 'moderation', label: 'Moderation', icon: Shield, badge: '2' },
-  { page: 'recommender', label: 'Recommender', icon: Compass },
-  { page: 'readme', label: 'README Gen', icon: FileText },
-];
+import { getDashboardStats } from '../lib/api';
 
 interface SidebarProps {
   currentPage: Page;
@@ -17,6 +10,24 @@ interface SidebarProps {
 }
 
 export function Sidebar({ currentPage, navigate }: SidebarProps) {
+  const [counts, setCounts] = useState({ triage: 0, moderation: 0, repositories: 0 });
+
+  useEffect(() => {
+    getDashboardStats()
+      .then((s) => setCounts({ triage: s.issuesAnalysed, moderation: s.prsModerated, repositories: s.activeRepos }))
+      .catch(() => {});
+  }, []);
+
+  const NAV_ITEMS: { page: Page; label: string; icon: React.ComponentType<{ className?: string }>; badge?: number }[] = [
+    { page: 'dashboard',   label: 'Dashboard',            icon: LayoutDashboard },
+    { page: 'repositories',label: 'Repositories',         icon: GitBranch,  badge: counts.repositories || undefined },
+    { page: 'triage',      label: 'Issue Triage',         icon: Tag,        badge: counts.triage || undefined },
+    { page: 'moderation',  label: 'Moderation',           icon: Shield,     badge: counts.moderation || undefined },
+    { page: 'recommender', label: 'Recommender',          icon: Compass },
+    { page: 'readme',      label: 'README Gen',           icon: FileText },
+    { page: 'settings',    label: 'Settings',             icon: Settings },
+  ];
+
   return (
     <aside className="w-56 bg-zinc-950 border-r border-zinc-800 flex flex-col flex-shrink-0">
       {/* Logo */}
@@ -26,7 +37,7 @@ export function Sidebar({ currentPage, navigate }: SidebarProps) {
         </div>
         <div>
           <div className="font-bold text-white text-sm tracking-tight leading-tight">GitWise AI</div>
-          <div className="text-[9px] text-zinc-600 leading-tight">Open-source · gpt-oss-120B</div>
+          <div className="text-[9px] text-zinc-600 leading-tight">Open-source · Qwen2.5 72B</div>
         </div>
       </div>
 
@@ -50,15 +61,14 @@ export function Sidebar({ currentPage, navigate }: SidebarProps) {
                   : 'text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/50'
               )}
             >
-              {/* Active left border */}
               {active && (
                 <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-violet-500 rounded-r-full" />
               )}
               <Icon className={cn('w-4 h-4 flex-shrink-0 transition-colors', active ? 'text-violet-400' : 'text-zinc-600 group-hover:text-zinc-400')} />
               <span className="flex-1">{label}</span>
-              {badge && (
+              {badge !== undefined && (
                 <span className={cn(
-                  'text-[9px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center',
+                  'text-[9px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center tabular-nums',
                   active ? 'bg-violet-500/20 text-violet-300' : 'bg-zinc-800 text-zinc-500'
                 )}>{badge}</span>
               )}
@@ -75,7 +85,7 @@ export function Sidebar({ currentPage, navigate }: SidebarProps) {
             <div className="absolute inset-0 rounded-full bg-emerald-400 animate-ping opacity-60" />
           </div>
           <div className="text-[10px] text-zinc-500 leading-tight flex-1 min-w-0">
-            <span className="text-zinc-300 font-medium">gpt-oss-120B</span>
+            <span className="text-zinc-300 font-medium">Qwen2.5 72B</span>
             <span className="text-zinc-700"> · model online</span>
           </div>
         </div>

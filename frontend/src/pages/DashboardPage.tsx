@@ -1,60 +1,74 @@
-import { Tag, Shield, Compass, FileText, GitBranch, ArrowRight, CheckCircle, AlertTriangle, XCircle, TrendingUp, Activity, Cpu } from 'lucide-react';
-import { MOCK_MODERATION_EVENTS, MOCK_REPOSITORIES, MOCK_TRIAGED_ISSUES } from '../data/mockData';
-import type { Page } from '../types';
+import { useState, useEffect } from 'react';
+import { Tag, Shield, Compass, FileText, GitBranch, ArrowRight, CheckCircle, AlertTriangle, XCircle, TrendingUp, Activity, Cpu, RefreshCw, Zap } from 'lucide-react';
+import type { Page, Repository } from '../types';
 import { cn } from '../utils/cn';
+import { getDashboardStats, getDashboardFeed, getDashboardActivity, getModeration, getRepos } from '../lib/api';
+import type { DashboardStats, FeedEntry, ActivityDay, ApiModerationEvent } from '../lib/api';
 
 interface DashboardPageProps {
   navigate: (page: Page) => void;
 }
 
-const CHART_DATA = [
-  { day: 'Mon', issues: 8,  events: 5  },
-  { day: 'Tue', issues: 14, events: 8  },
-  { day: 'Wed', issues: 12, events: 11 },
-  { day: 'Thu', issues: 20, events: 14 },
-  { day: 'Fri', issues: 18, events: 9  },
-  { day: 'Sat', issues: 6,  events: 4  },
-  { day: 'Sun', issues: 9,  events: 7  },
-];
-const CHART_MAX = Math.max(...CHART_DATA.flatMap((d) => [d.issues, d.events]));
-
-const HEALTH_ITEMS = [
-  { label: 'AI Inference',       value: 98,   display: '98% uptime',   color: 'bg-emerald-500' },
-  { label: 'Webhook Delivery',   value: 99.8, display: '99.8% success', color: 'bg-emerald-500' },
-  { label: 'Avg Triage Latency', value: 12,   display: '12ms',          color: 'bg-violet-500' },
-  { label: 'Queue Backlog',      value: 0,    display: 'Empty',         color: 'bg-emerald-500' },
-];
-
-const LIVE_FEED = [
-  { icon: XCircle,       color: 'text-red-400',     bg: 'bg-red-500/10',     text: 'PR #4401 blocked — hardcoded API key detected',          time: '2m ago'  },
-  { icon: CheckCircle,   color: 'text-emerald-400', bg: 'bg-emerald-500/10', text: 'Issue triaged as BUG · priority score 93',                time: '8m ago'  },
-  { icon: AlertTriangle, color: 'text-amber-400',   bg: 'bg-amber-500/10',   text: 'Commit flagged — possible SQL injection risk',             time: '15m ago' },
-  { icon: FileText,      color: 'text-amber-400',   bg: 'bg-amber-500/10',   text: 'README generated for vitejs/vite',                        time: '32m ago' },
-  { icon: CheckCircle,   color: 'text-emerald-400', bg: 'bg-emerald-500/10', text: 'PR #881 passed — docs-only change, zero risk',            time: '1h ago'  },
-  { icon: Tag,           color: 'text-violet-400',  bg: 'bg-violet-500/10',  text: '6 issues batch-triaged in facebook/react',                time: '2h ago'  },
-];
-
-const DECISION_ICON  = { PASS: CheckCircle, FLAG: AlertTriangle, BLOCK: XCircle } as const;
-const DECISION_COLOR = { PASS: 'text-emerald-400', FLAG: 'text-amber-400',   BLOCK: 'text-red-400' } as const;
-
 function timeAgo(ts: string) {
   const diff = Date.now() - new Date(ts).getTime();
   const m = Math.floor(diff / 60000);
+  if (m < 2) return 'just now';
   if (m < 60) return `${m}m ago`;
   const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  return `${Math.floor(h / 24)}d ago`;
+  return h < 24 ? `${h}h ago` : `${Math.floor(h / 24)}d ago`;
+}
+
+function feedIcon(type: string, severity?: string) {
+  const t = type + (severity ?? '');
+  if (t.includes('block') || t.includes('BLOCK')) return { Icon: XCircle, color: 'text-red-400', bg: 'bg-red-500/10' };
+  if (t.includes('flag') || t.includes('FLAG')) return { Icon: AlertTriangle, color: 'text-amber-400', bg: 'bg-amber-500/10' };
+  if (t.includes('readme')) return { Icon: FileText, color: 'text-amber-400', bg: 'bg-amber-500/10' };
+  if (t.includes('triage') || t.includes('issue')) return { Icon: Tag, color: 'text-violet-400', bg: 'bg-violet-500/10' };
+  return { Icon: CheckCircle, color: 'text-emerald-400', bg: 'bg-emerald-500/10' };
+}
+
+function modIcon(decision: string) {
+  if (decision === 'BLOCK') return { Icon: XCircle, color: 'text-red-400', bg: 'bg-red-500/10' };
+  if (decision === 'FLAG') return { Icon: AlertTriangle, color: 'text-amber-400', bg: 'bg-amber-500/10' };
+  return { Icon: CheckCircle, color: 'text-emerald-400', bg: 'bg-emerald-500/10' };
 }
 
 export function DashboardPage({ navigate }: DashboardPageProps) {
-  const monitoredRepos = MOCK_REPOSITORIES.filter((r) => r.isMonitored);
-  const blockedCount  = MOCK_MODERATION_EVENTS.filter((e) => e.decision === 'BLOCK').length;
+  const [stats, setStats] = useState<DashboardStats>({
+    issuesAnalysed: 0, prsModerated: 0, blockedPrs: 0, flaggedPrs: 0, passedPrs: 0,
+    activeRepos: 0, readmesGenerated: 0, modelLatencyMs: 0, eventsToday: 0,
+    allWebhooksHealthy: true, aiUptime: 0, webhookDeliveryRate: 0, queueBacklog: 0,
+  });
+  const [feed, setFeed] = useState<FeedEntry[]>([]);
+  const [feedLoading, setFeedLoading] = useState(true);
+  const [activity, setActivity] = useState<ActivityDay[]>([]);
+  const [activityLoading, setActivityLoading] = useState(true);
+  const [recentMod, setRecentMod] = useState<ApiModerationEvent[]>([]);
+  const [monitoredRepos, setMonitoredRepos] = useState<Repository[]>([]);
+
+  useEffect(() => {
+    getDashboardStats().then(setStats).catch(() => {});
+    getDashboardFeed(6)
+      .then(setFeed)
+      .catch(() => {})
+      .finally(() => setFeedLoading(false));
+    getDashboardActivity(7)
+      .then(setActivity)
+      .catch(() => {})
+      .finally(() => setActivityLoading(false));
+    getModeration()
+      .then((events) => setRecentMod(events.slice(0, 3)))
+      .catch(() => {});
+    getRepos()
+      .then((repos) => setMonitoredRepos(repos.filter((r: Repository) => r.isMonitored).slice(0, 4)))
+      .catch(() => {});
+  }, []);
 
   const STATS = [
-    { label: 'Issues Analysed', value: MOCK_TRIAGED_ISSUES.length,    trend: '+18%', up: true,  icon: Tag,      color: 'text-violet-400', bg: 'bg-violet-500/10',  page: 'triage'       as Page },
-    { label: 'PRs Moderated',   value: MOCK_MODERATION_EVENTS.length, trend: '+7%',  up: true,  icon: Shield,   color: 'text-blue-400',   bg: 'bg-blue-500/10',    page: 'moderation'   as Page },
-    { label: 'Blocked PRs',     value: blockedCount,                  trend: '+2',   up: false, icon: XCircle,  color: 'text-red-400',    bg: 'bg-red-500/10',     page: 'moderation'   as Page },
-    { label: 'Active Repos',    value: monitoredRepos.length,         trend: '+1',   up: true,  icon: GitBranch,color: 'text-emerald-400',bg: 'bg-emerald-500/10', page: 'repositories' as Page },
+    { label: 'Issues Analysed', value: stats.issuesAnalysed, trend: '+18%', up: true,  icon: Tag,      color: 'text-violet-400', bg: 'bg-violet-500/10',  page: 'triage'       as Page },
+    { label: 'PRs Moderated',   value: stats.prsModerated,   trend: '+7%',  up: true,  icon: Shield,   color: 'text-blue-400',   bg: 'bg-blue-500/10',    page: 'moderation'   as Page },
+    { label: 'Blocked PRs',     value: stats.blockedPrs,     trend: '+2',   up: false, icon: XCircle,  color: 'text-red-400',    bg: 'bg-red-500/10',     page: 'moderation'   as Page },
+    { label: 'Active Repos',    value: stats.activeRepos,    trend: '+1',   up: true,  icon: GitBranch,color: 'text-emerald-400',bg: 'bg-emerald-500/10', page: 'repositories' as Page },
   ];
 
   return (
@@ -67,13 +81,13 @@ export function DashboardPage({ navigate }: DashboardPageProps) {
           <div className="absolute inset-0 rounded-full bg-emerald-400 animate-ping opacity-50" />
         </div>
         <div className="flex items-center gap-2 text-xs text-zinc-400 flex-1 flex-wrap">
-          <span className="text-emerald-400 font-semibold">gpt-oss-120B online</span>
+          <span className="text-emerald-400 font-semibold">Qwen2.5 72B online</span>
           <span className="text-zinc-700">·</span>
-          <span>12ms avg latency</span>
+          <span>{stats.modelLatencyMs > 0 ? `${stats.modelLatencyMs}ms avg latency` : 'latency loading…'}</span>
           <span className="text-zinc-700">·</span>
-          <span>1,247 events processed today</span>
+          <span>{stats.eventsToday} events processed today</span>
           <span className="text-zinc-700 hidden md:inline">·</span>
-          <span className="hidden md:inline">All webhooks healthy</span>
+          <span className="hidden md:inline">{stats.allWebhooksHealthy ? 'All webhooks healthy' : 'Webhook issues detected'}</span>
         </div>
         <div className="flex items-center gap-1 text-[10px] text-zinc-600 flex-shrink-0">
           <Activity className="w-3 h-3" />
@@ -120,33 +134,45 @@ export function DashboardPage({ navigate }: DashboardPageProps) {
             </div>
           </div>
 
-          {/* Bars */}
-          <div className="flex items-end gap-2 h-36">
-            {CHART_DATA.map(({ day, issues, events }) => (
-              <div key={day} className="flex-1 flex flex-col items-center gap-1.5">
-                <div className="flex items-end gap-0.5 w-full" style={{ height: '112px' }}>
-                  <div
-                    className="flex-1 bg-violet-500/60 hover:bg-violet-500 rounded-t transition-all duration-300 ease-out"
-                    style={{ height: `${(issues / CHART_MAX) * 100}%` }}
-                    title={`${issues} issues`}
-                  />
-                  <div
-                    className="flex-1 bg-blue-500/50 hover:bg-blue-500 rounded-t transition-all duration-300 ease-out"
-                    style={{ height: `${(events / CHART_MAX) * 100}%` }}
-                    title={`${events} events`}
-                  />
+          {activityLoading ? (
+            <div className="h-36 flex items-center justify-center text-zinc-600 gap-2 text-xs">
+              <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Loading chart…
+            </div>
+          ) : activity.length === 0 ? (
+            <div className="h-36 flex items-center justify-center text-xs text-zinc-600">
+              No activity yet — data will appear as GitHub webhooks are processed.
+            </div>
+          ) : (() => {
+            const chartMax = Math.max(...activity.flatMap((d) => [d.issues, d.events]), 1);
+            return (
+              <>
+                <div className="flex items-end gap-2 h-36">
+                  {activity.map(({ day, issues, events }) => (
+                    <div key={day} className="flex-1 flex flex-col items-center gap-1.5">
+                      <div className="flex items-end gap-0.5 w-full" style={{ height: '112px' }}>
+                        <div
+                          className="flex-1 bg-violet-500/60 hover:bg-violet-500 rounded-t transition-all duration-300 ease-out"
+                          style={{ height: `${(issues / chartMax) * 100}%` }}
+                          title={`${issues} issues`}
+                        />
+                        <div
+                          className="flex-1 bg-blue-500/50 hover:bg-blue-500 rounded-t transition-all duration-300 ease-out"
+                          style={{ height: `${(events / chartMax) * 100}%` }}
+                          title={`${events} events`}
+                        />
+                      </div>
+                      <span className="text-[9px] text-zinc-600">{day}</span>
+                    </div>
+                  ))}
                 </div>
-                <span className="text-[9px] text-zinc-600">{day}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Y-axis labels */}
-          <div className="flex justify-between text-[9px] text-zinc-700 mt-2 px-1">
-            <span>0</span>
-            <span>{Math.round(CHART_MAX / 2)}</span>
-            <span>{CHART_MAX}</span>
-          </div>
+                <div className="flex justify-between text-[9px] text-zinc-700 mt-2 px-1">
+                  <span>0</span>
+                  <span>{Math.round(chartMax / 2)}</span>
+                  <span>{chartMax}</span>
+                </div>
+              </>
+            );
+          })()}
         </div>
 
         {/* System health */}
@@ -157,7 +183,32 @@ export function DashboardPage({ navigate }: DashboardPageProps) {
           </div>
 
           <div className="space-y-4 flex-1">
-            {HEALTH_ITEMS.map(({ label, value, display, color }) => (
+            {[
+              {
+                label: 'AI Inference',
+                value: stats.aiUptime,
+                display: stats.aiUptime > 0 ? `${stats.aiUptime.toFixed(1)}% uptime` : '—',
+                color: stats.aiUptime >= 95 ? 'bg-emerald-500' : 'bg-amber-500',
+              },
+              {
+                label: 'Webhook Delivery',
+                value: stats.webhookDeliveryRate,
+                display: stats.webhookDeliveryRate > 0 ? `${stats.webhookDeliveryRate.toFixed(1)}% success` : '—',
+                color: stats.webhookDeliveryRate >= 95 ? 'bg-emerald-500' : 'bg-amber-500',
+              },
+              {
+                label: 'Avg Triage Latency',
+                value: stats.modelLatencyMs > 0 ? Math.min(100, 100 - (stats.modelLatencyMs / 500) * 100) : 0,
+                display: stats.modelLatencyMs > 0 ? `${stats.modelLatencyMs}ms` : '—',
+                color: stats.modelLatencyMs <= 100 ? 'bg-violet-500' : 'bg-amber-500',
+              },
+              {
+                label: 'Queue Backlog',
+                value: stats.queueBacklog === 0 ? 100 : Math.max(0, 100 - stats.queueBacklog * 10),
+                display: stats.queueBacklog === 0 ? 'Empty' : `${stats.queueBacklog} pending`,
+                color: stats.queueBacklog === 0 ? 'bg-emerald-500' : 'bg-amber-500',
+              },
+            ].map(({ label, value, display, color }) => (
               <div key={label}>
                 <div className="flex items-center justify-between mb-1.5 text-xs">
                   <span className="text-zinc-500">{label}</span>
@@ -166,7 +217,7 @@ export function DashboardPage({ navigate }: DashboardPageProps) {
                 <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
                   <div
                     className={cn('h-full rounded-full transition-all duration-700', color)}
-                    style={{ width: value > 1 ? `${Math.min(100, value)}%` : '100%' }}
+                    style={{ width: `${Math.min(100, Math.max(0, value))}%` }}
                   />
                 </div>
               </div>
@@ -174,8 +225,10 @@ export function DashboardPage({ navigate }: DashboardPageProps) {
           </div>
 
           <div className="mt-5 pt-4 border-t border-zinc-800 flex items-center gap-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-            <span className="text-[10px] text-zinc-500">All systems operational</span>
+            <div className={cn('w-1.5 h-1.5 rounded-full', stats.allWebhooksHealthy ? 'bg-emerald-400' : 'bg-amber-400')} />
+            <span className="text-[10px] text-zinc-500">
+              {stats.allWebhooksHealthy ? 'All systems operational' : 'Some systems degraded'}
+            </span>
           </div>
         </div>
       </div>
@@ -192,20 +245,30 @@ export function DashboardPage({ navigate }: DashboardPageProps) {
               Real-time
             </span>
           </div>
-          <div className="divide-y divide-zinc-800/50">
-            {LIVE_FEED.map((item, i) => {
-              const Icon = item.icon;
-              return (
-                <div key={i} className="px-5 py-3 flex items-center gap-3 hover:bg-zinc-800/20 transition-colors">
-                  <div className={cn('w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0', item.bg)}>
-                    <Icon className={cn('w-3.5 h-3.5', item.color)} />
+          {feedLoading ? (
+            <div className="flex items-center justify-center gap-2 py-10 text-zinc-600 text-xs">
+              <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Loading…
+            </div>
+          ) : feed.length === 0 ? (
+            <div className="py-10 text-center text-xs text-zinc-600 px-5">
+              No activity yet. Import and monitor a repository to start seeing events here.
+            </div>
+          ) : (
+            <div className="divide-y divide-zinc-800/50">
+              {feed.map((item) => {
+                const { Icon, color, bg } = feedIcon(item.type, item.severity);
+                return (
+                  <div key={item.id} className="px-5 py-3 flex items-center gap-3 hover:bg-zinc-800/20 transition-colors">
+                    <div className={cn('w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0', bg)}>
+                      <Icon className={cn('w-3.5 h-3.5', color)} />
+                    </div>
+                    <span className="flex-1 text-xs text-zinc-400 min-w-0 truncate">{item.message}</span>
+                    <span className="text-[10px] text-zinc-600 flex-shrink-0 whitespace-nowrap">{timeAgo(item.timestamp)}</span>
                   </div>
-                  <span className="flex-1 text-xs text-zinc-400 min-w-0 truncate">{item.text}</span>
-                  <span className="text-[10px] text-zinc-600 flex-shrink-0 whitespace-nowrap">{item.time}</span>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Right column: quick actions + monitored repos */}
@@ -249,25 +312,36 @@ export function DashboardPage({ navigate }: DashboardPageProps) {
                 Manage <ArrowRight className="w-3 h-3" />
               </button>
             </div>
-            <div className="divide-y divide-zinc-800/50">
-              {monitoredRepos.map((repo) => {
-                const Icon = DECISION_ICON.PASS;
-                return (
-                  <div key={repo.id} className="px-4 py-3 flex items-center justify-between hover:bg-zinc-800/20 transition-colors">
-                    <div className="min-w-0">
-                      <p className="text-xs font-medium text-zinc-300 truncate">{repo.fullName}</p>
-                      <p className="text-[10px] text-zinc-600">{repo.openIssues} open issues · {repo.language}</p>
+            {monitoredRepos.length === 0 ? (
+              <div className="px-4 py-6 text-center">
+                <p className="text-xs text-zinc-600">No monitored repos yet.</p>
+                <button onClick={() => navigate('repositories')} className="mt-2 text-xs text-violet-400 hover:underline">Import from GitHub →</button>
+              </div>
+            ) : (
+              <div className="divide-y divide-zinc-800/50">
+                {monitoredRepos.map((repo) => (
+                  <div key={repo.id} className="px-4 py-3 flex items-center gap-3 hover:bg-zinc-800/20 transition-colors">
+                    <div className="w-7 h-7 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
+                      <Zap className="w-3.5 h-3.5 text-emerald-400" />
                     </div>
-                    <div className="flex items-center gap-2 flex-shrink-0 ml-3">
-                      {repo.webhookActive && (
-                        <span className="text-[9px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full">Webhook active</span>
-                      )}
-                      <Icon className={cn('w-3.5 h-3.5', repo.webhookActive ? DECISION_COLOR.PASS : 'text-zinc-700')} />
+                    <div className="flex-1 min-w-0">
+                      <a
+                        href={repo.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-xs font-medium text-zinc-300 hover:text-violet-400 transition-colors truncate block"
+                      >
+                        {repo.fullName}
+                      </a>
+                      <div className="text-[10px] text-zinc-600">{repo.language} · {repo.openIssues} issues</div>
                     </div>
+                    {repo.webhookActive && (
+                      <span className="text-[9px] text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full flex-shrink-0">Active</span>
+                    )}
                   </div>
-                );
-              })}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
 
         </div>
@@ -284,31 +358,30 @@ export function DashboardPage({ navigate }: DashboardPageProps) {
             View all <ArrowRight className="w-3 h-3" />
           </button>
         </div>
-        <div className="divide-y divide-zinc-800/40">
-          {MOCK_MODERATION_EVENTS.slice(0, 4).map((event) => {
-            const Icon = DECISION_ICON[event.decision];
-            return (
-              <div key={event.id} className="px-5 py-3 flex items-center gap-4 hover:bg-zinc-800/20 transition-colors">
-                <Icon className={cn('w-4 h-4 flex-shrink-0', DECISION_COLOR[event.decision])} />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-zinc-300 truncate">{event.title}</p>
-                  <p className="text-[10px] text-zinc-600 mt-0.5">{event.repo} · {event.reason}</p>
+        {recentMod.length === 0 ? (
+          <div className="px-5 py-6 text-center text-xs text-zinc-600">
+            Moderation events will appear here as webhooks are processed.{' '}
+            <button onClick={() => navigate('moderation')} className="text-violet-400 hover:underline">View all →</button>
+          </div>
+        ) : (
+          <div className="divide-y divide-zinc-800/50">
+            {recentMod.map((ev) => {
+              const { Icon, color, bg } = modIcon(ev.decision);
+              return (
+                <div key={ev.id} className="px-5 py-3 flex items-center gap-3 hover:bg-zinc-800/20 transition-colors">
+                  <div className={cn('w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0', bg)}>
+                    <Icon className={cn('w-3.5 h-3.5', color)} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-zinc-300 truncate">{ev.title}</p>
+                    <p className="text-[10px] text-zinc-600">{ev.repo} · {ev.decision}</p>
+                  </div>
+                  <span className="text-[10px] text-zinc-600 flex-shrink-0 whitespace-nowrap">{timeAgo(ev.timestamp)}</span>
                 </div>
-                <div className="flex items-center gap-3 flex-shrink-0 text-right">
-                  <span className={cn(
-                    'text-[10px] font-semibold px-2 py-0.5 rounded-full',
-                    event.decision === 'BLOCK' ? 'bg-red-500/10 text-red-400' :
-                    event.decision === 'FLAG'  ? 'bg-amber-500/10 text-amber-400' :
-                    'bg-emerald-500/10 text-emerald-400'
-                  )}>
-                    {event.decision}
-                  </span>
-                  <span className="text-[10px] text-zinc-600">{timeAgo(event.timestamp)}</span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
     </div>
