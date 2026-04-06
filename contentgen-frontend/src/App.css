@@ -1,0 +1,149 @@
+/* ── Reset & Base ───────────────────────────────── */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: #0f1117;
+  color: #e2e8f0;
+  font-family: "Segoe UI", sans-serif;
+  min-height: 100vh;
+}
+
+/* ── App Wrapper ────────────────────────────────── */
+.app {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 40px 20px;
+}
+
+/* ── Header ─────────────────────────────────────── */
+.header {
+  text-align: center;
+  margin-bottom: 48px;
+}
+
+.heading {
+  font-size: 2.8rem;
+  font-weight: 700;
+  color: #7c6ff7;
+  letter-spacing: -1px;
+}
+
+.subtitle {
+  margin-top: 10px;
+  font-size: 1.05rem;
+  color: #94a3b8;
+}
+
+/* ── Cards Container ─────────────────────────────── */
+.cards-container {
+  display: flex;
+  gap: 24px;
+}
+
+/* Stack on mobile */
+@media (max-width: 700px) {
+  .cards-container {
+    flex-direction: column;
+  }
+}
+
+/* ── Card ────────────────────────────────────────── */
+.card {
+  flex: 1;
+  background-color: #1e2130;
+  border: 1px solid #2d3148;
+  border-radius: 12px;
+  padding: 28px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.card-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.card-desc {
+  font-size: 0.9rem;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+
+/* ── Form Elements ───────────────────────────────── */
+.label {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  margin-bottom: -6px;
+}
+
+.input {
+  background-color: #0f1117;
+  border: 1px solid #2d3148;
+  border-radius: 8px;
+  color: #e2e8f0;
+  font-size: 0.95rem;
+  padding: 10px 14px;
+  width: 100%;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.input:focus {
+  border-color: #7c6ff7;
+}
+
+/* ── Output Box ──────────────────────────────────── */
+.output-box {
+  flex: 1;
+  background-color: #0f1117;
+  border: 1px dashed #2d3148;
+  border-radius: 8px;
+  padding: 20px;
+  min-height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.output-placeholder {
+  font-size: 0.9rem;
+  color: #475569;
+  text-align: center;
+}
+
+/* ── Buttons ─────────────────────────────────────── */
+.btn {
+  background-color: #7c6ff7;
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 11px 20px;
+  transition: background-color 0.2s, transform 0.1s;
+}
+
+.btn:hover {
+  background-color: #6457e8;
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.btn-secondary {
+  background-color: transparent;
+  border: 1px solid #7c6ff7;
+  color: #7c6ff7;
+}
+
+.btn-secondary:hover {
+  background-color: #7c6ff714;
+}
