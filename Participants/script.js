@@ -38,3 +38,6 @@ document.getElementById("profileForm").addEventListener("submit", function(e) {
 
   document.getElementById("message").innerText = message;
 });
+function goToProfile() {
+  window.location.href = "index.html";
+}

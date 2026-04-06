@@ -91,3 +91,40 @@ button:hover {
     transform: translateY(0);
   }
 }
+/* Dashboard Layout */
+.dashboard {
+  text-align: center;
+  color: white;
+}
+
+.dashboard h1 {
+  margin-bottom: 30px;
+}
+
+/* Cards container */
+.cards {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+}
+
+/* Individual card */
+.card {
+  width: 200px;
+  padding: 20px;
+  border-radius: 15px;
+  background: rgba(255,255,255,0.1);
+  backdrop-filter: blur(10px);
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+/* Hover animation */
+.card:hover {
+  transform: translateY(-10px) scale(1.05);
+}
+
+/* Text */
+.card h3 {
+  margin-bottom: 10px;
+}
