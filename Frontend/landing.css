@@ -20,7 +20,7 @@
   --amber-glow:   0 0 24px rgba(139,69,19,0.45);
   --text:         #2c1200;
   --text2:        #6b3d1a;
-  --trans:        0.22s ease;
+  --trans:        0.25s ease;
   --radius:       16px;
 }
 
@@ -122,7 +122,8 @@ body {
 
 .portal-card {
   position: relative;
-  background: var(--surface);
+  background: rgba(245, 233, 208, 0.95);
+  backdrop-filter: blur(10px);
   border: 1px solid var(--border);
   border-radius: 22px;
   padding: 2.6rem 2.2rem 2.2rem;
@@ -130,7 +131,7 @@ body {
   text-decoration: none;
   display: flex; flex-direction: column; align-items: flex-start; gap: 1.2rem;
   overflow: hidden;
-  transition: transform var(--trans), box-shadow var(--trans), border-color var(--trans);
+  transition: all var(--trans);
 }
 .portal-card::before {
   content: '';
@@ -139,7 +140,7 @@ body {
   opacity: 0;
   transition: opacity .3s ease;
 }
-.portal-card:hover { transform: translateY(-6px); }
+.portal-card:hover { transform: translateY(-6px) scale(1.02); }
 .portal-card:hover::before { opacity: 1; }
 .portal-card:active { transform: translateY(-2px); }
 
@@ -147,7 +148,7 @@ body {
 .card-participant { border-color: rgba(200,101,26,0.25); }
 .card-participant:hover {
   border-color: rgba(200,101,26,0.6);
-  box-shadow: var(--accent-glow), 0 20px 60px rgba(61,23,0,0.3);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.25), 0 0 10px rgba(200,101,26,0.2);
 }
 .card-participant::before {
   background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(200,101,26,0.08) 0%, transparent 70%);
@@ -157,7 +158,7 @@ body {
 .card-organiser { border-color: rgba(139,69,19,0.25); }
 .card-organiser:hover {
   border-color: rgba(139,69,19,0.6);
-  box-shadow: var(--amber-glow), 0 20px 60px rgba(61,23,0,0.3);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.25), 0 0 10px rgba(139,69,19,0.2);
 }
 .card-organiser::before {
   background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(139,69,19,0.09) 0%, transparent 70%);
@@ -274,6 +275,10 @@ body {
   to   { opacity: 1; transform: translateY(0); }
 }
 @keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadePage {
   from { opacity: 0; }
   to   { opacity: 1; }
 }

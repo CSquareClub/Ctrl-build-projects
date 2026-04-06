@@ -45,7 +45,7 @@
   --radius: 14px;
   --radius-sm: 8px;
   --shadow: 0 6px 32px rgba(30,8,0,0.45);
-  --trans: 0.22s ease;
+  --trans: 0.25s ease;
 }
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -66,6 +66,7 @@ h1,h2,h3,h4,.logo-text,.stat-num,.section-label,.desc-title,
   font-family:'Libre Baskerville',Georgia,serif;
   font-weight:700;
 }
+h1,h2,h3,h4 { animation: fadeIn 1s ease-in; }
 
 a{text-decoration:none;cursor:pointer;}
 input,textarea,select,button{
@@ -75,7 +76,12 @@ input,textarea,select,button{
 
 /* ── Pages ── */
 .page{display:none;}
-.page.active{display:flex;}
+.page.active{display:flex; animation: fadePage 0.4s ease;}
+
+@keyframes fadePage {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
 
 /* ══════════════════════════════════
    SHARED AUTH LAYOUT (login/register)
@@ -201,14 +207,15 @@ input,textarea,select,button{
 
 /* ── Buttons ── */
 .btn-primary{
-  background:var(--grad-btn);
-  color:var(--accent);
+  background: linear-gradient(135deg, #c8651a, #8b4513);
+  color:#fff;
   padding:.9rem 1.6rem;
   border-radius:var(--radius-sm);
   font-size:.95rem;cursor:pointer;
-  transition:transform var(--trans),box-shadow var(--trans),filter var(--trans);
-  letter-spacing:.02em;
-  box-shadow:0 4px 18px rgba(61,23,0,.45), var(--terra-glow);
+  transition: all var(--trans);
+  letter-spacing: 0.5px;
+  font-weight: 600;
+  box-shadow:0 4px 18px rgba(61,23,0,.45);
 }
 .btn-primary:hover{transform:translateY(-2px);filter:brightness(1.1);box-shadow:0 8px 28px rgba(61,23,0,.6);}
 .btn-primary:active{transform:translateY(0);}
@@ -221,7 +228,7 @@ input,textarea,select,button{
   padding:.7rem 1.2rem;
   border-radius:var(--radius-sm);
   cursor:pointer;font-size:.85rem;
-  transition:border-color var(--trans),color var(--trans);
+  transition: all var(--trans);
 }
 .btn-ghost:hover{border-color:var(--terra);color:var(--terra-lt);}
 
@@ -281,12 +288,13 @@ input,textarea,select,button{
 }
 
 .hk-card{
-  background: linear-gradient(160deg, var(--surface) 0%, var(--bg3) 100%);
+  background: rgba(245, 233, 208, 0.95);
+  backdrop-filter: blur(10px);
   border:1px solid var(--border);
   border-radius:var(--radius);
   padding:1.6rem;
   cursor:pointer;
-  transition:transform var(--trans),border-color var(--trans),box-shadow var(--trans);
+  transition: all var(--trans);
   position:relative;overflow:hidden;
 }
 .hk-card::before{
@@ -301,9 +309,9 @@ input,textarea,select,button{
   transform:scaleX(0);transition:transform var(--trans);transform-origin:left;
 }
 .hk-card:hover{
-  transform:translateY(-4px);
+  transform:translateY(-6px) scale(1.02);
   border-color:var(--terra-border);
-  box-shadow:0 14px 36px rgba(10,4,4,.65),var(--terra-glow);
+  box-shadow:0 10px 30px rgba(0,0,0,0.25), 0 0 10px rgba(200,101,26,0.2);
 }
 .hk-card:hover::after{transform:scaleX(1);}
 .hk-card.current{border-color:var(--accent);box-shadow:0 0 0 2px rgba(200,101,26,.15);}
@@ -518,7 +526,7 @@ input,textarea,select,button{
 }
 .tab{display:none;}
 .tab.active{display:block;animation:fadeIn .3s ease;}
-@keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
 
 /* ── Page header ── */
 .page-header{
@@ -569,10 +577,11 @@ input,textarea,select,button{
   gap:1.2rem;margin-bottom:1.5rem;
 }
 .stat-card{
-  background:linear-gradient(145deg,#f5ede0,#eeddd0);
+  background: rgba(245, 233, 208, 0.95);
+  backdrop-filter: blur(10px);
   border:1px solid rgba(180,100,40,0.18);border-radius:var(--radius);
   padding:1.6rem 1.4rem;text-align:center;
-  transition:transform var(--trans),border-color var(--trans),box-shadow var(--trans);
+  transition: all var(--trans);
   position:relative;overflow:hidden;
 }
 .stat-card::before{
@@ -580,7 +589,7 @@ input,textarea,select,button{
   background:linear-gradient(90deg,var(--terra),var(--accent));
   opacity:0;transition:opacity var(--trans);
 }
-.stat-card:hover{transform:translateY(-4px);border-color:rgba(200,101,26,0.35);box-shadow:0 12px 32px rgba(100,40,0,0.18);}
+.stat-card:hover{transform:translateY(-4px) scale(1.02);border-color:rgba(200,101,26,0.35);box-shadow:0 10px 30px rgba(0,0,0,0.25), 0 0 10px rgba(200,101,26,0.2);}
 .stat-card:hover::before{opacity:1;}
 .stat-icon{
   font-size:1.1rem;margin-bottom:.6rem;
@@ -616,10 +625,11 @@ input,textarea,select,button{
   display:grid;grid-template-columns:repeat(auto-fill,minmax(276px,1fr));gap:1.2rem;
 }
 .team-card{
-  background: linear-gradient(160deg, var(--surface) 0%, var(--bg3) 100%);
+  background: rgba(245, 233, 208, 0.95);
+  backdrop-filter: blur(10px);
   border:1px solid var(--border);border-radius:var(--radius);
   padding:1.5rem;
-  transition:transform var(--trans),border-color var(--trans),box-shadow var(--trans);
+  transition: all var(--trans);
   position:relative;overflow:hidden;
 }
 .team-card::after{
@@ -627,7 +637,7 @@ input,textarea,select,button{
   background:var(--grad-h);transform:scaleX(0);
   transition:transform var(--trans);transform-origin:left;
 }
-.team-card:hover{transform:translateY(-4px);border-color:var(--terra-border);box-shadow:0 14px 36px rgba(10,4,4,.65),var(--terra-glow);}
+.team-card:hover{transform:translateY(-4px) scale(1.02);border-color:var(--terra-border);box-shadow:0 10px 30px rgba(0,0,0,0.25), 0 0 10px rgba(200,101,26,0.2);}
 .team-card:hover::after{transform:scaleX(1);}
 .team-name{font-size:1.06rem;color:var(--text);margin-bottom:.25rem;}
 .team-leader{font-size:.82rem;color:var(--text3);margin-bottom:.8rem;font-style:italic;}
@@ -656,7 +666,8 @@ input,textarea,select,button{
 .chip-absent {background:rgba(200,101,26,.08);color:var(--accent-soft);border:1px solid var(--border2);}
 
 .table-wrap{
-  background: linear-gradient(160deg, var(--surface) 0%, var(--bg3) 100%);
+  background: rgba(245, 233, 208, 0.95);
+  backdrop-filter: blur(10px);
   border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;
 }
 .att-table{width:100%;border-collapse:collapse;}
@@ -1204,7 +1215,34 @@ input,textarea,select,button{
      JAVASCRIPT
 ══════════════════════════════════════════════════ -->
 <script>
-/* ── Mock Teams ── */
+/* ── Toast notification (replaces alert) ── */
+function showToast(msg, type='success') {
+  let container = document.getElementById('toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toast-container';
+    container.style.cssText = 'position:fixed;bottom:1.5rem;right:1.5rem;z-index:9999;display:flex;flex-direction:column;gap:.5rem;';
+    document.body.appendChild(container);
+  }
+  const toast = document.createElement('div');
+  const bg = type === 'success' ? 'linear-gradient(135deg,#c8651a,#8b4513)' : 'linear-gradient(135deg,#c0392b,#8b1a1a)';
+  toast.style.cssText = `background:${bg};color:#fff;padding:.75rem 1.25rem;border-radius:10px;font-size:.88rem;font-weight:600;letter-spacing:.3px;box-shadow:0 8px 24px rgba(0,0,0,0.3);opacity:0;transform:translateY(12px);transition:all 0.25s ease;max-width:320px;`;
+  toast.textContent = msg;
+  container.appendChild(toast);
+  requestAnimationFrame(() => { toast.style.opacity='1'; toast.style.transform='translateY(0)'; });
+  setTimeout(() => {
+    toast.style.opacity='0'; toast.style.transform='translateY(12px)';
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
+
+/* ── Loading state helper ── */
+function showLoading(btn) {
+  const original = btn.textContent;
+  btn.textContent = 'Loading...';
+  btn.disabled = true;
+  return () => { btn.textContent = original; btn.disabled = false; };
+}
 const MOCK_TEAMS=[
   {name:"ByteForce",     leader:"Aryan Sharma", members:["Aryan Sharma","Priya Nair","Kiran Das","Mehul Patel"],   roles:["Frontend","Backend","ML"]},
   {name:"NullPointers",  leader:"Sneha Joshi",  members:["Sneha Joshi","Rahul Verma","Tanya Singh"],               roles:["Backend","DevOps","Design"]},
@@ -1270,30 +1308,39 @@ function showAuthTab(tab){
 
 /* ── Login ── */
 function handleLogin(){
+  const btn = event.currentTarget || document.querySelector('#auth-login .btn-primary');
+  const restore = showLoading(btn);
   const email=_v('login-email'), pass=_v('login-password');
-  if(!email||!pass){flash('login-email');flash('login-password');return;}
-  sessionStorage.setItem('dm_logged_in','true');
-  // pre-fill profile email
-  const p=getProfile();if(!p.email){p.email=email;saveProfileData(p);}
-  afterAuth();
+  if(!email||!pass){flash('login-email');flash('login-password');restore();return;}
+  setTimeout(() => {
+    sessionStorage.setItem('dm_logged_in','true');
+    const p=getProfile();if(!p.email){p.email=email;saveProfileData(p);}
+    restore();
+    afterAuth();
+  }, 600);
 }
 
 /* ── Register ── */
 function handleRegister(){
+  const btn = event.currentTarget || document.querySelector('#auth-register .btn-primary');
+  const restore = showLoading(btn);
   const name=_v('reg-name'),email=_v('reg-email'),pass=_v('reg-password'),conf=_v('reg-confirm');
-  if(!name){flash('reg-name');return;}
-  if(!email){flash('reg-email');return;}
-  if(!pass){flash('reg-password');return;}
-  if(pass!==conf){flash('reg-confirm');return;}
-  // Save profile from registration
+  if(!name){flash('reg-name');restore();return;}
+  if(!email){flash('reg-email');restore();return;}
+  if(!pass){flash('reg-password');restore();return;}
+  if(pass!==conf){flash('reg-confirm');restore();return;}
   const p={
     name:name,username:_v('reg-username'),email:email,
     phone:_v('reg-phone'),org:_v('reg-org'),
     designation:'',bio:'',linkedin:'',github:'',website:''
   };
-  saveProfileData(p);
-  sessionStorage.setItem('dm_logged_in','true');
-  afterAuth();
+  setTimeout(() => {
+    saveProfileData(p);
+    sessionStorage.setItem('dm_logged_in','true');
+    restore();
+    showToast('Account created successfully 🚀');
+    afterAuth();
+  }, 600);
 }
 
 function afterAuth(){
@@ -1380,7 +1427,9 @@ function toggleFee(){
 }
 
 function createHackathon(){
-  const name=_v('hk-name');if(!name){flash('hk-name');return;}
+  const btn = event.currentTarget || document.querySelector('#page-create .btn-primary.full');
+  const restore = showLoading(btn);
+  const name=_v('hk-name');if(!name){flash('hk-name');restore();return;}
   const data={
     name,
     desc:_v('hk-desc')||'No description provided.',
@@ -1393,14 +1442,18 @@ function createHackathon(){
     regEnd:document.getElementById('hk-reg-end').value,
     fee:feeEnabled?(_v('hk-fee')||'0'):null
   };
-  const hks=getHks();hks.push(data);saveHks(hks);
-  activeIdx=hks.length-1;
-  sessionStorage.setItem('dm_active_idx',activeIdx);
-  initAttendance();
-  showPage('page-app');
-  renderDashboard(data);
-  loadProfileForm();
-  switchTab('dashboard');
+  setTimeout(() => {
+    const hks=getHks();hks.push(data);saveHks(hks);
+    activeIdx=hks.length-1;
+    sessionStorage.setItem('dm_active_idx',activeIdx);
+    initAttendance();
+    restore();
+    showToast('Hackathon created successfully 🚀');
+    showPage('page-app');
+    renderDashboard(data);
+    loadProfileForm();
+    switchTab('dashboard');
+  }, 600);
 }
 
 /* ── Dashboard ── */
@@ -1495,14 +1548,20 @@ function loadProfileForm(){
   syncProfileUI(p);
 }
 function saveProfile(){
+  const btn = event.currentTarget || document.querySelector('#tab-profile .btn-primary');
+  const restore = showLoading(btn);
   const p={
     name:_v('prof-name'),username:_v('prof-username'),email:_v('prof-email-field'),
     phone:_v('prof-phone'),org:_v('prof-org'),designation:_v('prof-designation'),
     bio:_v('prof-bio'),linkedin:_v('prof-linkedin'),github:_v('prof-github'),website:_v('prof-website')
   };
-  saveProfileData(p);syncProfileUI(p);
-  const b=document.getElementById('profile-saved-badge');
-  if(b){b.style.display='inline-block';clearTimeout(b._t);b._t=setTimeout(()=>b.style.display='none',2800);}
+  setTimeout(() => {
+    saveProfileData(p);syncProfileUI(p);
+    restore();
+    showToast('Profile saved ✓');
+    const b=document.getElementById('profile-saved-badge');
+    if(b){b.style.display='inline-block';clearTimeout(b._t);b._t=setTimeout(()=>b.style.display='none',2800);}
+  }, 400);
 }
 function syncProfileUI(p){
   const ini=getInitials(p.name||p.username||'?');
