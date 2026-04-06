@@ -211,3 +211,20 @@ export default {
   similarityToPercentage,
   storage,
 };
+
+/**
+ * Validate issue submission form fields
+ * @param {string} title - Issue title
+ * @param {string} description - Issue description
+ * @returns {Object} Validation errors object
+ */
+export const validateIssueForm = (title, description) => {
+  const errors = {};
+  if (!title.trim()) errors.title = 'Issue title is required';
+  else if (title.trim().length < 5) errors.title = 'Title must be at least 5 characters';
+  if (!description.trim()) errors.description = 'Description is required';
+  else if (description.trim().length < 20) errors.description = 'Description must be at least 20 characters';
+  return errors;
+};
+
+export const hasErrors = (errors) => Object.keys(errors).length > 0;
