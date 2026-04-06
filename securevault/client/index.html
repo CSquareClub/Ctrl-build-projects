@@ -3,30 +3,356 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SecureVault - Password Manager</title>
+  <title>SecureVault Pro - Password Manager</title>
   <link rel="stylesheet" href="styles.css">
+  <!-- Professional Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Source+Serif+4:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-  <div class="container">
-    <h1>🔐 SecureVault</h1>
-    
-    <!-- Master Password Setup -->
+  <div class="app-container">
+    <!-- Auth Section -->
     <div id="auth-section">
-      <h2>Enter Master Password</h2>
-      <input type="password" id="master-password" placeholder="Master Password">
-      <button onclick="unlockVault()">Unlock Vault</button>
+      <div class="auth-wrapper">
+        <div class="auth-left">
+          <div class="brand">
+            <div class="logo-icon">🔐</div>
+            <h1>SecureVault</h1>
+            <span class="pro-badge">PRO</span>
+          </div>
+          <p class="tagline">Enterprise-grade password security for everyone</p>
+          
+          <div class="features-list">
+            <div class="feature-item">
+              <span class="feature-icon">🛡️</span>
+              <div>
+                <h4>AES-256 Encryption</h4>
+                <p>Military-grade encryption</p>
+              </div>
+            </div>
+            <div class="feature-item">
+              <span class="feature-icon">🔍</span>
+              <div>
+                <h4>Security Audit</h4>
+                <p>Find weak & reused passwords</p>
+              </div>
+            </div>
+            <div class="feature-item">
+              <span class="feature-icon">📊</span>
+              <div>
+                <h4>Smart Categories</h4>
+                <p>Organize passwords efficiently</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="auth-right">
+          <div class="auth-card">
+            <h2>Unlock Your Vault</h2>
+            <p class="auth-subtitle">Enter your master password to continue</p>
+            
+            <div class="form-group">
+              <label for="master-password">Master Password</label>
+              <div class="input-wrapper">
+                <input type="password" id="master-password" placeholder="Enter master password" 
+                       onkeypress="if(event.key==='Enter') unlockVault()">
+                <button class="input-btn" onclick="togglePasswordVisibility('master-password')">👁️</button>
+              </div>
+            </div>
+            
+            <div class="security-notice">
+              <span>⚠️</span>
+              <small>Your master password is never stored. If lost, data cannot be recovered.</small>
+            </div>
+            
+            <button class="btn-primary btn-full" onclick="unlockVault()">
+              🔓 Unlock Vault
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <!-- Password Manager -->
+    <!-- Main Vault Section -->
     <div id="vault-section" style="display: none;">
-      <h2>Add New Password</h2>
-      <input type="text" id="website" placeholder="Website (e.g., gmail.com)">
-      <input type="text" id="username" placeholder="Username/Email">
-      <input type="password" id="password" placeholder="Password">
-      <button onclick="savePassword()">Save Password</button>
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <div class="brand-small">
+            <span class="logo-small">🔐</span>
+            <span>SecureVault</span>
+          </div>
+        </div>
+        
+        <nav class="sidebar-nav">
+          <button class="nav-item active" onclick="showView('passwords')" data-view="passwords">
+            <span>🗝️</span> All Passwords
+          </button>
+          <button class="nav-item" onclick="showView('audit')" data-view="audit">
+            <span>🛡️</span> Security Audit
+          </button>
+          <button class="nav-item" onclick="showView('categories')" data-view="categories">
+            <span>📁</span> Categories
+          </button>
+          <button class="nav-item" onclick="showView('export')" data-view="export">
+            <span>📥</span> Export / Backup
+          </button>
+        </nav>
+        
+        <div class="sidebar-categories">
+          <h3>Categories</h3>
+          <button class="category-btn active" onclick="filterByCategory('all')" data-category="all">
+            <span>📋</span> All <span class="count" id="count-all">0</span>
+          </button>
+          <button class="category-btn" onclick="filterByCategory('social')" data-category="social">
+            <span>👥</span> Social <span class="count" id="count-social">0</span>
+          </button>
+          <button class="category-btn" onclick="filterByCategory('work')" data-category="work">
+            <span>💼</span> Work <span class="count" id="count-work">0</span>
+          </button>
+          <button class="category-btn" onclick="filterByCategory('finance')" data-category="finance">
+            <span>🏦</span> Finance <span class="count" id="count-finance">0</span>
+          </button>
+          <button class="category-btn" onclick="filterByCategory('shopping')" data-category="shopping">
+            <span>🛒</span> Shopping <span class="count" id="count-shopping">0</span>
+          </button>
+          <button class="category-btn" onclick="filterByCategory('entertainment')" data-category="entertainment">
+            <span>🎮</span> Entertainment <span class="count" id="count-entertainment">0</span>
+          </button>
+          <button class="category-btn" onclick="filterByCategory('other')" data-category="other">
+            <span>📌</span> Other <span class="count" id="count-other">0</span>
+          </button>
+        </div>
+        
+        <div class="sidebar-footer">
+          <button class="btn-secondary btn-full" onclick="toggleDarkMode()">
+            <span id="theme-icon">🌙</span> Toggle Theme
+          </button>
+          <button class="btn-danger btn-full" onclick="lockVault()">
+            🔒 Lock Vault
+          </button>
+        </div>
+      </aside>
 
-      <h2>Your Saved Passwords</h2>
-      <div id="password-list"></div>
+      <!-- Main Content -->
+      <main class="main-content">
+        <!-- Header -->
+        <header class="main-header">
+          <div class="header-left">
+            <h1 id="view-title">All Passwords</h1>
+            <p class="header-subtitle" id="view-subtitle">Manage your secure credentials</p>
+          </div>
+          <div class="header-right">
+            <div class="search-box">
+              <span>🔍</span>
+              <input type="text" id="search-input" placeholder="Search passwords..." oninput="filterPasswords()">
+            </div>
+            <button class="btn-primary" onclick="openAddModal()">
+              ➕ Add Password
+            </button>
+          </div>
+        </header>
+
+        <!-- Passwords View -->
+        <div id="passwords-view" class="view-container active">
+          <!-- Stats Cards -->
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-icon">🔑</div>
+              <div class="stat-info">
+                <span class="stat-value" id="stat-total">0</span>
+                <span class="stat-label">Total Passwords</span>
+              </div>
+            </div>
+            <div class="stat-card stat-warning">
+              <div class="stat-icon">⚠️</div>
+              <div class="stat-info">
+                <span class="stat-value" id="stat-weak">0</span>
+                <span class="stat-label">Weak Passwords</span>
+              </div>
+            </div>
+            <div class="stat-card stat-danger">
+              <div class="stat-icon">🔄</div>
+              <div class="stat-info">
+                <span class="stat-value" id="stat-reused">0</span>
+                <span class="stat-label">Reused Passwords</span>
+              </div>
+            </div>
+            <div class="stat-card stat-info">
+              <div class="stat-icon">📅</div>
+              <div class="stat-info">
+                <span class="stat-value" id="stat-old">0</span>
+                <span class="stat-label">Old (90+ days)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Password List -->
+          <div class="password-list-container">
+            <div class="list-header">
+              <span>Website</span>
+              <span>Username</span>
+              <span>Category</span>
+              <span>Strength</span>
+              <span>Actions</span>
+            </div>
+            <div id="password-list" class="password-list"></div>
+          </div>
+        </div>
+
+        <!-- Security Audit View -->
+        <div id="audit-view" class="view-container">
+          <div class="audit-header">
+            <div class="security-score-card">
+              <div class="score-circle">
+                <svg viewBox="0 0 100 100">
+                  <circle class="score-bg" cx="50" cy="50" r="45"/>
+                  <circle class="score-fill" cx="50" cy="50" r="45" id="score-circle"/>
+                </svg>
+                <div class="score-value">
+                  <span id="security-score">0</span>
+                  <small>/ 100</small>
+                </div>
+              </div>
+              <div class="score-info">
+                <h3>Security Score</h3>
+                <p id="score-message">Analyzing your vault...</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="audit-grid">
+            <!-- Weak Passwords -->
+            <div class="audit-card">
+              <div class="audit-card-header">
+                <span class="audit-icon warning">⚠️</span>
+                <h3>Weak Passwords</h3>
+              </div>
+              <p class="audit-description">Passwords that are easy to crack</p>
+              <div id="weak-passwords-list" class="audit-list"></div>
+            </div>
+
+            <!-- Reused Passwords -->
+            <div class="audit-card">
+              <div class="audit-card-header">
+                <span class="audit-icon danger">🔄</span>
+                <h3>Reused Passwords</h3>
+              </div>
+              <p class="audit-description">Same password used on multiple sites</p>
+              <div id="reused-passwords-list" class="audit-list"></div>
+            </div>
+
+            <!-- Old Passwords -->
+            <div class="audit-card">
+              <div class="audit-card-header">
+                <span class="audit-icon info">📅</span>
+                <h3>Old Passwords</h3>
+              </div>
+              <p class="audit-description">Not changed in 90+ days</p>
+              <div id="old-passwords-list" class="audit-list"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Categories View -->
+        <div id="categories-view" class="view-container">
+          <div class="categories-grid" id="categories-grid"></div>
+        </div>
+
+        <!-- Export View -->
+        <div id="export-view" class="view-container">
+          <div class="export-grid">
+            <div class="export-card">
+              <div class="export-icon">📄</div>
+              <h3>Export as JSON</h3>
+              <p>Full backup with all metadata. Best for importing back to SecureVault.</p>
+              <button class="btn-primary" onclick="exportJSON()">Download JSON</button>
+            </div>
+            <div class="export-card">
+              <div class="export-icon">📊</div>
+              <h3>Export as CSV</h3>
+              <p>Spreadsheet format. Compatible with Excel, Google Sheets.</p>
+              <button class="btn-primary" onclick="exportCSV()">Download CSV</button>
+            </div>
+            <div class="export-card">
+              <div class="export-icon">🔐</div>
+              <h3>Encrypted Backup</h3>
+              <p>Fully encrypted file. Requires master password to restore.</p>
+              <button class="btn-primary" onclick="exportEncrypted()">Download Encrypted</button>
+            </div>
+          </div>
+          
+          <div class="import-section">
+            <h2>📥 Import Passwords</h2>
+            <div class="import-dropzone" id="import-dropzone">
+              <input type="file" id="import-file" accept=".json,.csv" onchange="handleImport(event)">
+              <div class="dropzone-content">
+                <span>📁</span>
+                <p>Drop file here or click to browse</p>
+                <small>Supports JSON and CSV files</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Add/Edit Modal -->
+    <div id="password-modal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="modal-title">➕ Add New Password</h2>
+          <button class="modal-close" onclick="closeModal()">&times;</button>
+        </div>
+        
+        <div class="modal-body">
+          <input type="hidden" id="edit-id">
+          
+          <div class="form-group">
+            <label for="input-website">Website / App</label>
+            <input type="text" id="input-website" placeholder="e.g., gmail.com">
+          </div>
+          
+          <div class="form-group">
+            <label for="input-username">Username / Email</label>
+            <input type="text" id="input-username" placeholder="e.g., john@email.com">
+          </div>
+          
+          <div class="form-group">
+            <label for="input-password">Password</label>
+            <div class="input-wrapper">
+              <input type="password" id="input-password" placeholder="Enter password" oninput="checkPasswordStrength(this.value)">
+              <button class="input-btn" onclick="togglePasswordVisibility('input-password')">👁️</button>
+              <button class="input-btn" onclick="generatePassword()">🎲</button>
+            </div>
+            <div class="password-strength" id="password-strength"></div>
+          </div>
+          
+          <div class="form-group">
+            <label for="input-category">Category</label>
+            <select id="input-category">
+              <option value="other">📌 Other</option>
+              <option value="social">👥 Social Media</option>
+              <option value="work">💼 Work</option>
+              <option value="finance">🏦 Finance & Banking</option>
+              <option value="shopping">🛒 Shopping</option>
+              <option value="entertainment">🎮 Entertainment</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label for="input-notes">Notes (Optional)</label>
+            <textarea id="input-notes" placeholder="Additional notes..."></textarea>
+          </div>
+        </div>
+        
+        <div class="modal-footer">
+          <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+          <button class="btn-primary" onclick="savePassword()">💾 Save Password</button>
+        </div>
+      </div>
     </div>
   </div>
 
