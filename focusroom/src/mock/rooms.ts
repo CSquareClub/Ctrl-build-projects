@@ -1,6 +1,12 @@
-import type { Room } from '../services/rooms'
+type MockRoom = {
+  id: string
+  title: string
+  description: string
+  activeUsers: number
+  createdAt: null
+}
 
-export const mockRooms: Room[] = [
+export const mockRooms: MockRoom[] = [
   {
     id: 'mock-room-neuro-lab',
     title: 'Neuro Lab Sprint',

@@ -1,5 +1,4 @@
 import {
-  ArrowUpRight,
   Bell,
   CalendarDays,
   Camera,
@@ -15,6 +14,7 @@ import { Link } from 'react-router-dom'
 
 import { useAuth } from '../context/AuthContext'
 import { Sidebar } from '../components/Sidebar'
+import { useRooms } from '../hooks/useRooms'
 
 const quickActions = [
   {
@@ -77,45 +77,46 @@ const quickActions = [
 
 export function DashboardPage() {
   const { user } = useAuth()
+  const { rooms, loading: roomsLoading, error: roomsError } = useRooms()
 
   return (
-    <div className="min-h-screen w-full bg-[#020b1f] text-slate-100">
+    <div className="min-h-screen w-full bg-[var(--bg)] text-[var(--text)]">
       <Sidebar />
 
       <main className="ml-72 p-6">
-        <header className="mb-5 flex items-center justify-between rounded-2xl border border-cyan-300/15 bg-[#081833] px-5 py-4">
+        <header className="mb-5 flex items-center justify-between rounded-2xl border border-[var(--border)] bg-[var(--card)] px-5 py-4 shadow-sm">
           <div>
             <h1 className="font-display text-2xl font-semibold">Dashboard</h1>
-            <p className="text-sm text-slate-300">Welcome back, Satyam • {user?.email ?? 'satyam@focusroom.app'}</p>
+            <p className="text-sm text-[var(--muted)]">Welcome back, Satyam • {user?.email ?? 'satyam@focusroom.app'}</p>
           </div>
           <button
             type="button"
-            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-300/20 bg-white/5 text-slate-200"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--bg-elev)] text-[var(--muted)]"
           >
             <Moon className="h-4 w-4" />
           </button>
         </header>
 
-        <section className="rounded-3xl border border-cyan-300/15 bg-[#07152e] p-5">
-          <div className="rounded-2xl border border-cyan-300/15 bg-[#06112a] p-4">
+        <section className="rounded-3xl border border-[var(--border)] bg-[var(--card)] p-5 shadow-sm">
+          <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg-elev)] p-4">
             <h2 className="text-lg font-semibold">Recent Focus Activity</h2>
-            <ul className="mt-3 space-y-3 text-sm text-slate-300">
+            <ul className="mt-3 space-y-3 text-sm text-[var(--muted)]">
               <li className="flex items-center gap-3">
-                <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-pink-500/20 text-pink-300">
+                <span className="icon-soft inline-flex h-8 w-8 items-center justify-center rounded-lg">
                   <Camera className="h-4 w-4" />
                 </span>
                 <div>
-                  <p className="font-medium text-slate-100">Completed Neural Recall deck</p>
-                  <p className="text-xs text-slate-400">2 days ago • 24 flashcards mastered</p>
+                  <p className="font-medium text-[var(--text)]">Completed Neural Recall deck</p>
+                  <p className="text-xs text-[var(--muted)]">2 days ago • 24 flashcards mastered</p>
                 </div>
               </li>
               <li className="flex items-center gap-3">
-                <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/20 text-amber-300">
+                <span className="icon-soft inline-flex h-8 w-8 items-center justify-center rounded-lg">
                   <Bell className="h-4 w-4" />
                 </span>
                 <div>
-                  <p className="font-medium text-slate-100">Smart room checkpoint alert</p>
-                  <p className="text-xs text-slate-400">3 days ago • Maintained 42-minute focus run</p>
+                  <p className="font-medium text-[var(--text)]">Smart room checkpoint alert</p>
+                  <p className="text-xs text-[var(--muted)]">3 days ago • Maintained 42-minute focus run</p>
                 </div>
               </li>
             </ul>
@@ -123,39 +124,63 @@ export function DashboardPage() {
 
           <h2 className="mb-3 mt-5 text-2xl font-semibold">Quick Actions</h2>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {quickActions.map((action, index) => {
+            {quickActions.map((action) => {
               const Icon = action.icon
-              const gradients = [
-                'from-pink-500 to-rose-400',
-                'from-cyan-500 to-teal-400',
-                'from-emerald-500 to-teal-400',
-                'from-blue-500 to-violet-500',
-                'from-sky-500 to-indigo-500',
-                'from-fuchsia-500 to-violet-500',
-                'from-teal-500 to-emerald-500',
-                'from-amber-500 to-orange-500',
-              ]
 
               return (
                 <Link
                   key={action.label}
                   to={action.to}
-                  className={`group rounded-2xl bg-gradient-to-br ${gradients[index]} p-4 text-white transition-transform duration-200 hover:-translate-y-1`}
+                  className="group rounded-2xl border border-[var(--border)] bg-[var(--card)] p-4 text-[var(--text)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[var(--bg-elev)]"
                 >
                   <div className="mb-4 flex items-start justify-between gap-3">
-                    <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white/20">
+                    <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--bg-elev)] text-[var(--muted)]">
                       <Icon className="h-5 w-5" />
                     </div>
-                    <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-1 text-[10px] uppercase tracking-[0.16em] text-white/80">
+                    <span className="inline-flex items-center rounded-full border border-[var(--border)] bg-[var(--bg-elev)] px-2 py-1 text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">
                       {action.sidebarLabel}
-                      <ArrowUpRight className="h-3 w-3" />
                     </span>
                   </div>
                   <h3 className="text-lg font-semibold leading-tight">{action.label}</h3>
-                  <p className="mt-1 text-sm text-white/85">{action.description}</p>
+                  <p className="mt-1 text-sm text-[var(--muted)]">{action.description}</p>
                 </Link>
               )
             })}
+          </div>
+
+          <div className="mt-6 rounded-2xl border border-[var(--border)] bg-[var(--bg-elev)] p-4">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-lg font-semibold">Live Rooms</h2>
+              <Link to="/smart-room" className="text-xs text-[var(--muted)] hover:text-[var(--text)]">View all</Link>
+            </div>
+
+            {roomsLoading ? <p className="mt-3 text-sm text-[var(--muted)]">Loading live rooms...</p> : null}
+            {roomsError ? <p className="mt-3 text-sm text-[var(--muted)]">{roomsError}</p> : null}
+
+            {!roomsLoading && !roomsError && rooms.length === 0 ? (
+              <p className="mt-3 text-sm text-[var(--muted)]">No live rooms right now.</p>
+            ) : null}
+
+            {!roomsLoading && rooms.length > 0 ? (
+              <ul className="mt-3 space-y-2">
+                {rooms.slice(0, 4).map((room) => (
+                  <li key={room.id} className="rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 py-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="font-medium text-[var(--text)]">{room.name}</p>
+                        <p className="text-xs text-[var(--muted)]">{room.topic} • {room.duration} min</p>
+                      </div>
+                      <Link
+                        to={`/room/${room.id}`}
+                        className="rounded-lg border border-[var(--border)] bg-[var(--bg-elev)] px-3 py-1 text-xs text-[var(--text)] hover:opacity-90"
+                      >
+                        Join
+                      </Link>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
           </div>
         </section>
       </main>

@@ -1,10 +1,10 @@
 import { useEffect } from 'react'
 
+import { applyTheme, getStoredTheme } from '../lib/theme'
+
 export function ThemeSync() {
   useEffect(() => {
-    const savedTheme = localStorage.getItem('focusroom-theme')
-    const useDark = savedTheme ? savedTheme === 'dark' : true
-    document.documentElement.classList.toggle('dark', useDark)
+    applyTheme(getStoredTheme())
   }, [])
 
   return null

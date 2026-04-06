@@ -12,9 +12,9 @@ type ButtonProps = {
 
 const variantClasses: Record<ButtonVariant, string> = {
   primary:
-    'primary-gradient-bg bg-[length:200%_200%] text-[var(--on-primary)] shadow-[var(--hero-glow)] hover:bg-right hover:shadow-[var(--card-glow)]',
+    'border border-[var(--border)] bg-[var(--text)] text-[var(--bg)] hover:opacity-90',
   secondary:
-    'border border-[var(--border)] bg-[var(--card)] text-[var(--text)] hover:bg-[var(--accent-soft)]',
+    'border border-[var(--border)] bg-[var(--card)] text-[var(--text)] hover:bg-[var(--bg-elev)]',
 }
 
 export function Button({
@@ -29,7 +29,7 @@ export function Button({
       whileHover={{ y: -2, scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
       className={[
-        'inline-flex items-center justify-center rounded-2xl px-6 py-3 text-sm font-semibold tracking-wide transition-all duration-300',
+        'inline-flex items-center justify-center rounded-2xl px-6 py-3 text-sm font-medium tracking-[0.02em] transition-all duration-200',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]',
         variantClasses[variant],
         className,

@@ -49,6 +49,14 @@ npm run preview
 
 Create a `.env` file if your Firebase project needs local configuration. The app expects Firebase configuration inside the client setup in `src/lib/firebase.ts`.
 
+For the AI Assistant chat, add your Gemini key as:
+
+```bash
+VITE_GEMINI_API_KEY=your_gemini_api_key_here
+```
+
+You can copy `.env.example` to `.env.local` and fill in your own key for local development.
+
 ## Deployment on Vercel
 
 This project is configured for Vercel with `vercel.json`.

@@ -1,6 +1,7 @@
 import { Bot, CalendarCheck2, DoorOpen, Gamepad2, Gauge, GraduationCap, LogOut, Trophy } from 'lucide-react'
 import { NavLink, useNavigate } from 'react-router-dom'
 
+import { useAuth } from '../context/AuthContext'
 import { logout } from '../services/auth'
 
 const navItems = [
@@ -15,6 +16,13 @@ const navItems = [
 
 export function Sidebar() {
   const navigate = useNavigate()
+  const { user } = useAuth()
+
+  const displayName = user?.displayName?.trim()
+    || user?.email?.split('@')[0]
+    || 'Focus Member'
+  const userBadge = user?.emailVerified ? 'Verified User' : 'Unverified User'
+  const accountHint = user?.email ?? 'No email available'
 
   const handleLogout = async () => {
     await logout()
@@ -22,19 +30,11 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="fixed left-0 top-0 z-40 flex h-screen w-64 flex-col border-r border-cyan-300/15 bg-[#08142d] px-4 pb-4 pt-5">
-      <div className="mb-6 rounded-2xl border border-cyan-300/15 bg-[#0c1c3b] p-3">
-        <h2 className="font-display text-xl font-semibold text-cyan-300">Satyam</h2>
-        <p className="text-xs text-slate-300">Premium • Verified</p>
-        <div className="mt-3">
-          <div className="mb-1 flex items-center justify-between text-xs text-slate-300">
-            <span>Health Score</span>
-            <span className="font-semibold text-emerald-300">91%</span>
-          </div>
-          <div className="h-2 rounded-full bg-slate-700/60">
-            <div className="h-full w-[91%] rounded-full bg-gradient-to-r from-cyan-400 to-emerald-400" />
-          </div>
-        </div>
+    <aside className="fixed left-0 top-0 z-40 flex h-screen w-64 flex-col border-r border-[var(--border)] bg-[var(--card)] px-4 pb-4 pt-5">
+      <div className="mb-6 rounded-2xl border border-[var(--border)] bg-[var(--bg-elev)] p-3">
+        <h2 className="font-display text-xl font-semibold text-[var(--accent)]">{displayName}</h2>
+        <p className="text-xs text-[var(--muted)]">{userBadge}</p>
+        <p className="mt-2 truncate text-xs text-[var(--muted)]">{accountHint}</p>
       </div>
 
       <nav className="flex-1 space-y-2 overflow-y-auto pr-1">
@@ -49,12 +49,12 @@ export function Sidebar() {
                 [
                   'flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-sm transition-all duration-200',
                   isActive
-                    ? 'bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950 shadow-[0_10px_30px_rgba(34,211,238,0.25)]'
-                    : 'text-slate-300 hover:bg-white/5 hover:text-white',
+                    ? 'bg-[var(--accent-soft)] text-[var(--accent)] shadow-sm'
+                    : 'text-[var(--muted)] hover:bg-[var(--bg-elev)] hover:text-[var(--text)]',
                 ].join(' ')
               }
             >
-              <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/10">
+              <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[var(--bg-elev)]">
                 <Icon className="h-4 w-4" />
               </span>
               <span className="leading-tight">
@@ -69,7 +69,7 @@ export function Sidebar() {
       <button
         type="button"
         onClick={handleLogout}
-        className="mt-4 inline-flex w-full items-center gap-3 rounded-2xl border border-red-300/25 bg-red-500/10 px-3 py-3 text-sm text-red-100 transition-all duration-200 hover:bg-red-500/20"
+        className="mt-4 inline-flex w-full items-center gap-3 rounded-2xl border border-[var(--border)] bg-[var(--bg-elev)] px-3 py-3 text-sm text-[var(--text)] transition-all duration-200 hover:opacity-90"
       >
         <LogOut className="h-4 w-4" />
         Logout
