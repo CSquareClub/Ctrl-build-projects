@@ -1,132 +1,114 @@
-from flask import Blueprint, request, jsonify
-from ..services.embedding_service import EmbeddingService
-from ..services.vector_service import VectorService
-from ..config.settings import config
-import os
+"""Similar issues routes for FastAPI"""
+from fastapi import APIRouter, HTTPException, Query
+from pydantic import BaseModel
+from typing import List, Dict, Any, Optional
 
-similar_bp = Blueprint('similar', __name__, url_prefix='/api/similar')
-embedding_service = EmbeddingService()
-vector_service = VectorService(config.FAISS_INDEX_PATH)
+from app.services.embedding_service import get_embedding_service
+from app.services.vector_service import get_vector_service
+from app.config.settings import config
 
-@similar_bp.route('', methods=['POST'])
-def find_similar_issues():
+router = APIRouter()
+
+class SimilarQuery(BaseModel):
+    """Model for similar issues query"""
+    text: str
+    top_k: int = 5
+
+@router.post("/")
+async def find_similar_issues(query: SimilarQuery) -> Dict[str, Any]:
     """Find similar issues based on text"""
     try:
-        data = request.get_json()
-        
-        if not data or 'text' not in data:
-            return jsonify({
-                'success': False,
-                'error': 'Text field is required'
-            }), 400
-        
-        text = data['text']
-        top_k = data.get('top_k', 5)
+        embedding_service = get_embedding_service()
+        vector_service = get_vector_service()
         
         # Generate embedding for query
-        query_embedding = embedding_service.generate_embedding(text)
+        query_embedding = embedding_service.generate_embedding(query.text)
         
         if not query_embedding:
-            return jsonify({
-                'success': False,
-                'error': 'Failed to generate embedding'
-            }), 500
+            raise HTTPException(status_code=500, detail="Failed to generate embedding")
         
         # Search for similar issues
-        similar_issues = vector_service.search(query_embedding, k=top_k)
+        similar_issues = vector_service.search(query_embedding, k=query.top_k)
         
-        return jsonify({
+        return {
             'success': True,
-            'query': text,
+            'query': query.text,
             'similar_count': len(similar_issues),
             'similar_issues': [
                 {
                     'issue_id': issue_id,
-                    'similarity': similarity
+                    'similarity': float(similarity)
                 }
                 for issue_id, similarity in similar_issues
             ]
-        }), 200
+        }
         
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': f'Internal server error: {str(e)}'
-        }), 500
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
-@similar_bp.route('/<issue_id>', methods=['GET'])
-def get_similar_by_id(issue_id):
+@router.get("/{issue_id}")
+async def get_similar_by_id(issue_id: str, top_k: int = Query(5)) -> Dict[str, Any]:
     """Get issues similar to a specific issue ID"""
     try:
-        top_k = request.args.get('top_k', default=5, type=int)
-        
         # In production, would retrieve issue embedding from database
         # For now, return placeholder
-        return jsonify({
+        return {
             'success': True,
             'issue_id': issue_id,
             'similar_count': 0,
             'similar_issues': []
-        }), 200
+        }
         
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': f'Internal server error: {str(e)}'
-        }), 500
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
-@similar_bp.route('/batch', methods=['POST'])
-def find_similar_batch():
+@router.post("/batch")
+async def find_similar_batch(queries: List[str]) -> Dict[str, Any]:
     """Find similar issues for multiple queries"""
     try:
-        data = request.get_json()
+        if not queries:
+            raise HTTPException(status_code=400, detail="Expected array of texts")
         
-        if not isinstance(data, list):
-            return jsonify({
-                'success': False,
-                'error': 'Expected array of texts'
-            }), 400
+        embedding_service = get_embedding_service()
+        vector_service = get_vector_service()
         
         results = []
-        for item in data:
+        for item in queries:
             if isinstance(item, str):
                 query_embedding = embedding_service.generate_embedding(item)
                 similar = vector_service.search(query_embedding, k=5)
                 results.append({
                     'query': item,
                     'similar_issues': [
-                        {'issue_id': iid, 'similarity': sim}
+                        {'issue_id': iid, 'similarity': float(sim)}
                         for iid, sim in similar
                     ]
                 })
         
-        return jsonify({
+        return {
             'success': True,
             'batch_count': len(results),
             'results': results
-        }), 200
+        }
         
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': f'Internal server error: {str(e)}'
-        }), 500
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
-@similar_bp.route('/index-info', methods=['GET'])
-def get_index_info():
+@router.get("/index-info")
+async def get_index_info() -> Dict[str, Any]:
     """Get information about the vector index"""
     try:
+        embedding_service = get_embedding_service()
+        vector_service = get_vector_service()
+        
         info = vector_service.get_index_info()
         model_info = embedding_service.get_model_info()
         
-        return jsonify({
+        return {
             'success': True,
             'index': info,
             'model': model_info
-        }), 200
+        }
         
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
+        raise HTTPException(status_code=500, detail=str(e))
