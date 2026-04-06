@@ -6,7 +6,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from app.db import load_issues
-from app.routes import analyze, health, issues, similar
+from app.routes import analyze, health, issues, similar, auth
 
 # Load backend .env so external API keys are available in all run modes.
 load_dotenv(Path(__file__).resolve().parents[1] / ".env")
@@ -36,6 +36,7 @@ app.add_middleware(
 
 # Include all routers
 app.include_router(health.router, tags=["Health"])
+app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
 app.include_router(analyze.router, prefix="/analyze", tags=["Analyze"])
 app.include_router(issues.router, prefix="/issues", tags=["Issues"])
 app.include_router(similar.router, prefix="/similar", tags=["Similar"])
