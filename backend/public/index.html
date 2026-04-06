@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Chat Assistant</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 600px;
+      height: 90vh;
+      max-height: 700px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      text-align: center;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    }
+
+    .header h1 {
+      font-size: 24px;
+      margin-bottom: 5px;
+    }
+
+    .header p {
+      font-size: 12px;
+      opacity: 0.9;
+    }
+
+    .chat-box {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .message {
+      display: flex;
+      gap: 10px;
+      animation: slideIn 0.3s ease-out;
+    }
+
+    .message.user {
+      justify-content: flex-end;
+    }
+
+    .message.bot {
+      justify-content: flex-start;
+    }
+
+    .message-content {
+      max-width: 70%;
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: 14px;
+      line-height: 1.5;
+      word-wrap: break-word;
+    }
+
+    .user .message-content {
+      background: #667eea;
+      color: white;
+      border-bottom-right-radius: 4px;
+    }
+
+    .bot .message-content {
+      background: #f1f3f5;
+      color: #333;
+      border-bottom-left-radius: 4px;
+    }
+
+    .typing {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+    }
+
+    .typing span {
+      width: 8px;
+      height: 8px;
+      background: #667eea;
+      border-radius: 50%;
+      animation: bounce 1.4s infinite;
+    }
+
+    .typing span:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+
+    .typing span:nth-child(3) {
+      animation-delay: 0.4s;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes bounce {
+      0%, 60%, 100% {
+        transform: translateY(0);
+      }
+      30% {
+        transform: translateY(-10px);
+      }
+    }
+
+    .input-area {
+      border-top: 1px solid #e9ecef;
+      padding: 15px;
+      display: flex;
+      gap: 10px;
+      background: #f8f9fa;
+    }
+
+    .input-group {
+      display: flex;
+      gap: 10px;
+      flex: 1;
+    }
+
+    #messageInput {
+      flex: 1;
+      padding: 12px 16px;
+      border: 1px solid #dee2e6;
+      border-radius: 24px;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.3s;
+    }
+
+    #messageInput:focus {
+      border-color: #667eea;
+    }
+
+    #messageInput::placeholder {
+      color: #adb5bd;
+    }
+
+    #sendBtn {
+      padding: 12px 24px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 24px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: transform 0.2s, box-shadow 0.2s;
+      white-space: nowrap;
+    }
+
+    #sendBtn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    #sendBtn:active {
+      transform: translateY(0);
+    }
+
+    #sendBtn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .error-message {
+      background: #ffe5e5;
+      color: #c92a2a;
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 13px;
+    }
+
+    @media (max-width: 600px) {
+      .container {
+        height: 100vh;
+        max-height: none;
+        border-radius: 0;
+      }
+
+      .message-content {
+        max-width: 85%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🤖 AI Chat Assistant</h1>
+      <p>Powered by Gemini 1.5 Flash</p>
+    </div>
+
+    <div class="chat-box" id="chatBox">
+      <div class="message bot">
+        <div class="message-content">
+          Hi there! 👋 I'm your AI study assistant. Ask me anything about studies, planning, or focus strategies.
+        </div>
+      </div>
+    </div>
+
+    <div class="input-area">
+      <div class="input-group">
+        <input
+          type="text"
+          id="messageInput"
+          placeholder="Type your message here..."
+          autocomplete="off"
+        />
+        <button id="sendBtn">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const chatBox = document.getElementById('chatBox')
+    const messageInput = document.getElementById('messageInput')
+    const sendBtn = document.getElementById('sendBtn')
+
+    // Send message on button click
+    sendBtn.addEventListener('click', sendMessage)
+
+    // Send message on Enter key
+    messageInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault()
+        sendMessage()
+      }
+    })
+
+    async function sendMessage() {
+      const message = messageInput.value.trim()
+
+      if (!message) return
+
+      // Disable input while sending
+      messageInput.disabled = true
+      sendBtn.disabled = true
+
+      // Add user message to chat
+      addMessage(message, 'user')
+      messageInput.value = ''
+
+      // Show typing indicator
+      const typingId = addTypingIndicator()
+
+      try {
+        // Call backend API
+        const response = await fetch('http://localhost:8787/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ message }),
+        })
+
+        const data = await response.json()
+
+        // Remove typing indicator
+        chatBox.removeChild(document.getElementById(typingId))
+
+        if (response.ok) {
+          addMessage(data.response, 'bot')
+        } else {
+          addMessage(`Error: ${data.response}`, 'bot')
+        }
+      } catch (error) {
+        // Remove typing indicator
+        const typingElement = document.getElementById(typingId)
+        if (typingElement) {
+          chatBox.removeChild(typingElement)
+        }
+
+        const errorMsg = `⚠️ Connection error: ${error.message}. Make sure the backend is running on http://localhost:8787`
+        addMessage(errorMsg, 'bot')
+      } finally {
+        // Re-enable input
+        messageInput.disabled = false
+        sendBtn.disabled = false
+        messageInput.focus()
+      }
+    }
+
+    function addMessage(text, sender) {
+      const messageDiv = document.createElement('div')
+      messageDiv.className = `message ${sender}`
+
+      const contentDiv = document.createElement('div')
+      contentDiv.className = 'message-content'
+      contentDiv.textContent = text
+
+      messageDiv.appendChild(contentDiv)
+      chatBox.appendChild(messageDiv)
+
+      // Scroll to bottom
+      chatBox.scrollTop = chatBox.scrollHeight
+    }
+
+    function addTypingIndicator() {
+      const messageDiv = document.createElement('div')
+      messageDiv.className = 'message bot'
+      messageDiv.id = 'typing-' + Date.now()
+
+      const contentDiv = document.createElement('div')
+      contentDiv.className = 'typing'
+
+      for (let i = 0; i < 3; i++) {
+        const span = document.createElement('span')
+        contentDiv.appendChild(span)
+      }
+
+      messageDiv.appendChild(contentDiv)
+      chatBox.appendChild(messageDiv)
+
+      // Scroll to bottom
+      chatBox.scrollTop = chatBox.scrollHeight
+
+      return messageDiv.id
+    }
+
+    // Focus input on page load
+    messageInput.focus()
+  </script>
+</body>
+</html>
