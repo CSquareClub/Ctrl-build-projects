@@ -131,3 +131,13 @@ const apiClient = new APIClient();
 
 export default apiClient;
 export { APIClient };
+
+/**
+ * Triage a new issue via the backend
+ * @param {string} title
+ * @param {string} description
+ * @param {string} repository
+ */
+export async function triageIssue(title, description, repository = '') {
+  return apiClient.analyzeIssue({ title, description, repository });
+}
