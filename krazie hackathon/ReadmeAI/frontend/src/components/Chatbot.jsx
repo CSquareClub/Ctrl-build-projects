@@ -48,29 +48,29 @@ export default function Chatbot({ readme, setReadme, isOpen, setIsOpen }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden">
+    <div className="fixed inset-0 z-50 overflow-hidden animate-fade-in">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/20 backdrop-blur-sm"
         onClick={() => setIsOpen(false)}
       ></div>
 
       {/* Chat Panel */}
-      <div className="absolute right-0 top-0 bottom-0 w-full md:w-96 bg-card border-l border-slate-700/40 shadow-elevation-3 flex flex-col animate-slide-in-up">
+      <div className="absolute right-0 top-0 bottom-0 w-full md:w-96 bg-white border-l border-border shadow-elevation-lg flex flex-col animate-slide-in-right">
         {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-slate-700/40 bg-slate-800/50">
+        <div className="flex items-center justify-between p-5 border-b border-border bg-bg-subtle">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-gradient-primary rounded-lg">
               <MessageCircle size={18} className="text-white" />
             </div>
             <div>
-              <h3 className="font-semibold text-slate-50">README Assistant</h3>
-              <p className="text-xs text-slate-400">AI-powered enhancement</p>
+              <h3 className="font-semibold text-text-primary">README Assistant</h3>
+              <p className="text-xs text-text-secondary">AI-powered enhancement</p>
             </div>
           </div>
           <button
             onClick={() => setIsOpen(false)}
-            className="p-2 hover:bg-slate-700/50 rounded-lg transition text-slate-400 hover:text-slate-200"
+            className="p-2 hover:bg-border rounded-lg transition text-text-secondary hover:text-text-primary"
           >
             <X size={20} />
           </button>
@@ -87,7 +87,7 @@ export default function Chatbot({ readme, setReadme, isOpen, setIsOpen }) {
                 className={`max-w-xs px-4 py-3 rounded-lg text-sm leading-relaxed ${
                   msg.role === 'user'
                     ? 'bg-gradient-primary text-white rounded-br-none'
-                    : 'bg-slate-700/50 text-slate-100 rounded-bl-none border border-slate-600/50'
+                    : 'bg-bg-muted text-text-primary rounded-bl-none border border-border'
                 }`}
               >
                 {msg.text}
@@ -97,11 +97,11 @@ export default function Chatbot({ readme, setReadme, isOpen, setIsOpen }) {
 
           {typing && (
             <div className="flex justify-start">
-              <div className="bg-slate-700/50 px-4 py-3 rounded-lg rounded-bl-none border border-slate-600/50">
+              <div className="bg-bg-muted px-4 py-3 rounded-lg rounded-bl-none border border-border">
                 <div className="flex gap-1">
-                  <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce"></span>
-                  <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></span>
-                  <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></span>
+                  <span className="w-2 h-2 bg-text-secondary rounded-full animate-bounce"></span>
+                  <span className="w-2 h-2 bg-text-secondary rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></span>
+                  <span className="w-2 h-2 bg-text-secondary rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></span>
                 </div>
               </div>
             </div>
@@ -110,7 +110,7 @@ export default function Chatbot({ readme, setReadme, isOpen, setIsOpen }) {
         </div>
 
         {/* Input Section */}
-        <div className="p-5 border-t border-slate-700/40 bg-slate-800/30">
+        <div className="p-5 border-t border-border bg-bg-subtle">
           <div className="flex gap-2 mb-3">
             <input
               value={input}
@@ -127,8 +127,8 @@ export default function Chatbot({ readme, setReadme, isOpen, setIsOpen }) {
               <Send size={18} />
             </button>
           </div>
-          <div className="text-xs text-slate-500 space-y-1">
-            <p className="font-medium text-slate-400">Suggestions:</p>
+          <div className="text-xs text-text-muted space-y-1">
+            <p className="font-medium text-text-secondary">Suggestions:</p>
             <p>• "Add badges" • "Make professional" • "Add installation" • "Add features"</p>
           </div>
         </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import MarkdownPreview from './MarkdownPreview'
 import { Copy, Download, Check } from 'lucide-react'
 
@@ -59,7 +59,7 @@ export default function OutputSection({ readme }) {
       </div>
 
       {/* Preview Card */}
-      <div className="card-base overflow-hidden">
+      <div className="card overflow-hidden">
         <MarkdownPreview content={readme} />
       </div>
     </div>
