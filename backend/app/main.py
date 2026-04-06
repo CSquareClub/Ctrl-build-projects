@@ -6,7 +6,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from app.db import load_issues
-from app.routes import analyze, health, issues, similar
+from app.routes import analyze, health, issues, similar, github
 
 # Load backend .env so external API keys are available in all run modes.
 load_dotenv(Path(__file__).resolve().parents[1] / ".env")
@@ -39,6 +39,7 @@ app.include_router(health.router, tags=["Health"])
 app.include_router(analyze.router, prefix="/analyze", tags=["Analyze"])
 app.include_router(issues.router, prefix="/issues", tags=["Issues"])
 app.include_router(similar.router, prefix="/similar", tags=["Similar"])
+app.include_router(github.router, prefix="/auth/github", tags=["GitHub OAuth"])
 
 @app.get("/")
 async def root():
