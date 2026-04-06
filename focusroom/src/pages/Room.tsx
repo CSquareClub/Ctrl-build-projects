@@ -1,11 +1,12 @@
-import { Clock3, LogOut, Users } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { Clock3, FileUp, LogOut, Send, Users } from 'lucide-react'
+import { type ChangeEvent, type FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
 import { Sidebar } from '../components/Sidebar'
 import { useAuth } from '../context/AuthContext'
+import { useRoomChat } from '../hooks/useRoomChat'
 import { useRoomMembers } from '../hooks/useRoomMembers'
-import { getRoomById, joinRoom, leaveRoom } from '../services/rooms'
+import { getRoomById, joinRoom, leaveRoom, sendRoomMessage, shareRoomFile } from '../services/rooms'
 import { saveSession } from '../services/sessions'
 
 const formatElapsed = (totalSeconds: number) => {
@@ -15,11 +16,17 @@ const formatElapsed = (totalSeconds: number) => {
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
 }
 
+const extractFirstUrl = (value: string) => {
+  const match = value.match(/https?:\/\/\S+/)
+  return match ? match[0] : null
+}
+
 export function RoomPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { user } = useAuth()
   const { members, loading: membersLoading, error: membersError } = useRoomMembers(id)
+  const { messages, loading: messagesLoading, error: messagesError } = useRoomChat(id)
 
   const [roomTitle, setRoomTitle] = useState('Focus Room')
   const [roomTopic, setRoomTopic] = useState('')
@@ -29,6 +36,11 @@ export function RoomPage() {
   const [startTime, setStartTime] = useState<Date>(() => new Date())
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const [submitting, setSubmitting] = useState(false)
+  const [messageText, setMessageText] = useState('')
+  const [messageSending, setMessageSending] = useState(false)
+  const [fileSharing, setFileSharing] = useState(false)
+  const [messageError, setMessageError] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
     const tick = window.setInterval(() => {
@@ -93,6 +105,30 @@ export function RoomPage() {
 
   const timerText = useMemo(() => formatElapsed(elapsedSeconds), [elapsedSeconds])
 
+  const handleSendMessage = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+
+    if (!id || !user) {
+      setMessageError('Please login to send a message.')
+      return
+    }
+
+    if (!messageText.trim()) {
+      return
+    }
+
+    setMessageSending(true)
+    setMessageError(null)
+    try {
+      await sendRoomMessage(id, messageText, user)
+      setMessageText('')
+    } catch (error) {
+      setMessageError(error instanceof Error ? error.message : 'Unable to send message.')
+    } finally {
+      setMessageSending(false)
+    }
+  }
+
   const handleLeaveRoom = async () => {
     if (!user || !id) {
       navigate('/dashboard', { replace: true })
@@ -104,20 +140,58 @@ export function RoomPage() {
     const duration = Math.max(1, Math.round((endTime.getTime() - startTime.getTime()) / (1000 * 60)))
 
     try {
-      await leaveRoom(id, user)
+      try {
+        await leaveRoom(id, user)
+      } catch {
+        // If room member cleanup fails, still continue to persist session history.
+      }
+
       await saveSession({
         userId: user.uid,
         roomId: id,
-        roomTitle,
+        roomTitle: roomTitle || `Room ${id}`,
+        roomTopic,
+        memberCount: members.length,
         startTime,
         endTime,
         duration,
       })
+      navigate('/records', { replace: true })
+    } catch (error) {
+      setRoomError(error instanceof Error ? error.message : 'Unable to save session history. Please try again.')
     } finally {
       setSubmitting(false)
     }
+  }
 
-    navigate('/dashboard', { replace: true })
+  const handlePickFile = () => {
+    if (!fileSharing) {
+      fileInputRef.current?.click()
+    }
+  }
+
+  const handleShareFile = async (event: ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = event.target.files?.[0]
+    event.target.value = ''
+
+    if (!selectedFile) {
+      return
+    }
+
+    if (!id || !user) {
+      setMessageError('Please login to share a file.')
+      return
+    }
+
+    setFileSharing(true)
+    setMessageError(null)
+    try {
+      await shareRoomFile(id, selectedFile, user)
+    } catch (error) {
+      setMessageError(error instanceof Error ? error.message : 'Unable to share file.')
+    } finally {
+      setFileSharing(false)
+    }
   }
 
   if (loadingRoom) {
@@ -191,6 +265,101 @@ export function RoomPage() {
               Focus Timer
             </p>
             <p className="font-display text-7xl font-bold text-[var(--text)]">{timerText}</p>
+          </div>
+
+          <div className="mx-auto mt-6 w-full max-w-xl rounded-2xl border border-[var(--border)] bg-[var(--bg-elev)] p-4 text-left">
+            <p className="text-sm font-semibold text-[var(--text)]">Room Chat</p>
+
+            {messagesLoading ? <p className="mt-2 text-xs text-[var(--muted)]">Loading messages...</p> : null}
+            {messagesError ? <p className="mt-2 text-xs text-[var(--muted)]">{messagesError}</p> : null}
+
+            <div className="mt-3 max-h-52 space-y-2 overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--card)] p-2.5">
+              {!messagesLoading && messages.length === 0 ? (
+                <p className="text-xs text-[var(--muted)]">No messages yet. Start the conversation.</p>
+              ) : (
+                messages.map((message) => {
+                  const own = user?.uid === message.senderId
+                  const fallbackUrl = extractFirstUrl(message.text)
+                  return (
+                    <article
+                      key={message.id}
+                      className={`rounded-lg border px-2.5 py-2 text-sm ${
+                        own
+                          ? 'ml-8 border-[var(--border)] bg-[var(--bg-elev)] text-[var(--text)]'
+                          : 'mr-8 border-[var(--border)] bg-[var(--card)] text-[var(--text)]'
+                      }`}
+                    >
+                      <p className="text-xs text-[var(--muted)]">{own ? 'You' : message.senderName}</p>
+                      {message.messageType === 'file' && message.fileUrl ? (
+                        <div className="mt-1 space-y-1">
+                          <p className="text-xs text-[var(--muted)]">Shared a file</p>
+                          <a
+                            href={message.fileUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center rounded-lg border border-[var(--border)] bg-[var(--card)] px-2 py-1 text-xs text-[var(--text)] hover:opacity-90"
+                          >
+                            {message.fileName ?? 'Download file'}
+                          </a>
+                          {typeof message.fileSize === 'number' ? (
+                            <p className="text-[11px] text-[var(--muted)]">{(message.fileSize / 1024).toFixed(1)} KB</p>
+                          ) : null}
+                        </div>
+                      ) : (
+                        <div className="mt-0.5 space-y-1">
+                          <p>{message.text}</p>
+                          {fallbackUrl ? (
+                            <a
+                              href={fallbackUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center rounded-lg border border-[var(--border)] bg-[var(--card)] px-2 py-1 text-xs text-[var(--text)] hover:opacity-90"
+                            >
+                              Open shared file
+                            </a>
+                          ) : null}
+                        </div>
+                      )}
+                    </article>
+                  )
+                })
+              )}
+            </div>
+
+            <form onSubmit={handleSendMessage} className="mt-3 flex items-center gap-2">
+              <input
+                type="text"
+                value={messageText}
+                onChange={(event) => setMessageText(event.target.value)}
+                placeholder="Type a message"
+                className="w-full rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm text-[var(--text)] outline-none placeholder:text-[var(--muted)] focus:border-[var(--text)]"
+              />
+              <input
+                ref={fileInputRef}
+                type="file"
+                onChange={handleShareFile}
+                className="hidden"
+              />
+              <button
+                type="button"
+                onClick={handlePickFile}
+                disabled={fileSharing}
+                className="inline-flex items-center gap-1 rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm text-[var(--text)] transition-opacity hover:opacity-90 disabled:opacity-70"
+              >
+                <FileUp className="h-4 w-4" />
+                {fileSharing ? 'Sharing' : 'File'}
+              </button>
+              <button
+                type="submit"
+                disabled={messageSending}
+                className="inline-flex items-center gap-1 rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm text-[var(--text)] transition-opacity hover:opacity-90 disabled:opacity-70"
+              >
+                <Send className="h-4 w-4" />
+                {messageSending ? 'Sending' : 'Send'}
+              </button>
+            </form>
+
+            {messageError ? <p className="mt-2 text-xs text-[var(--muted)]">{messageError}</p> : null}
           </div>
 
           <button

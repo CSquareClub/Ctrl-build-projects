@@ -8,6 +8,7 @@ import {
   getDoc,
   getDocs,
   onSnapshot,
+  orderBy,
   query,
   serverTimestamp,
   setDoc,
@@ -16,8 +17,9 @@ import {
   type Unsubscribe,
   where,
 } from 'firebase/firestore'
+import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage'
 
-import { db } from '../lib/firebase'
+import { db, storage } from '../lib/firebase'
 
 export type Room = {
   id: string
@@ -35,6 +37,18 @@ export type RoomMember = {
   email: string
   status: 'focusing'
   joinedAt: Timestamp | null
+}
+
+export type RoomMessage = {
+  id: string
+  text: string
+  senderId: string
+  senderName: string
+  messageType: 'text' | 'file'
+  fileName?: string
+  fileUrl?: string
+  fileSize?: number
+  createdAt: Timestamp | null
 }
 
 export type CreateRoomInput = {
@@ -64,6 +78,18 @@ const mapRoomMember = (id: string, data: DocumentData): RoomMember => ({
   email: String(data.email ?? ''),
   status: 'focusing',
   joinedAt: (data.joinedAt as Timestamp | undefined) ?? null,
+})
+
+const mapRoomMessage = (id: string, data: DocumentData): RoomMessage => ({
+  id,
+  text: String(data.text ?? ''),
+  senderId: String(data.senderId ?? ''),
+  senderName: String(data.senderName ?? 'Member'),
+  messageType: data.messageType === 'file' ? 'file' : 'text',
+  fileName: typeof data.fileName === 'string' ? data.fileName : undefined,
+  fileUrl: typeof data.fileUrl === 'string' ? data.fileUrl : undefined,
+  fileSize: typeof data.fileSize === 'number' ? data.fileSize : undefined,
+  createdAt: (data.createdAt as Timestamp | undefined) ?? null,
 })
 
 const getDisplayName = (user: User) => {
@@ -173,6 +199,81 @@ export const leaveRoom = async (roomId: string, user: User | null): Promise<void
   }
 }
 
+export const sendRoomMessage = async (roomId: string, text: string, user: User | null): Promise<void> => {
+  const authenticatedUser = requireAuthenticatedUser(user)
+  if (!roomId) throw new Error('Invalid room id.')
+
+  const cleaned = text.trim()
+  if (!cleaned) throw new Error('Message cannot be empty.')
+
+  try {
+    const messagesRef = collection(db, 'rooms', roomId, 'messages')
+    await addDoc(messagesRef, {
+      text: cleaned,
+      senderId: authenticatedUser.uid,
+      senderName: getDisplayName(authenticatedUser),
+      createdAt: serverTimestamp(),
+    })
+  } catch (error) {
+    return handleFirestoreError(error, 'Unable to send message.')
+  }
+}
+
+export const shareRoomFile = async (roomId: string, file: File, user: User | null): Promise<void> => {
+  const authenticatedUser = requireAuthenticatedUser(user)
+  if (!roomId) throw new Error('Invalid room id.')
+  if (!file) throw new Error('No file selected.')
+
+  const maxBytes = 10 * 1024 * 1024
+  if (file.size > maxBytes) {
+    throw new Error('File must be 10MB or smaller.')
+  }
+
+  try {
+    const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
+    const filePath = `rooms/${roomId}/shared/${Date.now()}-${authenticatedUser.uid}-${sanitizedName}`
+    const storageRef = ref(storage, filePath)
+
+    const uploadTask = uploadBytesResumable(storageRef, file)
+    await new Promise<void>((resolve, reject) => {
+      uploadTask.on(
+        'state_changed',
+        () => {
+          // Progress can be wired to UI later if needed.
+        },
+        (error) => reject(error),
+        () => resolve(),
+      )
+    })
+
+    const fileUrl = await getDownloadURL(uploadTask.snapshot.ref)
+
+    const messagesRef = collection(db, 'rooms', roomId, 'messages')
+    try {
+      await addDoc(messagesRef, {
+        text: `${getDisplayName(authenticatedUser)} shared a file`,
+        senderId: authenticatedUser.uid,
+        senderName: getDisplayName(authenticatedUser),
+        messageType: 'file',
+        fileName: file.name,
+        fileUrl,
+        fileSize: file.size,
+        createdAt: serverTimestamp(),
+      })
+    } catch {
+      // Fallback for strict Firestore schemas that only allow text chat fields.
+      await addDoc(messagesRef, {
+        text: `${getDisplayName(authenticatedUser)} shared ${file.name}: ${fileUrl}`,
+        senderId: authenticatedUser.uid,
+        senderName: getDisplayName(authenticatedUser),
+        createdAt: serverTimestamp(),
+      })
+    }
+  } catch (error) {
+    return handleFirestoreError(error, 'Unable to share file.')
+  }
+}
+
 export const listenLiveRooms = (
   onData: (rooms: Room[]) => void,
   onError?: (message: string) => void,
@@ -208,6 +309,27 @@ export const listenRoomMembers = (
     (error) => {
       if (onError) {
         onError(error instanceof FirebaseError ? `Unable to listen to members (${error.code})` : 'Unable to listen to members.')
+      }
+    },
+  )
+}
+
+export const listenRoomMessages = (
+  roomId: string,
+  onData: (messages: RoomMessage[]) => void,
+  onError?: (message: string) => void,
+): Unsubscribe => {
+  const messagesRef = collection(db, 'rooms', roomId, 'messages')
+  const messagesQuery = query(messagesRef, orderBy('createdAt', 'asc'))
+
+  return onSnapshot(
+    messagesQuery,
+    (snapshot) => {
+      onData(snapshot.docs.map((messageDoc) => mapRoomMessage(messageDoc.id, messageDoc.data())))
+    },
+    (error) => {
+      if (onError) {
+        onError(error instanceof FirebaseError ? `Unable to listen to chat (${error.code})` : 'Unable to listen to chat.')
       }
     },
   )

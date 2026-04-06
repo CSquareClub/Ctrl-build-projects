@@ -38,29 +38,55 @@ export function PreviewSection() {
                 transition={{ duration: 7, repeat: Number.POSITIVE_INFINITY, ease: 'easeInOut' }}
               />
             </div>
-            <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {flashcardMocks.map((card) => (
+            <div className="mt-6 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+              {flashcardMocks.slice(0, 6).map((card) => (
                 <motion.article
                   key={card.id}
                   whileHover={{ y: -3, scale: 1.01 }}
                   transition={{ duration: 0.2 }}
-                  className="rounded-xl border border-[var(--border)] bg-[var(--accent-soft)] p-3"
+                  className="relative overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--card)] p-3"
                   style={{
-                    backgroundImage: `linear-gradient(145deg, color-mix(in srgb, ${card.aura.from} 20%, transparent), color-mix(in srgb, ${card.aura.to} 18%, transparent))`,
+                    borderLeftWidth: 2,
+                    borderLeftColor: `color-mix(in srgb, ${card.aura.from} 38%, var(--border))`,
+                    backgroundImage: `linear-gradient(160deg, color-mix(in srgb, ${card.aura.from} 12%, var(--card)), color-mix(in srgb, ${card.aura.to} 7%, var(--card)))`,
+                    boxShadow: `inset 0 1px 0 color-mix(in srgb, ${card.aura.from} 22%, transparent)`,
                   }}
                 >
+                  <div
+                    className="absolute left-0 right-0 top-0 h-px"
+                    style={{ background: `color-mix(in srgb, ${card.aura.to} 24%, var(--border))` }}
+                  />
+
                   <div className="mb-2 flex items-center justify-between">
-                    <span className="rounded-full border border-[var(--border)] bg-[var(--card)] px-2 py-1 text-[10px] uppercase tracking-[0.15em] text-[var(--muted)]">
+                    <span
+                      className="rounded-full border px-2 py-1 text-[10px] uppercase tracking-[0.15em]"
+                      style={{
+                        borderColor: `color-mix(in srgb, ${card.aura.from} 42%, var(--border))`,
+                        background: `color-mix(in srgb, ${card.aura.from} 14%, var(--bg-elev))`,
+                        color: 'var(--text)',
+                      }}
+                    >
                       {card.deck}
                     </span>
-                    <span className="text-[10px] text-[var(--muted)]">{card.mastery}% mastery</span>
+                    <span
+                      className="text-[10px]"
+                      style={{ color: `color-mix(in srgb, ${card.aura.from} 42%, var(--muted))` }}
+                    >
+                      {card.mastery}% mastery
+                    </span>
                   </div>
-                  <p className="line-clamp-2 text-xs font-medium text-[var(--text)]">{card.front}</p>
-                  <p className="mt-2 line-clamp-1 text-[11px] text-[var(--muted)]">{card.back}</p>
+                  <p className="line-clamp-2 text-xs font-medium leading-relaxed text-[var(--text)]">{card.front}</p>
+                  <p className="mt-1.5 line-clamp-1 text-[11px] text-[var(--muted)]">{card.back}</p>
                   <div className="mt-3 flex items-center justify-between text-[10px] text-[var(--muted)]">
                     <span>Streak {card.streak}x</span>
-                    <div className="h-1.5 w-20 overflow-hidden rounded-full bg-[var(--card)]">
-                      <div className="h-full rounded-full" style={{ width: `${card.mastery}%`, background: `linear-gradient(90deg, ${card.aura.from}, ${card.aura.to})` }} />
+                    <div className="h-1.5 w-20 overflow-hidden rounded-full bg-[var(--bg-elev)]">
+                      <div
+                        className="h-full rounded-full"
+                        style={{
+                          width: `${card.mastery}%`,
+                          background: `linear-gradient(90deg, color-mix(in srgb, ${card.aura.from} 74%, var(--accent)), color-mix(in srgb, ${card.aura.from} 52%, var(--accent)))`,
+                        }}
+                      />
                     </div>
                   </div>
                 </motion.article>
@@ -76,7 +102,13 @@ export function PreviewSection() {
               </p>
               <ul className="space-y-2">
                 {users.map((user) => (
-                  <li key={user} className="flex items-center justify-between rounded-xl border border-[var(--border)] bg-[var(--accent-soft)] px-3 py-2 text-sm text-[var(--text)]">
+                  <li
+                    key={user}
+                    className="flex items-center justify-between rounded-xl border border-[var(--border)] px-3 py-2 text-sm text-[var(--text)]"
+                    style={{
+                      background: 'linear-gradient(120deg, color-mix(in srgb, var(--accent) 8%, var(--card)), var(--card))',
+                    }}
+                  >
                     <span>{user}</span>
                     <span className="text-xs text-[var(--success)]">Focused</span>
                   </li>
@@ -90,15 +122,15 @@ export function PreviewSection() {
                 Leaderboard
               </p>
               <div className="space-y-2 text-sm">
-                <div className="flex justify-between rounded-xl border border-[var(--border)] bg-[var(--accent-soft)] px-3 py-2 text-[var(--text)]">
+                <div className="flex justify-between rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-[var(--text)]">
                   <span>1. Noor</span>
                   <span className="text-[var(--accent)]">18h</span>
                 </div>
-                <div className="flex justify-between rounded-xl border border-[var(--border)] bg-[var(--accent-soft)] px-3 py-2 text-[var(--text)]">
+                <div className="flex justify-between rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-[var(--text)]">
                   <span>2. Ethan</span>
                   <span>16h</span>
                 </div>
-                <div className="flex justify-between rounded-xl border border-[var(--border)] bg-[var(--accent-soft)] px-3 py-2 text-[var(--text)]">
+                <div className="flex justify-between rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-[var(--text)]">
                   <span>3. You</span>
                   <span>15h</span>
                 </div>

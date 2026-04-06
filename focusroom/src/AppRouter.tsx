@@ -11,7 +11,7 @@ import { LoginPage } from './pages/Login'
 import { NearbyEducatorsPage } from './pages/NearbyEducators'
 import { RecordsPage } from './pages/Records'
 import { RoomPage } from './pages/Room'
-import { SidebarFeaturePage } from './pages/SidebarFeaturePage'
+import { AnalyticsLeaderboardPage } from './pages/AnalyticsLeaderboard'
 import { StudyPlannerPage } from './pages/StudyPlanner'
 import { SignupPage } from './pages/Signup'
 
@@ -63,7 +63,7 @@ export function AppRouter() {
         <Route path="/nearby-educators" element={<NearbyEducatorsPage />} />
         <Route
           path="/analytics-leaderboard"
-          element={<SidebarFeaturePage title="Analytics an Leaderboard" description="Track progress trends, focus consistency, and competitive rankings." />}
+          element={<AnalyticsLeaderboardPage />}
         />
         <Route
           path="/ai-assistant"

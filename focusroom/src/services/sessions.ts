@@ -15,6 +15,8 @@ export type SessionInput = {
   userId: string
   roomId: string
   roomTitle: string
+  roomTopic?: string
+  memberCount?: number
   startTime: Date
   endTime: Date
   duration: number
@@ -25,12 +27,33 @@ export type SessionRecord = {
   userId: string
   roomId: string
   roomTitle: string
+  roomTopic: string
+  memberCount: number
   startTime: Timestamp
   endTime: Timestamp
   duration: number
 }
 
 const localSessionKey = (userId: string) => `focusroom:sessions:${userId}`
+
+const toTimestamp = (value: unknown, fallback: Date): Timestamp => {
+  if (value instanceof Timestamp) {
+    return value
+  }
+
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return Timestamp.fromDate(value)
+  }
+
+  if (typeof value === 'string' || typeof value === 'number') {
+    const parsed = new Date(value)
+    if (!Number.isNaN(parsed.getTime())) {
+      return Timestamp.fromDate(parsed)
+    }
+  }
+
+  return Timestamp.fromDate(fallback)
+}
 
 const readLocalSessions = (userId: string): SessionRecord[] => {
   if (typeof window === 'undefined') {
@@ -48,15 +71,20 @@ const readLocalSessions = (userId: string): SessionRecord[] => {
       userId: string
       roomId: string
       roomTitle: string
-      startTime: string
-      endTime: string
-      duration: number
+      roomTopic?: string
+      memberCount?: number
+      startTime?: string
+      endTime?: string
+      duration?: number
     }>
 
     return parsed.map((session) => ({
       ...session,
-      startTime: Timestamp.fromDate(new Date(session.startTime)),
-      endTime: Timestamp.fromDate(new Date(session.endTime)),
+      roomTopic: String(session.roomTopic ?? ''),
+      memberCount: Number(session.memberCount ?? 0),
+      duration: Number(session.duration ?? 0),
+      startTime: toTimestamp(session.startTime, new Date()),
+      endTime: toTimestamp(session.endTime, new Date()),
     }))
   } catch {
     return []
@@ -79,6 +107,8 @@ const writeLocalSession = (session: SessionInput) => {
     userId: session.userId,
     roomId: session.roomId,
     roomTitle: session.roomTitle,
+    roomTopic: session.roomTopic ?? '',
+    memberCount: session.memberCount ?? 0,
     startTime: session.startTime.toISOString(),
     endTime: session.endTime.toISOString(),
     duration: session.duration,
@@ -87,15 +117,23 @@ const writeLocalSession = (session: SessionInput) => {
   window.localStorage.setItem(localSessionKey(session.userId), JSON.stringify(current))
 }
 
-const mapSession = (id: string, data: DocumentData): SessionRecord => ({
-  id,
-  userId: String(data.userId ?? ''),
-  roomId: String(data.roomId ?? ''),
-  roomTitle: String(data.roomTitle ?? ''),
-  startTime: data.startTime as Timestamp,
-  endTime: data.endTime as Timestamp,
-  duration: Number(data.duration ?? 0),
-})
+const mapSession = (id: string, data: DocumentData): SessionRecord => {
+  const fallbackStart = new Date()
+  const start = toTimestamp(data.startTime, fallbackStart)
+  const fallbackEnd = new Date(start.toMillis() + Number(data.duration ?? 0) * 60_000)
+
+  return {
+    id,
+    userId: String(data.userId ?? ''),
+    roomId: String(data.roomId ?? ''),
+    roomTitle: String(data.roomTitle ?? ''),
+    roomTopic: String(data.roomTopic ?? ''),
+    memberCount: Number(data.memberCount ?? 0),
+    startTime: start,
+    endTime: toTimestamp(data.endTime, fallbackEnd),
+    duration: Number(data.duration ?? 0),
+  }
+}
 
 export const saveSession = async (session: SessionInput) => {
   const sessionsRef = collection(db, 'sessions')
@@ -105,6 +143,8 @@ export const saveSession = async (session: SessionInput) => {
       userId: session.userId,
       roomId: session.roomId,
       roomTitle: session.roomTitle,
+      roomTopic: session.roomTopic ?? '',
+      memberCount: session.memberCount ?? 0,
       startTime: Timestamp.fromDate(session.startTime),
       endTime: Timestamp.fromDate(session.endTime),
       duration: session.duration,
