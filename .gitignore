@@ -47,3 +47,4 @@ Thumbs.db
 *.db
 *.sqlite
 *.sqlite3
+backend/data/pending_issues.json
