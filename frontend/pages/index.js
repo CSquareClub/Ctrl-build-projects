@@ -9,7 +9,7 @@ import IssuesCard from '../components/IssuesCard';
 import { Star, GitFork, Eye, CircleDot, Search, X } from 'lucide-react';
 
 export default function Home() {
-  const [repoInput, setRepoInput] = useState('torvalds/linux');
+  const [repoInput, setRepoInput] = useState('');
   const [repoData, setRepoData] = useState(null);
   const [repoOwner, setRepoOwner] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -66,8 +66,17 @@ export default function Home() {
         fetch(`https://api.github.com/users/${owner}`),
       ]);
 
-      if (!repoRes.ok) throw new Error('Repository not found');
-      if (!ownerRes.ok) throw new Error('Owner not found');
+      if (!repoRes.ok) {
+        const errJson = await repoRes.json().catch(() => ({}));
+        const msg = errJson.message || `HTTP ${repoRes.status}`;
+        throw new Error(msg.toLowerCase().includes('rate limit')
+          ? 'GitHub API rate limit exceeded. Please wait a few minutes and try again.'
+          : `Repository not found: ${msg}`);
+      }
+      if (!ownerRes.ok) {
+        const errJson = await ownerRes.json().catch(() => ({}));
+        throw new Error(errJson.message || 'Owner not found');
+      }
 
       const [repoJson, ownerJson] = await Promise.all([repoRes.json(), ownerRes.json()]);
       setRepoData(repoJson);
@@ -160,7 +169,7 @@ export default function Home() {
   };
 
   useEffect(() => {
-    fetchRepoData(repoInput);
+    if (repoInput) fetchRepoData(repoInput);
   }, []);
 
   // Focus input when search bar opens
