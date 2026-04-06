@@ -26,7 +26,7 @@ export function Layout({ currentPage, navigate, onLogout, user, children }: Layo
       <Sidebar currentPage={currentPage} navigate={navigate} />
       <div className="flex flex-col flex-1 min-w-0">
         <Header user={user} onLogout={onLogout} title={PAGE_TITLES[currentPage]} />
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto p-6">
           {children}
         </main>
       </div>
