@@ -24,7 +24,14 @@ async def get_all_issues() -> Dict[str, Any]:
 
 @router.get("/priority/{priority}")
 async def get_issues_by_priority(priority: str) -> Dict[str, Any]:
+    valid_priorities = ["low", "medium", "high", "critical"]
     normalized_priority = priority.lower()
+    if normalized_priority not in valid_priorities:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid priority. Must be one of: {valid_priorities}",
+        )
+
     issues = [
         issue
         for issue in issue_storage.get_all_issues()
