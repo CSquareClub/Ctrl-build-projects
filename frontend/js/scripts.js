@@ -33,6 +33,8 @@ const state = {
 	userId: localStorage.getItem("userId"),
 	username: localStorage.getItem("username"),
 	activeChatId: localStorage.getItem("activeChatId"),
+	difficultyLevel: localStorage.getItem("difficultyLevel") || "Neutral",
+	guidedLearning: localStorage.getItem("guidedLearning") === "true",
 };
 
 // DOM elements
@@ -788,6 +790,18 @@ function removeThinkingIndicator() {
 	}
 }
 
+function createResponseLevelBadge(level) {
+	const normalizedLevel = normalizeDifficultyLevel(level);
+	if (normalizedLevel === "Neutral") {
+		return null;
+	}
+
+	const badge = document.createElement("div");
+	badge.classList.add("ai-level-badge");
+	badge.textContent = `${normalizedLevel} Level`;
+	return badge;
+}
+
 function createMessageElement(message, animate = false) {
 	const wrapper = document.createElement("div");
 	const isAssistant = message.role === "assistant";
@@ -807,6 +821,14 @@ function createMessageElement(message, animate = false) {
 	const content = document.createElement("div");
 	content.classList.add("message-content");
 	const trimmed = (message.content ?? "").trim();
+	const responseLevel = isAssistant ? (message.response_level || message.responseLevel || null) : null;
+
+	if (isAssistant) {
+		const levelBadge = createResponseLevelBadge(responseLevel);
+		if (levelBadge) {
+			content.appendChild(levelBadge);
+		}
+	}
 
 	// Add copy button for USER messages only
 	if (!isAssistant) {
@@ -1515,6 +1537,9 @@ async function sendMessage(content) {
 	messageInput.style.height = "auto";
 	setChatStatus("", false);
 
+	const difficultyAtSend = normalizeDifficultyLevel(state.difficultyLevel);
+	const apiPrompt = buildApiPrompt(trimmedContent, difficultyAtSend);
+
 	// CHAT-SCOPED GENERATION: Track which chat is generating
 	generatingChatId = state.activeChatId;
 	isGenerating = true;
@@ -1533,6 +1558,9 @@ async function sendMessage(content) {
 				chat_id: state.activeChatId,
 				user_id: state.userId,
 				content: trimmedContent,
+				api_prompt: apiPrompt,
+				difficulty_level: difficultyAtSend,
+				guided_learning: state.guidedLearning,
 			},
 		});
 
@@ -1543,28 +1571,56 @@ async function sendMessage(content) {
 		setTimeout(() => {
 			removeThinkingIndicator();
 			setTimeout(() => {
-				if (response && typeof response.content === "string") {
-					// Store IDs in renderState for stop/finalize call
-					// DATA LOSS FIX: message_id is required to update saved message if stopped
-					renderState.chatId = response.chat_id || state.activeChatId;
-					renderState.userId = response.user_id || state.userId;
-					renderState.messageId = response.message_id;  // ID of already-saved message
+				if (!response) return;
 
-					const aiMessage = { role: "assistant", content: response.content };
-					appendMessage(aiMessage, true);
+				const responseLevel = response.response_level || (difficultyAtSend !== "Neutral" ? difficultyAtSend : null);
 
-					// REAL-TIME TITLE UPDATE: If server renamed the chat, update UI
-					if (response.new_title) {
-						chatTitle.textContent = response.new_title;
-						// Update sidebar chat item
-						const chatItem = chatList.querySelector(`[data-chat-id="${state.activeChatId}"]`);
-						if (chatItem) {
-							const titleSpan = chatItem.querySelector("span");
-							if (titleSpan) {
-								titleSpan.textContent = response.new_title;
-							}
+				// REAL-TIME TITLE UPDATE: If server renamed the chat, update UI
+				if (response.new_title) {
+					chatTitle.textContent = response.new_title;
+					const chatItem = chatList.querySelector(`[data-chat-id="${state.activeChatId}"]`);
+					if (chatItem) {
+						const titleSpan = chatItem.querySelector("span");
+						if (titleSpan) {
+							titleSpan.textContent = response.new_title;
 						}
 					}
+				}
+
+				const responseType = response.type || "text";
+
+				if (responseType === "quiz" && response.quiz) {
+					// --- QUIZ RESPONSE ---
+					hideWelcomeScreen();
+					removeEmptyState();
+					isGenerating = false;
+					generatingChatId = null;
+					hideStopButton();
+					renderQuizCard(response.quiz, responseLevel);
+					chatArea.scrollTop = chatArea.scrollHeight;
+
+				} else if (responseType === "summary" && response.summary) {
+					// --- SUMMARY RESPONSE ---
+					hideWelcomeScreen();
+					removeEmptyState();
+					isGenerating = false;
+					generatingChatId = null;
+					hideStopButton();
+					renderSummaryCard(response.summary, responseLevel);
+					chatArea.scrollTop = chatArea.scrollHeight;
+
+				} else if (typeof response.content === "string") {
+					// --- NORMAL TEXT RESPONSE ---
+					renderState.chatId = response.chat_id || state.activeChatId;
+					renderState.userId = response.user_id || state.userId;
+					renderState.messageId = response.message_id;
+
+					const aiMessage = {
+						role: "assistant",
+						content: response.content,
+						response_level: responseLevel,
+					};
+					appendMessage(aiMessage, true);
 
 					const isAtBottom = chatArea.scrollHeight - chatArea.scrollTop - chatArea.clientHeight < 100;
 					if (isAtBottom) {
@@ -1590,6 +1646,332 @@ async function sendMessage(content) {
 		messageInput.focus();
 	}
 }
+
+// ========================
+// EDUCATIONAL FEATURES
+// ========================
+// Quiz Cards, Summary Cards, Difficulty Level, Guided Learning
+// ========================
+
+/**
+ * Renders a quiz card with clickable MCQ option buttons.
+ * @param {Object} quizData - { type, topic, questions: [{ id, question, options: {A,B,C,D}, correct_option, explanation }] }
+ */
+function renderQuizCard(quizData, responseLevel = null) {
+	const wrapper = document.createElement("div");
+	wrapper.classList.add("message", "ai-message");
+
+	const avatar = document.createElement("div");
+	avatar.classList.add("message-avatar");
+	const logo = document.createElement("img");
+	logo.src = "assests/logo.png";
+	logo.alt = "Saivo";
+	logo.classList.add("bot-logo");
+	avatar.appendChild(logo);
+	wrapper.appendChild(avatar);
+
+	const card = document.createElement("div");
+	card.classList.add("quiz-card");
+	const levelBadge = createResponseLevelBadge(responseLevel);
+	if (levelBadge) {
+		card.appendChild(levelBadge);
+	}
+
+	// Header
+	const header = document.createElement("div");
+	header.classList.add("quiz-card-header");
+	const icon = document.createElement("div");
+	icon.classList.add("quiz-card-icon");
+	icon.textContent = "📝";
+	header.appendChild(icon);
+
+	const headerText = document.createElement("div");
+	const title = document.createElement("div");
+	title.classList.add("quiz-card-title");
+	title.textContent = "Quick Quiz";
+	headerText.appendChild(title);
+	const topic = document.createElement("div");
+	topic.classList.add("quiz-card-topic");
+	topic.textContent = quizData.topic || "General Knowledge";
+	headerText.appendChild(topic);
+	header.appendChild(headerText);
+	card.appendChild(header);
+
+	// Questions
+	const questions = quizData.questions || [];
+	questions.forEach((q, qIndex) => {
+		const questionDiv = document.createElement("div");
+		questionDiv.classList.add("quiz-question");
+
+		const qNum = document.createElement("div");
+		qNum.classList.add("quiz-question-num");
+		qNum.textContent = `Question ${qIndex + 1}`;
+		questionDiv.appendChild(qNum);
+
+		const qText = document.createElement("div");
+		qText.classList.add("quiz-question-text");
+		qText.textContent = q.question;
+		questionDiv.appendChild(qText);
+
+		const optionsDiv = document.createElement("div");
+		optionsDiv.classList.add("quiz-options");
+
+		const optionKeys = ["A", "B", "C", "D"];
+		const optionButtons = [];
+
+		optionKeys.forEach(key => {
+			if (!q.options[key]) return;
+			const btn = document.createElement("button");
+			btn.classList.add("quiz-option-btn");
+			btn.type = "button";
+
+			const label = document.createElement("span");
+			label.classList.add("quiz-option-label");
+			label.textContent = key;
+			btn.appendChild(label);
+
+			const text = document.createElement("span");
+			text.textContent = q.options[key];
+			btn.appendChild(text);
+
+			btn.addEventListener("click", () => {
+				handleQuizAnswer(btn, optionButtons, questionDiv, q, key);
+			});
+
+			optionButtons.push({ key, btn });
+			optionsDiv.appendChild(btn);
+		});
+
+		questionDiv.appendChild(optionsDiv);
+		card.appendChild(questionDiv);
+	});
+
+	wrapper.appendChild(card);
+	messagesContainer.appendChild(wrapper);
+	chatArea.scrollTop = chatArea.scrollHeight;
+}
+
+/**
+ * Handles quiz answer selection — shows correct/incorrect, calls backend for AI feedback.
+ */
+async function handleQuizAnswer(selectedBtn, allButtons, questionDiv, questionData, selectedKey) {
+	const isCorrect = selectedKey === questionData.correct_option;
+
+	// Disable all buttons and show states
+	allButtons.forEach(({ key, btn }) => {
+		btn.disabled = true;
+		if (key === selectedKey) {
+			btn.classList.add(isCorrect ? "correct" : "incorrect");
+		} else if (key === questionData.correct_option && !isCorrect) {
+			btn.classList.add("show-correct");
+		} else {
+			btn.classList.add("dimmed");
+		}
+	});
+
+	// Show loading feedback
+	const loadingDiv = document.createElement("div");
+	loadingDiv.classList.add("quiz-loading");
+	loadingDiv.innerHTML = 'Getting feedback <span class="dot">.</span><span class="dot">.</span><span class="dot">.</span>';
+	questionDiv.appendChild(loadingDiv);
+	chatArea.scrollTop = chatArea.scrollHeight;
+
+	try {
+		const result = await apiFetch("/chat/quiz-answer", {
+			method: "POST",
+			body: {
+				chat_id: state.activeChatId,
+				user_id: state.userId,
+				topic: questionData.topic || "the topic",
+				question: questionData.question,
+				options: questionData.options,
+				selected_option: selectedKey,
+				correct_option: questionData.correct_option,
+				explanation: questionData.explanation || "",
+				difficulty_level: state.difficultyLevel,
+				guided_learning: state.guidedLearning,
+			},
+		});
+
+		loadingDiv.remove();
+
+		const feedbackDiv = document.createElement("div");
+		feedbackDiv.classList.add("quiz-feedback", isCorrect ? "correct-feedback" : "incorrect-feedback");
+		const feedbackIcon = isCorrect ? "✅" : "💡";
+		feedbackDiv.innerHTML = `<span class="quiz-feedback-icon">${feedbackIcon}</span> ${escapeHtml(result.feedback || questionData.explanation)}`;
+		questionDiv.appendChild(feedbackDiv);
+
+	} catch (error) {
+		loadingDiv.remove();
+		const feedbackDiv = document.createElement("div");
+		feedbackDiv.classList.add("quiz-feedback", isCorrect ? "correct-feedback" : "incorrect-feedback");
+		const feedbackIcon = isCorrect ? "✅" : "💡";
+		feedbackDiv.innerHTML = `<span class="quiz-feedback-icon">${feedbackIcon}</span> ${isCorrect ? "Correct!" : "Not quite."} ${escapeHtml(questionData.explanation)}`;
+		questionDiv.appendChild(feedbackDiv);
+	}
+
+	chatArea.scrollTop = chatArea.scrollHeight;
+}
+
+/**
+ * Renders a summary card with structured sections.
+ * @param {Object} summaryData - { type, topic, one_line_definition, key_points: [] }
+ */
+function renderSummaryCard(summaryData, responseLevel = null) {
+	const wrapper = document.createElement("div");
+	wrapper.classList.add("message", "ai-message");
+
+	const avatar = document.createElement("div");
+	avatar.classList.add("message-avatar");
+	const logo = document.createElement("img");
+	logo.src = "assests/logo.png";
+	logo.alt = "Saivo";
+	logo.classList.add("bot-logo");
+	avatar.appendChild(logo);
+	wrapper.appendChild(avatar);
+
+	const card = document.createElement("div");
+	card.classList.add("summary-card");
+	const levelBadge = createResponseLevelBadge(responseLevel);
+	if (levelBadge) {
+		card.appendChild(levelBadge);
+	}
+
+	// Header
+	const header = document.createElement("div");
+	header.classList.add("summary-card-header");
+	const icon = document.createElement("div");
+	icon.classList.add("summary-card-icon");
+	icon.textContent = "📋";
+	header.appendChild(icon);
+	const title = document.createElement("div");
+	title.classList.add("summary-card-title");
+	title.textContent = summaryData.topic || "Concept Summary";
+	header.appendChild(title);
+	card.appendChild(header);
+
+	// Definition section
+	const defSection = document.createElement("div");
+	defSection.classList.add("summary-section");
+	const defLabel = document.createElement("div");
+	defLabel.classList.add("summary-section-label");
+	defLabel.textContent = "One-Line Definition";
+	defSection.appendChild(defLabel);
+	const defText = document.createElement("div");
+	defText.classList.add("summary-definition");
+	defText.textContent = summaryData.one_line_definition || "";
+	defSection.appendChild(defText);
+	card.appendChild(defSection);
+
+	// Key Points section
+	const kpSection = document.createElement("div");
+	kpSection.classList.add("summary-section");
+	const kpLabel = document.createElement("div");
+	kpLabel.classList.add("summary-section-label");
+	kpLabel.textContent = "Key Points";
+	kpSection.appendChild(kpLabel);
+
+	const kpList = document.createElement("ul");
+	kpList.classList.add("summary-key-points");
+	const keyPoints = summaryData.key_points || [];
+	keyPoints.forEach((point, i) => {
+		const li = document.createElement("li");
+		li.classList.add("summary-key-point");
+		const pointIcon = document.createElement("span");
+		pointIcon.classList.add("summary-point-icon");
+		pointIcon.textContent = `${i + 1}`;
+		li.appendChild(pointIcon);
+		const pointText = document.createElement("span");
+		pointText.textContent = point;
+		li.appendChild(pointText);
+		kpList.appendChild(li);
+	});
+	kpSection.appendChild(kpList);
+	card.appendChild(kpSection);
+
+	wrapper.appendChild(card);
+	messagesContainer.appendChild(wrapper);
+	chatArea.scrollTop = chatArea.scrollHeight;
+}
+
+// ========================
+// DIFFICULTY LEVEL BUTTONS
+// ========================
+const difficultyBtns = document.querySelectorAll(".diff-btn");
+const DIFFICULTY_LEVELS = ["Neutral", "Beginner", "Intermediate", "Advanced"];
+
+function normalizeDifficultyLevel(level) {
+	if (typeof level !== "string") {
+		return "Neutral";
+	}
+
+	const normalized = level.trim().toLowerCase();
+	if (normalized === "beginner") return "Beginner";
+	if (normalized === "intermediate") return "Intermediate";
+	if (normalized === "advanced") return "Advanced";
+	return "Neutral";
+}
+
+function buildApiPrompt(content, difficultyLevel) {
+	const normalizedDifficulty = normalizeDifficultyLevel(difficultyLevel);
+	if (normalizedDifficulty === "Neutral") {
+		return content;
+	}
+
+	return `${content} at ${normalizedDifficulty.toLowerCase()} level`;
+}
+
+function setDifficultyLevel(level) {
+	const normalizedLevel = normalizeDifficultyLevel(level);
+	if (!DIFFICULTY_LEVELS.includes(normalizedLevel)) {
+		return;
+	}
+
+	state.difficultyLevel = normalizedLevel;
+	localStorage.setItem("difficultyLevel", normalizedLevel);
+
+	difficultyBtns.forEach(btn => {
+		btn.classList.toggle("active", btn.dataset.level === normalizedLevel);
+	});
+}
+
+difficultyBtns.forEach(btn => {
+	btn.addEventListener("click", () => {
+		setDifficultyLevel(btn.dataset.level);
+	});
+});
+
+// Restore difficulty on load
+if (state.difficultyLevel) {
+	setDifficultyLevel(state.difficultyLevel);
+}
+
+// ========================
+// GUIDED LEARNING TOGGLE
+// ========================
+const guidedToggleInput = document.getElementById("guided-toggle-input");
+const guidedLabel = document.getElementById("guided-label");
+
+function setGuidedLearning(enabled) {
+	state.guidedLearning = enabled;
+	localStorage.setItem("guidedLearning", enabled ? "true" : "false");
+
+	if (guidedToggleInput) {
+		guidedToggleInput.checked = enabled;
+	}
+	if (guidedLabel) {
+		guidedLabel.textContent = enabled ? "Guided Learning" : "Ask Me Anything";
+	}
+}
+
+if (guidedToggleInput) {
+	guidedToggleInput.addEventListener("change", () => {
+		setGuidedLearning(guidedToggleInput.checked);
+	});
+}
+
+// Restore guided learning state on load
+setGuidedLearning(state.guidedLearning);
 
 async function initializeApp() {
 	if (!state.userId) {

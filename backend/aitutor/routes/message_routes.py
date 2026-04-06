@@ -12,9 +12,16 @@ from models.message import Message
 from schemas.message_schema import (
     CreateMessageRequest,
     MessageResponse,
+    QuizAnswerRequest,
     SendMessageRequest,
 )
-from services.ai_services import generate_ai_reply
+from services.ai_services import (
+    generate_ai_reply,
+    generate_ai_reply_with_mode,
+    generate_quiz_feedback_reply,
+    generate_quiz_payload,
+    generate_summary_payload,
+)
 from services.logic_engine import process_logic
 # Import the new rename module
 from rename import handle_chat_rename
@@ -63,6 +70,33 @@ def _parse_object_id(value: str, field_name: str) -> ObjectId:
     return ObjectId(value)
 
 
+def _normalize_difficulty_level(value: Optional[str]) -> str:
+    """Normalize UI difficulty labels to a stable set for backend handling."""
+    if not value:
+        return "Neutral"
+
+    normalized = value.strip().lower()
+    if normalized == "beginner":
+        return "Beginner"
+    if normalized == "intermediate":
+        return "Intermediate"
+    if normalized == "advanced":
+        return "Advanced"
+    return "Neutral"
+
+
+def _build_prompt_for_api(content: str, api_prompt: Optional[str], difficulty_level: str) -> str:
+    """Build the exact prompt text sent to AI calls."""
+    if api_prompt and api_prompt.strip():
+        return api_prompt.strip()
+
+    base_content = content.strip() or content
+    if difficulty_level == "Neutral":
+        return base_content
+
+    return f"{base_content} at {difficulty_level.lower()} level"
+
+
 @message_router.post("", response_model=MessageResponse, status_code=status.HTTP_201_CREATED)
 async def create_message(
     payload: CreateMessageRequest,
@@ -85,6 +119,7 @@ async def create_message(
         role=message.role,
         content=message.content,
         created_at=message.created_at,
+        response_level=None,
     )
 
 
@@ -116,6 +151,7 @@ async def list_messages(
                 role=document["role"],
                 content=sanitized_content,  # Sanitized content for frontend
                 created_at=document["created_at"],
+                response_level=document.get("response_level"),
             )
         )
 
@@ -195,21 +231,104 @@ async def send_message(
         context.append(f"{role}: {content}")
     context.reverse()
 
-    # Generate AI response
+    # --- EDUCATIONAL FEATURE ROUTING ---
+    # Detect quiz/summary triggers in user message
+    content_lower = payload.content.strip().lower()
+    difficulty = _normalize_difficulty_level(payload.difficulty_level)
+    guided = bool(payload.guided_learning)
+    prompt_for_api = _build_prompt_for_api(payload.content, payload.api_prompt, difficulty)
+    response_level = difficulty if difficulty != "Neutral" else None
+
+    is_quiz = any(trigger in content_lower for trigger in ["quiz me", "test me"])
+    is_summary = content_lower.strip() == "summarize" or content_lower.strip().startswith("summarize ")
+
+    if is_quiz:
+        # Generate structured quiz JSON
+        quiz_data = await generate_quiz_payload(
+            message=prompt_for_api,
+            context=context,
+            difficulty_level=difficulty,
+            guided_learning=guided,
+        )
+
+        # Save a text summary to DB so history makes sense
+        quiz_summary = f"📝 Quiz: {quiz_data.get('topic', 'Topic')} — 3 questions generated."
+        assistant_message = Message.create(
+            chat_id=chat_id, user_id=user_id, role="assistant", content=quiz_summary,
+        )
+        assistant_document = assistant_message.to_document()
+        assistant_document["ai_generated"] = True
+        assistant_document["was_stopped"] = False
+        if response_level:
+            assistant_document["response_level"] = response_level
+        result = await db["messages"].insert_one(assistant_document)
+
+        response = {
+            "type": "quiz",
+            "content": quiz_summary,
+            "chat_id": str(chat_id),
+            "user_id": str(user_id),
+            "message_id": str(result.inserted_id),
+            "pending": False,
+            "quiz": quiz_data,
+            "response_level": response_level,
+        }
+        if new_title:
+            response["new_title"] = new_title
+        return response
+
+    elif is_summary:
+        # Generate structured summary JSON
+        summary_data = await generate_summary_payload(
+            message=prompt_for_api,
+            context=context,
+            difficulty_level=difficulty,
+            guided_learning=guided,
+        )
+
+        # Save a text summary to DB
+        summary_text = (
+            f"📋 Summary: {summary_data.get('topic', 'Topic')}\n"
+            f"Definition: {summary_data.get('one_line_definition', '')}\n"
+            f"Key Points: {', '.join(summary_data.get('key_points', []))}"
+        )
+        assistant_message = Message.create(
+            chat_id=chat_id, user_id=user_id, role="assistant", content=summary_text,
+        )
+        assistant_document = assistant_message.to_document()
+        assistant_document["ai_generated"] = True
+        assistant_document["was_stopped"] = False
+        if response_level:
+            assistant_document["response_level"] = response_level
+        result = await db["messages"].insert_one(assistant_document)
+
+        response = {
+            "type": "summary",
+            "content": summary_text,
+            "chat_id": str(chat_id),
+            "user_id": str(user_id),
+            "message_id": str(result.inserted_id),
+            "pending": False,
+            "summary": summary_data,
+            "response_level": response_level,
+        }
+        if new_title:
+            response["new_title"] = new_title
+        return response
+
+    # --- Normal chat flow (with mode settings) ---
     reply = process_logic(payload.content)
     used_ai = False
     if reply is None:
-        reply = await generate_ai_reply(payload.content, context)
+        reply = await generate_ai_reply_with_mode(
+            message=prompt_for_api,
+            context=context,
+            difficulty_level=difficulty,
+            guided_learning=guided,
+        )
         used_ai = True
 
     # --- DATA LOSS FIX: ALWAYS save full response IMMEDIATELY ---
-    # This ensures bot responses are never lost if frontend disappears
-    # (page reload, tab close, network issues, etc.)
-    # 
-    # Save strategy:
-    # 1. Save full response NOW (guarantees no data loss)
-    # 2. If frontend sends STOP signal later, UPDATE to add marker
-    # 3. If frontend sends nothing, full response remains saved
     assistant_message = Message.create(
         chat_id=chat_id,
         user_id=user_id,
@@ -218,26 +337,24 @@ async def send_message(
     )
     assistant_document = assistant_message.to_document()
     assistant_document["ai_generated"] = True
-    assistant_document["was_stopped"] = False  # Default: not stopped (may be updated later)
+    assistant_document["was_stopped"] = False
+    if response_level:
+        assistant_document["response_level"] = response_level
     
     result = await db["messages"].insert_one(assistant_document)
     saved_message_id = result.inserted_id
 
-    # NOTE: Chat rename is now handled by the rename module
-    # See handle_chat_rename() call above, which:
-    # 1. Tries rule-based rename on first message
-    # 2. FORCES AI rename on 3rd user message (synchronously)
-
     # Return response with message_id and new_title for frontend update
     response = {
+        "type": "text",
         "content": reply,
         "chat_id": str(chat_id),
         "user_id": str(user_id),
-        "message_id": str(saved_message_id),  # Frontend needs this to send STOP signal
-        "pending": False,  # Message is already saved
+        "message_id": str(saved_message_id),
+        "pending": False,
+        "response_level": response_level,
     }
     
-    # Include new title if chat was renamed (frontend can update sidebar)
     if new_title:
         response["new_title"] = new_title
     
@@ -312,6 +429,7 @@ async def finalize_response(
             role=existing_message["role"],
             content=existing_message["content"],
             created_at=existing_message["created_at"],
+            response_level=existing_message.get("response_level"),
         )
 
     # User stopped - apply marker if stop_index is valid
@@ -342,4 +460,63 @@ async def finalize_response(
         role="assistant",
         content=final_content,
         created_at=existing_message["created_at"],
+        response_level=existing_message.get("response_level"),
     )
+
+
+@chat_interaction_router.post("/quiz-answer")
+async def submit_quiz_answer(
+    payload: QuizAnswerRequest,
+    db: AsyncIOMotorDatabase = Depends(get_database),
+):
+    """
+    Submit a quiz answer and receive AI-generated feedback.
+
+    The frontend sends the question details and selected answer.
+    The backend generates contextual feedback using AI.
+    """
+    chat_id = _parse_object_id(payload.chat_id, "chat_id")
+    user_id = _parse_object_id(payload.user_id, "user_id")
+
+    chat_document = await db["chats"].find_one({"_id": chat_id, "user_id": user_id})
+    if not chat_document:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chat not found for user")
+
+    difficulty = _normalize_difficulty_level(payload.difficulty_level)
+    guided = bool(payload.guided_learning)
+    response_level = difficulty if difficulty != "Neutral" else None
+
+    # Generate AI feedback for the selected answer
+    feedback = await generate_quiz_feedback_reply(
+        topic=payload.topic,
+        question=payload.question,
+        options=payload.options,
+        selected_option=payload.selected_option,
+        correct_option=payload.correct_option,
+        explanation=payload.explanation,
+        difficulty_level=difficulty,
+        guided_learning=guided,
+    )
+
+    is_correct = payload.selected_option.strip().upper() == payload.correct_option.strip().upper()
+
+    # Save answer + feedback as messages in the chat
+    user_answer_text = f"Quiz answer: {payload.selected_option}"
+    user_msg = Message.create(chat_id=chat_id, user_id=user_id, role="user", content=user_answer_text)
+    await db["messages"].insert_one(user_msg.to_document())
+
+    assistant_msg = Message.create(chat_id=chat_id, user_id=user_id, role="assistant", content=feedback)
+    assistant_doc = assistant_msg.to_document()
+    assistant_doc["ai_generated"] = True
+    assistant_doc["was_stopped"] = False
+    if response_level:
+        assistant_doc["response_level"] = response_level
+    result = await db["messages"].insert_one(assistant_doc)
+
+    return {
+        "feedback": feedback,
+        "is_correct": is_correct,
+        "correct_option": payload.correct_option,
+        "message_id": str(result.inserted_id),
+        "response_level": response_level,
+    }

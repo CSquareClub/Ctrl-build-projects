@@ -24,6 +24,7 @@ class MessageResponse(BaseModel):
 	role: str
 	content: str
 	created_at: datetime
+	response_level: Optional[str] = None
 
 
 class SendMessageRequest(BaseModel):
@@ -32,9 +33,29 @@ class SendMessageRequest(BaseModel):
 	chat_id: str = Field(..., min_length=1)
 	user_id: str = Field(..., min_length=1)
 	content: str = Field(..., min_length=1)
+	api_prompt: Optional[str] = Field(default=None)
+	
+	# Educational mode settings
+	difficulty_level: Optional[str] = Field(default="Neutral")
+	guided_learning: Optional[bool] = Field(default=False)
 	
 	# Optional fields for stop handling (Phase 2)
 	# stopped: indicates if user stopped rendering mid-way
 	# stop_index: character index where rendering was stopped
 	stopped: Optional[bool] = Field(default=False)
 	stop_index: Optional[int] = Field(default=None)
+
+
+class QuizAnswerRequest(BaseModel):
+	"""Request body for submitting a quiz answer and getting AI feedback."""
+
+	chat_id: str = Field(..., min_length=1)
+	user_id: str = Field(..., min_length=1)
+	topic: str = Field(..., min_length=1)
+	question: str = Field(..., min_length=1)
+	options: dict = Field(...)
+	selected_option: str = Field(..., min_length=1)
+	correct_option: str = Field(..., min_length=1)
+	explanation: str = Field(default="")
+	difficulty_level: Optional[str] = Field(default="Neutral")
+	guided_learning: Optional[bool] = Field(default=False)
