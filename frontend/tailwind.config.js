@@ -8,8 +8,8 @@ module.exports = {
     extend: {
       colors: {
         terminal: {
-          bg:      '#000000',
-          surface: '#080d08',
+          bg:      '#0d1117',
+          surface: '#161b22',
           border:  '#1a3320',
           text:    '#22c55e',
           bright:  '#4ade80',
