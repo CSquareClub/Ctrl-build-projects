@@ -1,8 +1,389 @@
 # GitWise AI — System Architecture
 
-This document covers how GitWise AI is put together — the system diagram, how each component works, the database schema, the moderation decision flow, and how we've thought about the hard engineering problems.
+---
+
+## High-Level Architecture
+
+```
+┌─────────────────────────────────────────────┐
+│              GitHub Platform                │
+│  Issues · PRs · Commits · Comments          │
+│  Webhooks · OAuth · Status API              │
+└────────────────────┬────────────────────────┘
+                     │ Webhooks + API calls
+                     ▼
+┌─────────────────────────────────────────────┐
+│           GitWise AI Backend                │
+│         (FastAPI — free tier host)          │
+│                                             │
+│  ┌─────────────┐  ┌──────────────────────┐ │
+│  │ Auth Service│  │  Webhook Receiver    │ │
+│  │ GitHub OAuth│  │  Event Router        │ │
+│  └─────────────┘  └──────────────────────┘ │
+│                                             │
+│  ┌─────────────────────────────────────┐   │
+│  │         AI Orchestration Layer      │   │
+│  │                                     │   │
+│  │  Issue Triage  │  Code Moderation   │   │
+│  │  PR Review     │  README Generator  │   │
+│  │  Recommender   │  Comment Analysis  │   │
+│  └─────────────────────────────────────┘   │
+│                                             │
+│  ┌─────────────────────────────────────┐   │
+│  │         Dashboard API               │   │
+│  │  /dashboard/stats                   │   │
+│  │  /dashboard/activity                │   │
+│  │  /dashboard/feed                    │   │
+│  └─────────────────────────────────────┘   │
+└──────────────┬──────────────────────────────┘
+               │
+               ▼
+┌─────────────────────────────────────────────┐
+│       gpt-oss-120B Inference Service        │
+│   (Hugging Face free endpoint or            │
+│    self-hosted on free GPU tier)            │
+└──────────────┬──────────────────────────────┘
+               │
+       ┌───────┴────────┐
+       ▼                ▼
+┌─────────────┐  ┌──────────────────┐
+│ PostgreSQL  │  │  Vector DB       │
+│ (Supabase   │  │  (Qdrant Cloud   │
+│  free tier) │  │   free tier or   │
+│             │  │   FAISS in-mem)  │
+└─────────────┘  └──────────────────┘
+               │
+               ▼
+┌─────────────────────────────────────────────┐
+│           GitWise AI Frontend               │
+│  React 19 + Tailwind v4 — Vercel free       │
+│                                             │
+│  Landing → Dashboard → Repos → Triage       │
+│  Moderation → Recommender → README Gen      │
+└─────────────────────────────────────────────┘
+```
 
 ---
+
+## Frontend → Backend API Map
+
+Every frontend page and what it needs from the backend:
+
+| Page | Backend Calls |
+|---|---|
+| LandingPage | `GET /auth/github` (OAuth redirect) |
+| DashboardPage | `GET /dashboard/stats`, `GET /dashboard/activity?days=7`, `GET /dashboard/feed?limit=6` |
+| RepositoriesPage | `GET /repos`, `POST /repos/import`, `POST /repos/{id}/watch`, `DELETE /repos/{id}/watch` |
+| IssueTriagePage | `POST /issues/analyze`, `GET /issues`, `POST /issues/{id}/label` |
+| ModerationPage | `GET /moderation`, `GET /moderation/{id}`, `POST /moderation/{id}/override`, `POST /webhooks/github` |
+| RecommenderPage | `POST /prefs`, `GET /recommend`, `POST /bookmarks`, `DELETE /bookmarks/{id}`, `GET /bookmarks` |
+| ReadmeGeneratorPage | `POST /readme/generate`, `POST /readme/pr` |
+
+---
+
+## Component Architecture
+
+```
+App.tsx
+│  State: isAuthenticated (bool), page (Page)
+│  Auth gate: if (!isAuthenticated) → <LandingPage>
+│  Logged in: <Layout> wraps all inner pages
+│
+├── components/Layout.tsx
+│     ├── components/Sidebar.tsx        ← nav, badge counts, AI status footer
+│     ├── components/Header.tsx         ← page title, demo badge, bell, avatar, logout
+│     └── <main className="p-6">{children}</main>
+│
+├── pages/LandingPage.tsx              ← hero, stats, features, how-it-works, CTA
+├── pages/DashboardPage.tsx            ← stat cards, bar chart, health panel, live feed
+├── pages/RepositoriesPage.tsx         ← repo cards with monitor toggle
+├── pages/IssueTriagePage.tsx          ← analysis form + triaged issues table
+├── pages/ModerationPage.tsx           ← event feed with filters + override
+├── pages/RecommenderPage.tsx          ← skill profile + ranked issues + bookmarks
+└── pages/ReadmeGeneratorPage.tsx      ← config panel + preview/edit/source tabs
+```
+
+---
+
+## Auth Service
+
+Handles GitHub OAuth 2.0 end-to-end:
+
+1. `GET /auth/github` — redirects to GitHub with required scopes.
+2. `GET /auth/callback` — receives `code`, exchanges for access token, stores encrypted, sets session cookie, redirects to `FRONTEND_URL/dashboard`.
+3. `GET /auth/me` — returns `UserProfile` for the current session (used on app load to restore auth state).
+4. `POST /auth/logout` — clears server session.
+
+Required OAuth scopes: `repo`, `read:user`, `user:email`, `write:discussion`, `admin:repo_hook`, `pull_requests`.
+
+---
+
+## Webhook Receiver & Event Router
+
+Entry point: `POST /webhooks/github`
+
+1. Validate `X-Hub-Signature-256` against `GITHUB_WEBHOOK_SECRET` — reject with 401 if invalid.
+2. Use `X-GitHub-Delivery` as idempotency key — skip if already processed.
+3. Return `{ received: true }` with status 200 immediately (before any AI processing).
+4. Dispatch to async task queue based on `X-GitHub-Event` header:
+   - `issues` → Issue Triage pipeline
+   - `pull_request` → Code Moderation + PR Review pipeline
+   - `push` → Commit analysis pipeline
+   - `issue_comment` / `pull_request_review_comment` → Comment moderation pipeline
+
+---
+
+## AI Orchestration Layer
+
+| Module | Input | Output | GitHub Action |
+|---|---|---|---|
+| Issue Triage | Issue title + body | `TriagedIssue` (classification, labels, priority, duplicates) | Apply labels, post comment if duplicate/spam |
+| Code Moderation | PR diff, commit content, or comment text | `ModerationEvent` (decision, severity, file, line) | Post `REQUEST_CHANGES` or commit status |
+| README Generator | `owner/repo`, section options | Markdown string | Optionally create PR via GitHub API |
+| Recommender | User skill profile | `RecommendedIssue[]` sorted by matchScore | None (read-only) |
+| Comment Analysis | Comment body | PASS / FLAG / BLOCK + explanation | Post warning reply if flagged |
+
+---
+
+## Moderation Decision Flow
+
+```
+GitHub Event Received (Webhook POST /webhooks/github)
+        │
+        ▼
+Validate X-Hub-Signature-256
+        │
+        ▼
+Return 200 OK immediately (async everything below)
+        │
+        ▼
+Extract relevant content (diff, message, comment text)
+        │
+        ▼
+Send to gpt-oss-120B moderation pipeline
+        │
+        ▼
+Decision: PASS | FLAG | BLOCK   (+ Severity: CRITICAL | HIGH | MEDIUM | LOW)
+        │
+   ─────┴──────────────────
+  │                        │
+PASS                  FLAG / BLOCK
+  │                        │
+Log event            Post AI comment on GitHub:
+(decision: PASS)       - reason
+                       - aiExplanation
+                       - link to file#LN–LM
+                            │
+                       If PR:     POST /repos/{owner}/{repo}/pulls/{pr_number}/reviews
+                                  (event: REQUEST_CHANGES)
+                       If Commit: POST /repos/{owner}/{repo}/statuses/{sha}
+                                  (state: failure)
+                       If Comment: post reply comment
+                            │
+                       Save ModerationEvent to DB
+```
+
+---
+
+## Deep Links to Exact Problem Location
+
+When AI identifies a fault at a specific file + line, the backend builds:
+
+**Single line:**
+```
+https://github.com/{owner}/{repo}/blob/{commit_sha}/{file_path}#L{line_number}
+```
+
+**Line range:**
+```
+https://github.com/{owner}/{repo}/blob/{commit_sha}/{file_path}#L{start}-L{end}
+```
+
+The `ModerationEvent` schema stores `file`, `lineStart`, `lineEnd`, `commitSha`, and `githubUrl` (the pre-built deep link).
+
+**AI JSON response shape expected from gpt-oss-120B:**
+```json
+{
+  "decision": "BLOCK",
+  "severity": "CRITICAL",
+  "issues": [
+    {
+      "type": "security",
+      "file": "src/config/database.js",
+      "line_start": 42,
+      "line_end": 42,
+      "description": "Hardcoded API key detected. This credential will be exposed in the public repository.",
+      "suggestion": "Use process.env.API_KEY and add this variable to .env.example without the actual value."
+    }
+  ],
+  "explanation": "Full AI-generated explanation for the GitHub comment."
+}
+```
+
+---
+
+## Severity Levels
+
+| Level | Frontend display | Backend action |
+|---|---|---|
+| `CRITICAL` | Red dot, red text | Automatic block — PR cannot merge; commit status = failure |
+| `HIGH` | Orange dot | Block applied; maintainer can override via dashboard |
+| `MEDIUM` | Amber dot | Flag only — comment posted, merge not blocked |
+| `LOW` | Zinc dot | Log only — no GitHub action taken |
+
+---
+
+## Priority Scoring (Issue Triage)
+
+```
+Priority Score (0–100) =
+  Severity signal                35%
+  Reproducibility clues          20%
+  User impact estimate           25%
+  Freshness & recency            10%
+  Repo-specific heuristics       10%
+```
+
+Displayed as a progress bar in the frontend (violet → fuchsia gradient).
+
+---
+
+## Match Score (Recommender)
+
+```
+Match Score (0–100) = base matchScore
+  + skill overlap bonus (5 pts per matching language)
+  + experience adjustment:
+      beginner  → Easy issues +10, others -15
+      advanced  → Hard issues +10
+      intermediate → neutral
+```
+
+Results are sorted descending by adjusted matchScore before being returned.
+
+---
+
+## Database Schema (PostgreSQL / Supabase)
+
+### users
+```sql
+id          UUID PRIMARY KEY
+github_id   INTEGER UNIQUE NOT NULL
+login       TEXT NOT NULL
+name        TEXT
+avatar_url  TEXT
+email       TEXT
+access_token TEXT  -- encrypted at rest
+created_at  TIMESTAMPTZ DEFAULT now()
+```
+
+### repositories
+```sql
+id             UUID PRIMARY KEY
+user_id        UUID REFERENCES users(id)
+github_id      INTEGER NOT NULL
+name           TEXT NOT NULL
+owner          TEXT NOT NULL
+full_name      TEXT NOT NULL
+url            TEXT
+description    TEXT
+language       TEXT
+stars          INTEGER
+forks          INTEGER
+open_issues    INTEGER
+is_monitored   BOOLEAN DEFAULT false
+webhook_active BOOLEAN DEFAULT false
+webhook_id     INTEGER  -- GitHub webhook ID for deletion
+last_updated   TIMESTAMPTZ
+```
+
+### triaged_issues
+```sql
+id              UUID PRIMARY KEY
+repo_id         UUID REFERENCES repositories(id)
+github_id       INTEGER
+title           TEXT
+body            TEXT
+classification  TEXT  -- IssueClassification enum
+priority_score  INTEGER
+labels          TEXT[]
+is_duplicate    BOOLEAN
+duplicate_of    UUID REFERENCES triaged_issues(id)
+state           TEXT  -- 'open' | 'closed'
+url             TEXT
+author          TEXT
+created_at      TIMESTAMPTZ
+analyzed_at     TIMESTAMPTZ DEFAULT now()
+```
+
+### moderation_events
+```sql
+id             UUID PRIMARY KEY
+repo_id        UUID REFERENCES repositories(id)
+type           TEXT  -- EventType enum
+decision       TEXT  -- 'PASS' | 'FLAG' | 'BLOCK'
+severity       TEXT  -- 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'
+title          TEXT
+author         TEXT
+author_avatar  TEXT
+reason         TEXT
+ai_explanation TEXT
+file           TEXT
+line_start     INTEGER
+line_end       INTEGER
+commit_sha     TEXT
+pr_number      INTEGER
+github_url     TEXT
+overridden     BOOLEAN DEFAULT false
+overridden_by  TEXT
+timestamp      TIMESTAMPTZ DEFAULT now()
+```
+
+### recommendations
+```sql
+id           UUID PRIMARY KEY
+user_id      UUID REFERENCES users(id)
+github_id    INTEGER
+title        TEXT
+repo         TEXT
+url          TEXT
+labels       TEXT[]
+difficulty   TEXT  -- 'Easy' | 'Medium' | 'Hard'
+match_score  INTEGER
+languages    TEXT[]
+explanation  TEXT
+stars        INTEGER
+comments     INTEGER
+bookmarked   BOOLEAN DEFAULT false
+created_at   TIMESTAMPTZ
+```
+
+### user_prefs
+```sql
+id         UUID PRIMARY KEY
+user_id    UUID REFERENCES users(id) UNIQUE
+skills     TEXT[]
+domains    TEXT[]
+experience TEXT  -- 'beginner' | 'intermediate' | 'advanced'
+```
+
+---
+
+## Vector Database (Qdrant / FAISS)
+
+- Collection: `issue_embeddings`
+- Each point: `{ id: issue_uuid, vector: float[1536], payload: { repo, title, github_id } }`
+- Duplicate check: cosine similarity threshold = 0.85 (configurable per repo)
+- Only the Qdrant point ID is stored in Postgres; full vectors stay in Qdrant
+
+---
+
+## Free Tier Constraints
+
+- **Render cold starts** — implement keep-alive ping every 10 minutes
+- **Model inference latency** — queue all webhook events; always return 200 immediately
+- **Supabase 500MB limit** — embeddings in Qdrant only
+
 
 ## High-Level Architecture
 

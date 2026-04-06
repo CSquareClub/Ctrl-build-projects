@@ -1,8 +1,220 @@
 # GitWise AI
 
-> Your open-source GitHub companion — it triages issues, catches bad PRs before they merge, helps newcomers find their first contribution, and writes your README for you. No paid APIs. Ever.
+> Your open-source GitHub companion — triages issues, catches bad PRs before they merge, helps newcomers find their first contribution, and writes your README for you. No paid APIs. Ever.
 
 ---
+
+## What is GitWise AI?
+
+Maintaining an open-source project is hard. Issues pile up unlabeled, duplicates slip through, new contributors get lost, and documentation always falls behind. GitWise AI fixes all of that in one place.
+
+Connect it to GitHub via OAuth and it quietly goes to work:
+
+- **Maintainers** stop drowning in issue noise — every new issue gets classified, scored for priority, and checked against existing ones automatically.
+- **New contributors** get a personalised feed of issues that match their skill level, experience, and domains.
+- **Repository owners** generate a complete professional README in seconds.
+- **Everyone** gets a clear explanation with a direct link to the exact line of code whenever a PR or commit gets flagged.
+
+Everything runs on `gpt-oss-120B`, a fully open-source model you can self-host. No OpenAI. No Anthropic. No per-token bill.
+
+---
+
+## What it Can Do
+
+| Feature | What it actually does |
+|---|---|
+| Issue Triage | Classifies every new issue (BUG / FEATURE_REQUEST / DOCUMENTATION / QUESTION / SPAM / UNCLEAR), checks for duplicates, scores priority 0–100, suggests GitHub labels |
+| PR & Commit Moderation | Scans code diffs and commit messages for secrets, vulnerabilities, policy violations, and toxic content before anything merges |
+| AI Block Notifications | Posts a structured comment on GitHub with PASS / FLAG / BLOCK decision, severity level, AI explanation, and deep link to the faulty line |
+| First Issue Recommender | Scores open issues by skill match, experience level (beginner / intermediate / advanced), and domain preference; updates live as profile changes |
+| README Generator | Takes a GitHub URL, generates a full Markdown README with badges, features, install steps, usage examples, API reference, contributing guide, and license; supports Preview / Edit / Source view and one-click PR creation |
+| Dashboard | Live AI status banner, 7-day activity bar chart, system health panel, live feed, moderation event table, quick nav |
+
+---
+
+## Frontend Structure
+
+```
+frontend/
+  src/
+    App.tsx               # Root — page state machine, auth gate, routing
+    main.tsx              # React DOM mount
+    index.css             # Tailwind v4 + custom scrollbar + keyframe animations
+    components/
+      GithubIcon.tsx      # SVG GitHub logo
+      Header.tsx          # Top bar: page title, demo badge, notification bell, user avatar, logout
+      Sidebar.tsx         # Nav with active indicator, badge counts, AI status footer
+      Layout.tsx          # Shell: Sidebar + Header + <main p-6>
+    pages/
+      LandingPage.tsx     # Public marketing page — hero, stats, features, CTA
+      DashboardPage.tsx   # Post-login home — stat cards, bar chart, health panel, live feed
+      RepositoriesPage.tsx# List all repos; toggle monitoring per repo
+      IssueTriagePage.tsx # Manual issue analysis form + triaged-issues table with filters
+      ModerationPage.tsx  # Moderation event feed with decision/type filters and override action
+      RecommenderPage.tsx # Skill profile builder + issue recommendations with bookmark
+      ReadmeGeneratorPage.tsx # README generator with preview/edit/source tabs and PR creation
+    data/
+      mockData.ts         # All mock data: MOCK_USER, MOCK_REPOSITORIES, MOCK_TRIAGED_ISSUES,
+                          #               MOCK_MODERATION_EVENTS, MOCK_RECOMMENDATIONS
+    types/
+      index.ts            # All shared TypeScript types (see Data Types section below)
+    utils/
+      cn.ts               # clsx + tailwind-merge helper
+```
+
+---
+
+## Architecture (short version)
+
+```
+GitHub (Webhooks + OAuth + Status API)
+        ↓
+GitWise AI Backend (FastAPI on Render)
+        ↓
+gpt-oss-120B Inference (Hugging Face free endpoint)
+        ↓
+PostgreSQL (Supabase)  +  Vector DB (Qdrant / FAISS)
+        ↓
+React + Tailwind Dashboard (Vercel)
+```
+
+Full details: [architecture.md](architecture.md) · [tech-stack.md](tech-stack.md) · [context.md](context.md)
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | React 19 + Tailwind CSS v4, Vite 7, TypeScript 5, lucide-react, react-markdown + remark-gfm |
+| Backend | Python 3.11 + FastAPI (Render free tier) |
+| AI Model | `gpt-oss-120B` (Hugging Face free endpoint) |
+| Vector DB | Qdrant Cloud free tier / FAISS in-memory |
+| Relational DB | Supabase free tier (PostgreSQL) |
+| GitHub Integration | PyGitHub + REST API + Webhooks |
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- Python 3.11+
+- Node.js 18+
+- GitHub OAuth App ([create here](https://github.com/settings/developers))
+- Free [Supabase](https://supabase.com) account
+- Free [Qdrant Cloud](https://cloud.qdrant.io) account
+- Free [Hugging Face](https://huggingface.co) account with access to `gpt-oss-120B`
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/your-org/gitwise-ai.git
+cd gitwise-ai
+```
+
+### 2. Configure environment
+
+```bash
+cp .env.example .env
+# Fill in all variables — see tech-stack.md for the full list
+```
+
+### 3. Start the backend
+
+```bash
+cd backend
+pip install -r requirements.txt
+python run_migrations.py
+uvicorn main:app --reload
+# Runs on http://localhost:8000
+```
+
+### 4. Start the frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+# Runs on http://localhost:5173
+```
+
+### 5. Connect a webhook
+
+In your GitHub repo **Settings → Webhooks**:
+
+- **Payload URL:** `http://localhost:8000/webhooks/github` (or your deployed URL)
+- **Content type:** `application/json`
+- **Secret:** value of `GITHUB_WEBHOOK_SECRET` in `.env`
+- **Events:** Issues, Pull requests, Push, Issue comments, Pull request review comments
+
+---
+
+## API Reference
+
+> All endpoints require `Authorization: Bearer <access_token>` except `/auth/*` and `/webhooks/github`.
+
+### Auth
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/auth/github` | Redirect to GitHub OAuth |
+| `GET` | `/auth/callback` | GitHub OAuth callback — exchanges code for token, sets session |
+| `GET` | `/auth/me` | Returns current `UserProfile` |
+| `POST` | `/auth/logout` | Clears session |
+
+### Repositories
+
+| Method | Endpoint | Body / Params | Returns |
+|---|---|---|---|
+| `POST` | `/repos/import` | — | `Repository[]` — pulls all repos from GitHub |
+| `GET` | `/repos` | — | `Repository[]` — all imported repos |
+| `POST` | `/repos/{id}/watch` | — | `Repository` — registers webhook, sets `isMonitored: true` |
+| `DELETE` | `/repos/{id}/watch` | — | `Repository` — removes webhook, sets `isMonitored: false` |
+
+### Issue Triage
+
+| Method | Endpoint | Body / Params | Returns |
+|---|---|---|---|
+| `POST` | `/issues/analyze` | `{ title, body, repoId? }` | `TriagedIssue` — classification, priority, labels, duplicates |
+| `GET` | `/issues` | `?repoId&classification&state` | `TriagedIssue[]` |
+| `GET` | `/issues/similar` | `?issueId&threshold=0.85` | `{ title, repo, similarity, url }[]` |
+| `POST` | `/issues/{id}/label` | `{ labels: string[] }` | Applies labels on GitHub via API |
+
+### Moderation
+
+| Method | Endpoint | Body / Params | Returns |
+|---|---|---|---|
+| `POST` | `/webhooks/github` | GitHub webhook payload (raw) | `{ received: true }` — always 200 |
+| `GET` | `/moderation` | `?repoId&decision&type` | `ModerationEvent[]` |
+| `GET` | `/moderation/{id}` | — | `ModerationEvent` (full detail with deep links) |
+| `POST` | `/moderation/{id}/override` | `{ overriddenBy: string }` | `ModerationEvent` with `overridden: true` |
+
+### Recommender
+
+| Method | Endpoint | Body / Params | Returns |
+|---|---|---|---|
+| `POST` | `/prefs` | `{ skills, domains, experience }` | Saves user profile |
+| `GET` | `/recommend` | `?skills&domains&experience` | `RecommendedIssue[]` sorted by matchScore |
+| `POST` | `/bookmarks` | `{ issueId: string }` | Adds bookmark |
+| `DELETE` | `/bookmarks/{issueId}` | — | Removes bookmark |
+| `GET` | `/bookmarks` | — | `RecommendedIssue[]` |
+
+### README Generation
+
+| Method | Endpoint | Body / Params | Returns |
+|---|---|---|---|
+| `POST` | `/readme/generate` | `{ repoUrl, options: ReadmeOptions }` | `{ content: string, repoName: string }` |
+| `POST` | `/readme/pr` | `{ repoName, content }` | `{ prUrl: string, prNumber: number }` — creates PR on GitHub |
+
+---
+
+## Data Types
+
+All types live in `frontend/src/types/index.ts`. The backend must return JSON that matches these shapes exactly.
+
+See [context.md](context.md) for the full schema definitions.
+
 
 ## What is GitWise AI?
 
