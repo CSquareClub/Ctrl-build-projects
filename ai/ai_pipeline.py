@@ -1,12 +1,17 @@
 from collections import Counter
 from functools import lru_cache
 import math
+import os
 import re
 
 
 SKILLS = ("python", "java", "sql", "react", "ml")
 SPACE_PATTERN = re.compile(r"\s+")
 WORD_PATTERN = re.compile(r"\b[a-z0-9]+\b")
+
+os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS_WARNING", "1")
+os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
+os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 
 
 def _default_result(reasons=None):
@@ -53,9 +58,18 @@ def clean_text(text):
 @lru_cache(maxsize=1)
 def _load_embedding_model():
     try:
+        from huggingface_hub.utils import disable_progress_bars
         from sentence_transformers import SentenceTransformer
+        from transformers.utils import logging as transformers_logging
 
-        return SentenceTransformer("all-MiniLM-L6-v2")
+        disable_progress_bars()
+        transformers_logging.set_verbosity_error()
+        transformers_logging.disable_progress_bar()
+
+        try:
+            return SentenceTransformer("all-MiniLM-L6-v2", local_files_only=True)
+        except Exception:
+            return SentenceTransformer("all-MiniLM-L6-v2")
     except Exception:
         return None
 

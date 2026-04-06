@@ -1,0 +1,2 @@
+pdfplumber>=0.11.9
+sentence-transformers>=5.3.0
