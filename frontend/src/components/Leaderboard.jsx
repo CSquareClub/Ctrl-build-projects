@@ -2,15 +2,24 @@ import React from 'react';
 import { Award, ChevronRight, User } from 'lucide-react';
 import './Leaderboard.css';
 
-const mockCandidates = [
-  { id: 1, name: "Eleanor Pena", role: "Sr. Frontend Engineer", match: 96, fraud: 2, final: 94 },
-  { id: 2, name: "Savannah Nguyen", role: "React Developer", match: 92, fraud: 1, final: 91 },
-  { id: 3, name: "Albert Flores", role: "UI/UX Developer", match: 88, fraud: 4, final: 84 },
-  { id: 4, name: "Bessie Cooper", role: "Frontend Lead", match: 86, fraud: 8, final: 78 },
-  { id: 5, name: "Wade Warren", role: "Web Developer", match: 72, fraud: 15, final: 57 },
-];
-
 const Leaderboard = () => {
+  const [candidates, setCandidates] = React.useState([]);
+  const [isLoading, setIsLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    const fetchRankings = async () => {
+      try {
+        const response = await fetch('http://10.224.213.198:8000/rank');
+        const data = await response.json();
+        setCandidates(data);
+      } catch (error) {
+        console.error('Error fetching rankings:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchRankings();
+  }, []);
   return (
     <section className="leaderboard-section" id="leaderboard">
       <div className="leaderboard-container">
@@ -33,59 +42,71 @@ const Leaderboard = () => {
               </tr>
             </thead>
             <tbody>
-              {mockCandidates.map((candidate, index) => {
-                let rankClass = '';
-                if (index === 0) rankClass = 'rank-gold top-candidate';
-                else if (index === 1) rankClass = 'rank-silver';
-                else if (index === 2) rankClass = 'rank-bronze';
-
-                // Cap the stagger class at 5 since we only made up to stagger-5, fallback to stagger-5 if beyond
-                const staggerValue = index + 1 <= 5 ? index + 1 : 5;
-
-                return (
-                  <tr 
-                    key={candidate.id} 
-                    className={`table-row ${rankClass} hover-lift fade-in-up stagger-${staggerValue}`}
-                  >
-                    <td className="rank-cell">
-                      {index <= 2 ? (
-                        <div className={`rank-badge ${index === 0 ? 'gold' : index === 1 ? 'silver' : 'bronze'}`}>
-                          <Award size={18} />
-                        </div>
-                      ) : (
-                        <span className="rank-num">#{index + 1}</span>
-                      )}
-                    </td>
-                  <td>
-                    <div className="candidate-info">
-                      <div className="avatar">
-                        <User size={18} />
-                      </div>
-                      <div>
-                        <h4>{candidate.name}</h4>
-                        <span className="role">{candidate.role}</span>
-                      </div>
-                    </div>
-                  </td>
-                  <td>
-                    <span className="score-badge blue">{candidate.match}%</span>
-                  </td>
-                  <td>
-                    <span className={`score-badge ${candidate.fraud > 10 ? 'red' : 'green'}`}>
-                      {candidate.fraud}%
-                    </span>
-                  </td>
-                  <td>
-                    <strong className="final-score">{candidate.final}</strong>
-                  </td>
-                  <td>
-                    <button className="icon-btn">
-                      <ChevronRight size={20} />
-                    </button>
+              {isLoading ? (
+                <tr>
+                  <td colSpan="6" style={{ textAlign: 'center', padding: '3rem', opacity: 0.5 }}>
+                    Fetching Top Candidates...
                   </td>
                 </tr>
-              );
-            })}
+              ) : candidates.length > 0 ? (
+                candidates.map((candidate, index) => {
+                  let rankClass = '';
+                  if (index === 0) rankClass = 'rank-gold top-candidate';
+                  else if (index === 1) rankClass = 'rank-silver';
+                  else if (index === 2) rankClass = 'rank-bronze';
+
+                  const staggerValue = index + 1 <= 5 ? index + 1 : 5;
+
+                  return (
+                    <tr 
+                      key={candidate.id || index} 
+                      className={`table-row ${rankClass} hover-lift fade-in-up stagger-${staggerValue}`}
+                    >
+                      <td className="rank-cell">
+                        {index <= 2 ? (
+                          <div className={`rank-badge ${index === 0 ? 'gold' : index === 1 ? 'silver' : 'bronze'}`}>
+                            <Award size={18} />
+                          </div>
+                   ) : (
+                          <span className="rank-num">#{index + 1}</span>
+                        )}
+                      </td>
+                    <td>
+                      <div className="candidate-info">
+                        <div className="avatar">
+                          <User size={18} />
+                        </div>
+                        <div>
+                          <h4>{candidate.name}</h4>
+                          <span className="role">{candidate.role}</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <span className="score-badge blue">{candidate.match}%</span>
+                    </td>
+                    <td>
+                      <span className={`score-badge ${candidate.fraud > 10 ? 'red' : 'green'}`}>
+                        {candidate.fraud}%
+                      </span>
+                    </td>
+                    <td>
+                      <strong className="final-score">{candidate.final}</strong>
+                    </td>
+                    <td>
+                      <button className="icon-btn">
+                        <ChevronRight size={20} />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })) : (
+                <tr>
+                  <td colSpan="6" style={{ textAlign: 'center', padding: '2rem', opacity: 0.5 }}>
+                    No candidates found in the system.
+                  </td>
+                </tr>
+              )}
           </tbody>
         </table>
         </div>

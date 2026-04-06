@@ -35,13 +35,28 @@ const UploadSection = ({ onUploadComplete }) => {
     }
   };
 
-  const handleFile = (file) => {
+  const handleFile = async (file) => {
     setIsUploading(true);
-    // Simulate upload & analysis delay
-    setTimeout(() => {
+    
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await fetch('http://10.224.213.198:8000/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error('Upload failed');
+      
+      const data = await response.json();
       setIsUploading(false);
-      onUploadComplete(file);
-    }, 2500);
+      onUploadComplete(data);
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      setIsUploading(false);
+      alert('Network Error: Could not connect to http://10.224.213.198:8000/upload. Verify backend is running.');
+    }
   };
 
   return (

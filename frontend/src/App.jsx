@@ -10,8 +10,10 @@ import './App.css';
 
 function App() {
   const [hasUploaded, setHasUploaded] = useState(false);
+  const [analysisResults, setAnalysisResults] = useState(null);
 
-  const handleUploadComplete = (file) => {
+  const handleUploadComplete = (data) => {
+    setAnalysisResults(data);
     setHasUploaded(true);
     // Scroll to dashboard smoothly
     setTimeout(() => {
@@ -33,9 +35,9 @@ function App() {
         <Hero onUploadClick={scrollToUpload} />
         <UploadSection onUploadComplete={handleUploadComplete} />
         
-        {hasUploaded && (
+        {hasUploaded && analysisResults && (
           <div className="fade-in">
-            <Dashboard />
+            <Dashboard scores={analysisResults.scores || analysisResults} />
           </div>
         )}
 

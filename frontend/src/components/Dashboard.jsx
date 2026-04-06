@@ -78,10 +78,19 @@ const Dashboard = ({ scores }) => {
 
         <div className="detailed-metrics glass-panel">
           <h3 className="metrics-title">Detailed Metrics Breakdown</h3>
-          <ProgressBar label="Technical Skills Match" targetValue={95} colorClass="bg-green" />
-          <ProgressBar label="Experience Alignment" targetValue={88} colorClass="bg-blue" />
-          <ProgressBar label="Education Match" targetValue={100} colorClass="bg-purple" />
-          <ProgressBar label="Risk Indicators" targetValue={renderScores.fraud} colorClass="bg-red" />
+          {(renderScores.metrics || [
+            { label: "Technical Skills Match", value: 95, color: "bg-green" },
+            { label: "Experience Alignment", value: 88, color: "bg-blue" },
+            { label: "Education Match", value: 100, color: "bg-purple" },
+            { label: "Risk Indicators", value: renderScores.fraud, color: "bg-red" }
+          ]).map((metric, idx) => (
+            <ProgressBar 
+              key={idx} 
+              label={metric.label || metric.name} 
+              targetValue={metric.value || metric.score} 
+              colorClass={metric.color || (idx === 0 ? 'bg-green' : idx === 1 ? 'bg-blue' : idx === 2 ? 'bg-purple' : 'bg-red')} 
+            />
+          ))}
         </div>
 
       </div>
