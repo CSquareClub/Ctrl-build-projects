@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "@supabase/supabase-js": "^2.101.1",
+    "framer-motion": "^12.38.0"
+  }
+}
