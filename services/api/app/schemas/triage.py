@@ -12,6 +12,7 @@ class SimilarIssueCandidate(BaseModel):
     rerank_score: float = 0.0
     final_score: float = 0.0
     reasons: list[str] = Field(default_factory=list)
+    labels: list[str] = Field(default_factory=list)
 
 
 class TriageResult(BaseModel):
@@ -24,6 +25,10 @@ class TriageResult(BaseModel):
     duplicate_confidence: float
     similar_issues: list[SimilarIssueCandidate] = Field(default_factory=list)
     suggested_labels: list[str] = Field(default_factory=list)
+    type_reasoning: list[str] = Field(default_factory=list)
+    label_reasoning: list[str] = Field(default_factory=list)
+    neighbor_evidence_used: bool = False
+    neighbor_evidence_summary: list[str] = Field(default_factory=list)
     missing_information: list[str] = Field(default_factory=list)
     summary: str
     analysis_version: str = "v0"

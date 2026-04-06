@@ -18,6 +18,9 @@ This folder hosts the FastAPI backend foundation for OpenIssue.
 - local vector indexing/query route support:
   - `POST /api/vectors/index`
   - `POST /api/vectors/query`
+- explainable Wave 3 classification + label suggestion primitives:
+  - `app/triage/classification.py`
+  - `ClassificationLabelingService` in `app/triage/service.py`
 
 ## Vector indexing layer
 
@@ -118,3 +121,22 @@ The index response includes:
 - `cleared_count`
 
 These fields indicate whether stale rows were invalidated before indexing.
+
+## Wave 3 classification and labels
+
+Wave 3 adds a deterministic, explainable classification layer for the categories:
+
+- `bug`
+- `feature_request`
+- `documentation`
+- `support_question`
+- `spam_or_noise`
+
+Design notes:
+
+- uses weighted lexical and issue-structure heuristics (no proprietary model)
+- optionally applies conservative neighbor evidence from Wave 2 similar candidates
+- keeps output stable with `predicted_type` + `suggested_labels`
+- returns UI-friendly reasoning fields (`type_reasoning`, `label_reasoning`, `neighbor_evidence_*`)
+
+Neighbor evidence is intentionally ignored when candidate confidence is weak, to avoid noisy label transfer.

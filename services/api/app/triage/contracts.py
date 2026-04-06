@@ -1,7 +1,10 @@
+from __future__ import annotations
+
 from typing import Protocol
 
 from app.schemas.issue import NormalizedIssue
 from app.schemas.triage import SimilarIssueCandidate, TriageResult
+from app.triage.classification import ClassificationDecision, LabelSuggestionDecision
 
 
 class DuplicateDetector(Protocol):
@@ -11,7 +14,20 @@ class DuplicateDetector(Protocol):
 
 
 class IssueClassifier(Protocol):
-    def classify(self, issue: NormalizedIssue) -> tuple[str, float, list[str]]: ...
+    def classify(
+        self,
+        issue: NormalizedIssue,
+        similar_issues: list[SimilarIssueCandidate] | None = None,
+    ) -> ClassificationDecision: ...
+
+
+class LabelSuggester(Protocol):
+    def suggest(
+        self,
+        issue: NormalizedIssue,
+        predicted_type: str,
+        similar_issues: list[SimilarIssueCandidate] | None = None,
+    ) -> LabelSuggestionDecision: ...
 
 
 class PriorityScorer(Protocol):

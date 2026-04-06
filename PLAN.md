@@ -1,5 +1,54 @@
 # PLAN.md
 
+## Execution Update (2026-04-06): Wave 3 classification and label suggestion layer
+
+Current goal:
+
+- implement a deterministic, explainable issue classification + label suggestion layer that can plug into the unified triage analyze response without taking over duplicate or priority ownership
+
+Exact scope:
+
+- implement rule-based classification for the locked categories: `bug`, `feature_request`, `documentation`, `support_question`, `spam_or_noise`
+- generate calibrated `suggested_labels` with transparent reasons
+- support optional nearest-neighbor evidence from existing Wave 2 similar issue candidates when confidence is sufficient
+- add frontend-friendly reasoning fields while preserving existing `predicted_type`/`suggested_labels` compatibility in triage schemas
+- document behavior and constraints for integration in later unified analyze orchestration
+
+Files/components likely affected:
+
+- `services/api/app/triage/classification.py` (new classification + labeling engine)
+- `services/api/app/schemas/triage.py` (additive reasoning/evidence fields)
+- `services/api/app/triage/contracts.py` (classification/labeling protocol alignment)
+- `services/api/app/triage/__init__.py` (module exports/docs)
+- `services/api/README.md` (classification/labels contract notes)
+
+Sequencing:
+
+1. inspect existing Wave 2 retrieval outputs/schemas and triage result contracts
+2. implement lexical + structure-based rule scoring with stable category mapping
+3. add optional neighbor-evidence aggregation from high-confidence similar candidates
+4. add transparent label suggestion pass with explicit reason strings
+5. run compile + sample analysis commands across multiple issue archetypes
+
+Validation strategy:
+
+- run Python compile checks for backend modules
+- run sample classification analyses for bug/feature/docs/support/spam shapes
+- run a sample with nearest-neighbor label evidence and verify that evidence use is explicit in reasons
+
+Risks / open questions:
+
+- category boundaries (`bug` vs `support_question`) can be ambiguous for low-detail reports; confidence may need later calibration from real maintainer feedback
+- neighbor labels across repositories can be noisy; evidence application must remain conservative and optional
+- repo-specific label taxonomies may require future mapping tables to avoid over-suggesting generic labels
+
+Explicitly out of scope:
+
+- priority scoring implementation changes
+- duplicate reranking algorithm changes
+- proprietary/hosted classification models
+- frontend UI implementation work
+
 ## Execution Update (2026-04-06): Wave 2 semantic embedding correction (MiniLM)
 
 Current goal:
