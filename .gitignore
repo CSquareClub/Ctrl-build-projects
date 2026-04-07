@@ -58,5 +58,3 @@ pnpm-debug.log*
 # Coverage
 coverage/
 .nyc_output/
-
-/backend
