@@ -164,25 +164,25 @@ if __name__ == "__main__":
     main()
 
 
-if _name_ == '_main_':
-    import argparse
+# if _name_ == '_main_':
+#     import argparse
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--frame', type=str, required=True)  # base64 image
-    args = parser.parse_args()
+#     parser = argparse.ArgumentParser()
+#     parser.add_argument('--frame', type=str, required=True)  # base64 image
+#     args = parser.parse_args()
 
-    # Decode the base64 frame back to an image
-    img_bytes = base64.b64decode(args.frame)
-    img_array = np.frombuffer(img_bytes, dtype=np.uint8)
-    frame = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
+#     # Decode the base64 frame back to an image
+#     img_bytes = base64.b64decode(args.frame)
+#     img_array = np.frombuffer(img_bytes, dtype=np.uint8)
+#     frame = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
 
-    # ── Call YOUR model's predict function here ───────────────
-    # Replace these lines with however your model runs inference:
-    result =draw_alert(frame)  # ← your function name here
+#     # ── Call YOUR model's predict function here ───────────────
+#     # Replace these lines with however your model runs inference:
+#     result =draw_alert(frame)  # ← your function name here
 
-    # Output must be JSON — Node.js reads this
-    print(json.dumps({
-        "present": bool(result['is_present']),
-        "phone_detected": bool(result['phone_detected']),
-        "confidence": float(result['confidence'])
-    }))
+#     # Output must be JSON — Node.js reads this
+#     print(json.dumps({
+#         "present": bool(result['is_present']),
+#         "phone_detected": bool(result['phone_detected']),
+#         "confidence": float(result['confidence'])
+#     }))
