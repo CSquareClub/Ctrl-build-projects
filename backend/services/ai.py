@@ -103,27 +103,25 @@ JSON:"""
     return json.loads(raw[start:end])
 
 
-_embed_model = None
-
-
-def _get_embed_model():
-    """Load SentenceTransformer once and cache it for the process lifetime."""
-    global _embed_model
-    if _embed_model is None:
-        from sentence_transformers import SentenceTransformer
-        _embed_model = SentenceTransformer("all-MiniLM-L6-v2")
-    return _embed_model
+EMBED_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
+EMBED_URL = f"https://router.huggingface.co/hf-inference/pipeline/feature-extraction/{EMBED_MODEL}"
 
 
 async def embed_text(text: str) -> list[float]:
     """
     Get an embedding vector for duplicate detection.
-    Uses sentence-transformers locally — fast, free, no API key needed.
-    Model is loaded once and cached for the lifetime of the process.
+    Uses the HF Inference API — no local PyTorch required.
     """
-    model = _get_embed_model()
-    vector = model.encode(text[:512]).tolist()
-    return vector
+    if not HF_TOKEN:
+        raise RuntimeError("GPT_OSS_MODEL_API_KEY is not set in .env")
+    async with httpx.AsyncClient(timeout=TIMEOUT) as client:
+        resp = await client.post(
+            EMBED_URL,
+            headers=HEADERS,
+            json={"inputs": text[:512]},
+        )
+        resp.raise_for_status()
+        return resp.json()
 
 
 async def generate_readme(repo_name: str, description: str, options: dict) -> str:

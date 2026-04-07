@@ -24,8 +24,11 @@ def _get_qdrant():
 def _ensure_faiss():
     global _faiss_index
     if _faiss_index is None:
-        import faiss
-        _faiss_index = faiss.IndexFlatIP(VECTOR_SIZE)  # inner-product (cosine after normalisation)
+        try:
+            import faiss
+            _faiss_index = faiss.IndexFlatIP(VECTOR_SIZE)
+        except ImportError:
+            return None
     return _faiss_index
 
 
@@ -39,9 +42,14 @@ async def upsert(point_id: str, vector: list[float], payload: dict) -> None:
             points=[PointStruct(id=point_id, vector=vector, payload=payload)],
         )
     else:
-        import faiss
-        import numpy as np
+        try:
+            import faiss
+            import numpy as np
+        except ImportError:
+            return  # faiss not installed — skip in-memory store
         index = _ensure_faiss()
+        if index is None:
+            return
         v = np.array([vector], dtype="float32")
         faiss.normalize_L2(v)
         index.add(v)
@@ -72,8 +80,11 @@ async def find_similar(vector: list[float], threshold: float = 0.85, top_k: int 
     else:
         if not _faiss_ids:
             return []
-        import numpy as np
-        import faiss as faiss_lib
+        try:
+            import numpy as np
+            import faiss as faiss_lib
+        except ImportError:
+            return []
         index = _ensure_faiss()
         v = np.array([vector], dtype="float32")
         faiss_lib.normalize_L2(v)
