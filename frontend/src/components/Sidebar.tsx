@@ -112,6 +112,10 @@ export function Sidebar({ currentPage, navigate, mobileOpen, onClose }: SidebarP
           <span>GPU load</span>
           <span>72%</span>
         </div>
+        <div className="pt-2 border-t border-zinc-800 mt-2">
+          <p className="text-[8px] text-zinc-600 text-center leading-tight">Created with ❤️ by Team Krypthos</p>
+          <p className="text-[7px] text-zinc-700 text-center mt-0.5">Arindam · Shivansh · Aishpreet</p>
+        </div>
       </div>
     </aside>
   );

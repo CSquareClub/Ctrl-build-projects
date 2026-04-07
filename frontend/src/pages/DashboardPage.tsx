@@ -384,6 +384,11 @@ export function DashboardPage({ navigate }: DashboardPageProps) {
         )}
       </div>
 
+      {/* Credit */}
+      <div className="text-center pt-2 pb-4">
+        <p className="text-[10px] text-zinc-600">Created with ❤️ by Team Krypthos (Arindam, Shivansh, Aishpreet)</p>
+      </div>
+
     </div>
   );
 }

@@ -303,6 +303,11 @@ export function SettingsPage({ onLogout }: SettingsPageProps) {
           )}
         </button>
       </div>
+
+      {/* Credit */}
+      <div className="text-center py-4">
+        <p className="text-[10px] text-zinc-600">Created with ❤️ by Team Krypthos (Arindam, Shivansh, Aishpreet)</p>
+      </div>
     </div>
   );
 }

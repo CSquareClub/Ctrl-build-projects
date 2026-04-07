@@ -285,7 +285,7 @@ export function LandingPage({ authError, onDismissError }: LandingPageProps = {}
 
       {/* CTA */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 pb-16 sm:pb-24">
-        <div className="bg-gradient-to-br from-violet-600/20 to-fuchsia-600/10 border border-violet-500/20 rounded-3xl p-12 text-center">
+        <div className="bg-gradient-to-br from-violet-600/20 to-fuchsia-600/10 border border-violet-500/20 rounded-3xl p-8 sm:p-12 text-center">
           <h2 className="text-3xl font-bold text-white mb-3 tracking-tight">
             Ready to stop babysitting GitHub?
           </h2>
@@ -316,6 +316,9 @@ export function LandingPage({ authError, onDismissError }: LandingPageProps = {}
             <span>Qwen2.5 72B</span>
             <span>FastAPI · Supabase · FAISS</span>
             <span>React · Tailwind CSS</span>
+          </div>
+          <div className="text-center sm:text-right text-[10px] text-zinc-600">
+            Created with ❤️ by Team Krypthos (Arindam, Shivansh, Aishpreet)
           </div>
         </div>
       </footer>
