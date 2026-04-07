@@ -2,6 +2,12 @@ export interface VoiceRecognitionResult {
   text: string;
 }
 
+interface SpeakTextOptions {
+  onStart?: () => void;
+  onEnd?: () => void;
+  onError?: () => void;
+}
+
 type RecognitionConstructor = new () => {
   continuous: boolean;
   interimResults: boolean;
@@ -61,9 +67,11 @@ export function startVoiceRecognition(): Promise<VoiceRecognitionResult> {
   });
 }
 
-export function speakText(text: string) {
+let activeUtterance: SpeechSynthesisUtterance | null = null;
+
+export function speakText(text: string, options: SpeakTextOptions = {}) {
   if (typeof window === "undefined" || !("speechSynthesis" in window) || !text.trim()) {
-    return;
+    return false;
   }
 
   window.speechSynthesis.cancel();
@@ -71,11 +79,29 @@ export function speakText(text: string) {
   utterance.rate = 0.96;
   utterance.pitch = 1;
   utterance.volume = 1;
+  utterance.onstart = () => {
+    activeUtterance = utterance;
+    options.onStart?.();
+  };
+  utterance.onend = () => {
+    if (activeUtterance === utterance) {
+      activeUtterance = null;
+    }
+    options.onEnd?.();
+  };
+  utterance.onerror = () => {
+    if (activeUtterance === utterance) {
+      activeUtterance = null;
+    }
+    options.onError?.();
+  };
   window.speechSynthesis.speak(utterance);
+  return true;
 }
 
 export function stopSpeaking() {
   if (typeof window !== "undefined" && "speechSynthesis" in window) {
+    activeUtterance = null;
     window.speechSynthesis.cancel();
   }
 }

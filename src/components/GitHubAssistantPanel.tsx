@@ -11,7 +11,6 @@ import {
   WandSparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -153,11 +152,16 @@ export default function GitHubAssistantPanel({
         },
       ]);
 
-      if (options?.speak) {
-        speakText(response.answer);
-        setSpeaking(true);
-        window.setTimeout(() => setSpeaking(false), 2200);
-      }
+        if (options?.speak) {
+          const started = speakText(response.answer, {
+            onStart: () => setSpeaking(true),
+            onEnd: () => setSpeaking(false),
+            onError: () => setSpeaking(false),
+          });
+          if (!started) {
+            setSpeaking(false);
+          }
+        }
     } catch (err) {
       setError(toUserFacingError(err, "github-code-insight"));
     } finally {
@@ -198,21 +202,21 @@ export default function GitHubAssistantPanel({
   };
 
   return (
-    <Card className="rounded-[28px] border border-slate-800 bg-slate-900/70 shadow-[0_18px_60px_rgba(15,23,42,0.22)] xl:sticky xl:top-6">
-      <CardHeader className="border-b border-slate-800/90 pb-5">
+    <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-transparent transition-colors">
+      <div className="border-b border-slate-200 dark:border-slate-800/90 px-5 pb-5 pt-5">
         <div className="flex items-start gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-800 bg-slate-950/70 text-slate-100">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-transparent text-slate-700 dark:text-slate-100">
             <Bot className="h-5 w-5" />
           </div>
           <div>
-            <CardTitle className="text-white">Code Agent</CardTitle>
-            <p className="mt-1 text-sm text-slate-400">
+            <h3 className="text-base font-semibold text-slate-900 dark:text-white">Code Agent</h3>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               Repo-aware debugging help for the selected issue, files, and patch.
             </p>
           </div>
         </div>
-      </CardHeader>
-      <CardContent className="space-y-4 pb-5 pt-5">
+      </div>
+      <div className="space-y-4 p-5">
         <div className="flex flex-wrap gap-2">
           {QUICK_ACTIONS.map((action) => (
             <Button
@@ -234,7 +238,7 @@ export default function GitHubAssistantPanel({
 
         <div
           ref={listRef}
-          className="max-h-[520px] min-h-[280px] space-y-3 overflow-y-auto rounded-2xl border border-slate-800 bg-slate-950/60 p-4"
+          className="max-h-[520px] min-h-[280px] space-y-3 overflow-y-auto rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-transparent p-4"
         >
           {messages.map((message) => (
             <div
@@ -244,8 +248,8 @@ export default function GitHubAssistantPanel({
               <div
                 className={`max-w-[90%] rounded-2xl px-4 py-3 text-sm leading-6 ${
                   message.role === "user"
-                    ? "bg-indigo-500/15 text-indigo-100"
-                    : "border border-slate-800 bg-slate-900/70 text-slate-200"
+                    ? "bg-red-600 text-white"
+                    : "border border-slate-200 dark:border-slate-800 bg-white dark:bg-transparent text-slate-700 dark:text-slate-200"
                 }`}
               >
                 {message.text}
@@ -255,8 +259,8 @@ export default function GitHubAssistantPanel({
 
           {loading ? (
             <div className="flex justify-start">
-              <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-800 bg-slate-900/70 px-4 py-3 text-sm text-slate-300">
-                <Loader2 className="h-4 w-4 animate-spin" />
+              <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-transparent px-4 py-3 text-sm text-slate-600 dark:text-slate-300">
+                <Loader2 className="h-4 w-4 animate-spin text-red-600 dark:text-red-400" />
                 Thinking through the repo context...
               </div>
             </div>
@@ -264,8 +268,8 @@ export default function GitHubAssistantPanel({
         </div>
 
         {issue ? (
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-sm text-slate-400">
-            <p className="font-medium text-slate-200">{issue.title}</p>
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-transparent p-4 text-sm text-slate-500 dark:text-slate-400">
+            <p className="font-medium text-slate-800 dark:text-slate-200">{issue.title}</p>
             <p className="mt-2">
               {analysis
                 ? `Using ${analysis.files.length} relevant file snippets and the current patch diff.`
@@ -283,24 +287,24 @@ export default function GitHubAssistantPanel({
             ) : null}
           </div>
         ) : (
-          <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-950/40 p-4 text-sm text-slate-400">
+          <div className="rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-transparent p-4 text-sm text-slate-500 dark:text-slate-400">
             Select an issue to start a contextual debugging conversation.
           </div>
         )}
 
         {error ? (
-          <div className="rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+          <div className="rounded-2xl border border-red-200 dark:border-red-500/20 bg-red-50 dark:bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-300">
             {error}
           </div>
         ) : null}
 
-        <div className="sticky bottom-0 rounded-2xl border border-slate-800 bg-slate-950/90 p-3 backdrop-blur">
+        <div className="sticky bottom-0 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-[#161616]/90 p-3 backdrop-blur">
           <div className="flex gap-2">
             <Input
               value={input}
               onChange={(event) => setInput(event.target.value)}
               placeholder="Ask about the issue, patch, or a file..."
-              className="h-11 rounded-2xl border-slate-800 bg-slate-900 text-slate-100 placeholder:text-slate-500"
+              className="h-11 rounded-xl border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-transparent text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500"
               onKeyDown={(event) => {
                 if (event.key === "Enter" && !event.shiftKey) {
                   event.preventDefault();
@@ -334,7 +338,7 @@ export default function GitHubAssistantPanel({
             </Button>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

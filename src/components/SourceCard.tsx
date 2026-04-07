@@ -65,117 +65,64 @@ const iconMap = {
 
 const sourceTheme = {
   gmail: {
-    cardIdle:
-      "border-rose-500/25 bg-[linear-gradient(135deg,rgba(244,63,94,0.16)_0%,rgba(15,23,42,0.94)_55%,rgba(15,23,42,0.98)_100%)]",
-    cardConnected:
-      "border-rose-400/35 bg-[linear-gradient(135deg,rgba(244,63,94,0.24)_0%,rgba(15,23,42,0.96)_55%,rgba(15,23,42,1)_100%)]",
-    iconIdle: "bg-rose-500/12 text-rose-300 ring-1 ring-inset ring-rose-500/20",
-    iconConnected: "bg-rose-500/18 text-rose-300 ring-1 ring-inset ring-rose-500/30",
-    hover: "hover:border-rose-400/45 hover:shadow-[0_18px_50px_-18px_rgba(244,63,94,0.45)]",
-    titleHover: "group-hover:text-rose-300",
-    button: "hover:border-rose-500 hover:bg-rose-500/90 hover:text-white hover:shadow-lg hover:shadow-rose-500/20",
+    idleAccent: "before:bg-rose-400/25 dark:before:bg-rose-400/20",
+    connectedAccent: "before:bg-rose-500/40 dark:before:bg-rose-400/30",
+    iconIdle: "bg-rose-50 text-rose-600 ring-1 ring-inset ring-rose-200 dark:bg-rose-500/10 dark:text-rose-300 dark:ring-rose-500/20",
+    iconConnected: "bg-rose-50 text-rose-600 ring-1 ring-inset ring-rose-300 dark:bg-rose-500/14 dark:text-rose-300 dark:ring-rose-500/30",
   },
   github: {
-    cardIdle:
-      "border-slate-500/25 bg-[linear-gradient(135deg,rgba(148,163,184,0.14)_0%,rgba(15,23,42,0.94)_55%,rgba(15,23,42,0.98)_100%)]",
-    cardConnected:
-      "border-slate-300/30 bg-[linear-gradient(135deg,rgba(148,163,184,0.20)_0%,rgba(15,23,42,0.96)_55%,rgba(15,23,42,1)_100%)]",
-    iconIdle: "bg-slate-500/12 text-slate-200 ring-1 ring-inset ring-slate-400/20",
-    iconConnected:
-      "bg-slate-400/18 text-white ring-1 ring-inset ring-slate-300/30",
-    hover:
-      "hover:border-slate-300/45 hover:shadow-[0_18px_50px_-18px_rgba(148,163,184,0.35)]",
-    titleHover: "group-hover:text-slate-100",
-    button:
-      "hover:border-slate-400 hover:bg-slate-200 hover:text-slate-950 hover:shadow-lg hover:shadow-slate-500/20",
+    idleAccent: "before:bg-slate-400/20 dark:before:bg-slate-400/20",
+    connectedAccent: "before:bg-slate-500/35 dark:before:bg-slate-300/25",
+    iconIdle: "bg-slate-50 text-slate-600 ring-1 ring-inset ring-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-800",
+    iconConnected: "bg-slate-100 text-slate-700 ring-1 ring-inset ring-slate-300 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700",
   },
   outlook: {
-    cardIdle:
-      "border-sky-500/25 bg-[linear-gradient(135deg,rgba(14,165,233,0.16)_0%,rgba(15,23,42,0.94)_55%,rgba(15,23,42,0.98)_100%)]",
-    cardConnected:
-      "border-sky-400/35 bg-[linear-gradient(135deg,rgba(14,165,233,0.24)_0%,rgba(15,23,42,0.96)_55%,rgba(15,23,42,1)_100%)]",
-    iconIdle: "bg-sky-500/12 text-sky-300 ring-1 ring-inset ring-sky-500/20",
-    iconConnected: "bg-sky-500/18 text-sky-300 ring-1 ring-inset ring-sky-500/30",
-    hover: "hover:border-sky-400/45 hover:shadow-[0_18px_50px_-18px_rgba(14,165,233,0.45)]",
-    titleHover: "group-hover:text-sky-300",
-    button: "hover:border-sky-500 hover:bg-sky-500/90 hover:text-white hover:shadow-lg hover:shadow-sky-500/20",
+    idleAccent: "before:bg-sky-400/22 dark:before:bg-sky-400/18",
+    connectedAccent: "before:bg-sky-500/38 dark:before:bg-sky-400/28",
+    iconIdle: "bg-sky-50 text-sky-600 ring-1 ring-inset ring-sky-200 dark:bg-sky-500/10 dark:text-sky-300 dark:ring-sky-500/20",
+    iconConnected: "bg-sky-50 text-sky-600 ring-1 ring-inset ring-sky-300 dark:bg-sky-500/14 dark:text-sky-300 dark:ring-sky-500/30",
   },
   instagram: {
-    cardIdle:
-      "border-pink-500/25 bg-[linear-gradient(135deg,rgba(236,72,153,0.18)_0%,rgba(168,85,247,0.10)_28%,rgba(15,23,42,0.94)_58%,rgba(15,23,42,0.98)_100%)]",
-    cardConnected:
-      "border-pink-400/35 bg-[linear-gradient(135deg,rgba(236,72,153,0.24)_0%,rgba(168,85,247,0.16)_28%,rgba(15,23,42,0.96)_58%,rgba(15,23,42,1)_100%)]",
-    iconIdle: "bg-pink-500/12 text-pink-300 ring-1 ring-inset ring-pink-500/20",
-    iconConnected: "bg-pink-500/18 text-pink-300 ring-1 ring-inset ring-pink-500/30",
-    hover: "hover:border-pink-400/45 hover:shadow-[0_18px_50px_-18px_rgba(236,72,153,0.45)]",
-    titleHover: "group-hover:text-pink-300",
-    button: "hover:border-pink-500 hover:bg-pink-500/90 hover:text-white hover:shadow-lg hover:shadow-pink-500/20",
+    idleAccent: "before:bg-pink-400/22 dark:before:bg-pink-400/18",
+    connectedAccent: "before:bg-pink-500/36 dark:before:bg-pink-400/28",
+    iconIdle: "bg-pink-50 text-pink-600 ring-1 ring-inset ring-pink-200 dark:bg-pink-500/10 dark:text-pink-300 dark:ring-pink-500/20",
+    iconConnected: "bg-pink-50 text-pink-600 ring-1 ring-inset ring-pink-300 dark:bg-pink-500/14 dark:text-pink-300 dark:ring-pink-500/30",
   },
   reddit: {
-    cardIdle:
-      "border-orange-500/25 bg-[linear-gradient(135deg,rgba(249,115,22,0.18)_0%,rgba(15,23,42,0.94)_55%,rgba(15,23,42,0.98)_100%)]",
-    cardConnected:
-      "border-orange-400/35 bg-[linear-gradient(135deg,rgba(249,115,22,0.26)_0%,rgba(15,23,42,0.96)_55%,rgba(15,23,42,1)_100%)]",
-    iconIdle: "bg-orange-500/12 text-orange-300 ring-1 ring-inset ring-orange-500/20",
-    iconConnected: "bg-orange-500/18 text-orange-300 ring-1 ring-inset ring-orange-500/30",
-    hover: "hover:border-orange-400/45 hover:shadow-[0_18px_50px_-18px_rgba(249,115,22,0.45)]",
-    titleHover: "group-hover:text-orange-300",
-    button: "hover:border-orange-500 hover:bg-orange-500/90 hover:text-white hover:shadow-lg hover:shadow-orange-500/20",
+    idleAccent: "before:bg-orange-400/24 dark:before:bg-orange-400/18",
+    connectedAccent: "before:bg-orange-500/38 dark:before:bg-orange-400/28",
+    iconIdle: "bg-orange-50 text-orange-600 ring-1 ring-inset ring-orange-200 dark:bg-orange-500/10 dark:text-orange-300 dark:ring-orange-500/20",
+    iconConnected: "bg-orange-50 text-orange-600 ring-1 ring-inset ring-orange-300 dark:bg-orange-500/14 dark:text-orange-300 dark:ring-orange-500/30",
   },
   "social-search": {
-    cardIdle:
-      "border-violet-500/25 bg-[linear-gradient(135deg,rgba(139,92,246,0.18)_0%,rgba(59,130,246,0.08)_30%,rgba(15,23,42,0.94)_60%,rgba(15,23,42,0.98)_100%)]",
-    cardConnected:
-      "border-violet-400/35 bg-[linear-gradient(135deg,rgba(139,92,246,0.26)_0%,rgba(59,130,246,0.14)_30%,rgba(15,23,42,0.96)_60%,rgba(15,23,42,1)_100%)]",
-    iconIdle: "bg-violet-500/12 text-violet-300 ring-1 ring-inset ring-violet-500/20",
-    iconConnected: "bg-violet-500/18 text-violet-300 ring-1 ring-inset ring-violet-500/30",
-    hover: "hover:border-violet-400/45 hover:shadow-[0_18px_50px_-18px_rgba(139,92,246,0.45)]",
-    titleHover: "group-hover:text-violet-300",
-    button: "hover:border-violet-500 hover:bg-violet-500/90 hover:text-white hover:shadow-lg hover:shadow-violet-500/20",
+    idleAccent: "before:bg-violet-400/22 dark:before:bg-violet-400/18",
+    connectedAccent: "before:bg-violet-500/38 dark:before:bg-violet-400/28",
+    iconIdle: "bg-violet-50 text-violet-600 ring-1 ring-inset ring-violet-200 dark:bg-violet-500/10 dark:text-violet-300 dark:ring-violet-500/20",
+    iconConnected: "bg-violet-50 text-violet-600 ring-1 ring-inset ring-violet-300 dark:bg-violet-500/14 dark:text-violet-300 dark:ring-violet-500/30",
   },
   imap: {
-    cardIdle:
-      "border-amber-500/25 bg-[linear-gradient(135deg,rgba(245,158,11,0.18)_0%,rgba(15,23,42,0.94)_55%,rgba(15,23,42,0.98)_100%)]",
-    cardConnected:
-      "border-amber-400/35 bg-[linear-gradient(135deg,rgba(245,158,11,0.26)_0%,rgba(15,23,42,0.96)_55%,rgba(15,23,42,1)_100%)]",
-    iconIdle: "bg-amber-500/12 text-amber-300 ring-1 ring-inset ring-amber-500/20",
-    iconConnected: "bg-amber-500/18 text-amber-300 ring-1 ring-inset ring-amber-500/30",
-    hover: "hover:border-amber-400/45 hover:shadow-[0_18px_50px_-18px_rgba(245,158,11,0.45)]",
-    titleHover: "group-hover:text-amber-300",
-    button: "hover:border-amber-500 hover:bg-amber-500/90 hover:text-slate-950 hover:shadow-lg hover:shadow-amber-500/20",
+    idleAccent: "before:bg-amber-400/22 dark:before:bg-amber-400/18",
+    connectedAccent: "before:bg-amber-500/38 dark:before:bg-amber-400/28",
+    iconIdle: "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-500/20",
+    iconConnected: "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-300 dark:bg-amber-500/14 dark:text-amber-300 dark:ring-amber-500/30",
   },
   "app-reviews": {
-    cardIdle:
-      "border-cyan-500/25 bg-[linear-gradient(135deg,rgba(6,182,212,0.18)_0%,rgba(15,23,42,0.94)_55%,rgba(15,23,42,0.98)_100%)]",
-    cardConnected:
-      "border-cyan-400/35 bg-[linear-gradient(135deg,rgba(6,182,212,0.26)_0%,rgba(15,23,42,0.96)_55%,rgba(15,23,42,1)_100%)]",
-    iconIdle: "bg-cyan-500/12 text-cyan-300 ring-1 ring-inset ring-cyan-500/20",
-    iconConnected: "bg-cyan-500/18 text-cyan-300 ring-1 ring-inset ring-cyan-500/30",
-    hover: "hover:border-cyan-400/45 hover:shadow-[0_18px_50px_-18px_rgba(6,182,212,0.45)]",
-    titleHover: "group-hover:text-cyan-300",
-    button: "hover:border-cyan-500 hover:bg-cyan-500/90 hover:text-slate-950 hover:shadow-lg hover:shadow-cyan-500/20",
+    idleAccent: "before:bg-slate-400/20 dark:before:bg-slate-400/18",
+    connectedAccent: "before:bg-slate-500/34 dark:before:bg-slate-300/24",
+    iconIdle: "bg-slate-50 text-slate-600 ring-1 ring-inset ring-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-800",
+    iconConnected: "bg-slate-100 text-slate-700 ring-1 ring-inset ring-slate-300 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700",
   },
   "google-play": {
-    cardIdle:
-      "border-emerald-500/25 bg-[linear-gradient(135deg,rgba(34,197,94,0.18)_0%,rgba(15,23,42,0.94)_55%,rgba(15,23,42,0.98)_100%)]",
-    cardConnected:
-      "border-emerald-400/35 bg-[linear-gradient(135deg,rgba(34,197,94,0.26)_0%,rgba(15,23,42,0.96)_55%,rgba(15,23,42,1)_100%)]",
-    iconIdle: "bg-emerald-500/12 text-emerald-300 ring-1 ring-inset ring-emerald-500/20",
-    iconConnected: "bg-emerald-500/18 text-emerald-300 ring-1 ring-inset ring-emerald-500/30",
-    hover: "hover:border-emerald-400/45 hover:shadow-[0_18px_50px_-18px_rgba(34,197,94,0.45)]",
-    titleHover: "group-hover:text-emerald-300",
-    button: "hover:border-emerald-500 hover:bg-emerald-500/90 hover:text-slate-950 hover:shadow-lg hover:shadow-emerald-500/20",
+    idleAccent: "before:bg-emerald-400/22 dark:before:bg-emerald-400/18",
+    connectedAccent: "before:bg-emerald-500/38 dark:before:bg-emerald-400/28",
+    iconIdle: "bg-emerald-50 text-emerald-600 ring-1 ring-inset ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-500/20",
+    iconConnected: "bg-emerald-50 text-emerald-600 ring-1 ring-inset ring-emerald-300 dark:bg-emerald-500/14 dark:text-emerald-300 dark:ring-emerald-500/30",
   },
   "google-calendar": {
-    cardIdle:
-      "border-blue-500/25 bg-[linear-gradient(135deg,rgba(59,130,246,0.18)_0%,rgba(15,23,42,0.94)_55%,rgba(15,23,42,0.98)_100%)]",
-    cardConnected:
-      "border-blue-400/35 bg-[linear-gradient(135deg,rgba(59,130,246,0.26)_0%,rgba(15,23,42,0.96)_55%,rgba(15,23,42,1)_100%)]",
-    iconIdle: "bg-blue-500/12 text-blue-300 ring-1 ring-inset ring-blue-500/20",
-    iconConnected: "bg-blue-500/18 text-blue-300 ring-1 ring-inset ring-blue-500/30",
-    hover: "hover:border-blue-400/45 hover:shadow-[0_18px_50px_-18px_rgba(59,130,246,0.45)]",
-    titleHover: "group-hover:text-blue-300",
-    button: "hover:border-blue-500 hover:bg-blue-500/90 hover:text-white hover:shadow-lg hover:shadow-blue-500/20",
+    idleAccent: "before:bg-blue-400/22 dark:before:bg-blue-400/18",
+    connectedAccent: "before:bg-blue-500/38 dark:before:bg-blue-400/28",
+    iconIdle: "bg-blue-50 text-blue-600 ring-1 ring-inset ring-blue-200 dark:bg-blue-500/10 dark:text-blue-300 dark:ring-blue-500/20",
+    iconConnected: "bg-blue-50 text-blue-600 ring-1 ring-inset ring-blue-300 dark:bg-blue-500/14 dark:text-blue-300 dark:ring-blue-500/30",
   },
 } as const;
 
@@ -206,23 +153,24 @@ export default function SourceCard({
   const showChildren = alwaysShowChildren || !collapsible || connected || expanded;
   const healthToneClass =
     healthTone === "good"
-      ? "text-emerald-300"
+      ? "text-emerald-600 dark:text-emerald-400"
       : healthTone === "warning"
-        ? "text-amber-300"
-        : "text-slate-300";
+        ? "text-amber-600 dark:text-amber-400"
+        : "text-slate-700 dark:text-slate-300";
+  const iconToneClass = connected ? theme.iconConnected : theme.iconIdle;
 
   return (
     <div
       className={cn(
-        "group relative rounded-2xl border p-6 transition-all duration-300",
+        "group relative overflow-hidden rounded-2xl border bg-white p-6 transition-all duration-300 before:absolute before:inset-x-0 before:top-0 before:h-px dark:bg-transparent",
         connected
-          ? theme.cardConnected
-          : theme.cardIdle,
-        theme.hover
+          ? "border-emerald-200 dark:border-emerald-500/20"
+          : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700",
+        connected ? theme.connectedAccent : theme.idleAccent
       )}
     >
       {connected && (
-        <div className="absolute top-4 right-4 flex items-center gap-1.5 rounded-full bg-emerald-500/12 px-2 py-1 text-xs font-medium text-emerald-400">
+        <div className="absolute top-4 right-4 flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-600 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400">
           <CheckCircle2 className="h-3.5 w-3.5" />
           Connected
         </div>
@@ -231,31 +179,27 @@ export default function SourceCard({
       <div className="mb-6 flex items-start gap-4">
         <div
           className={cn(
-            "flex items-center justify-center rounded-xl p-3.5 shadow-inner transition-colors",
-            connected
-              ? theme.iconConnected
-              : theme.iconIdle
+            "flex items-center justify-center rounded-xl p-3.5 transition-colors",
+            iconToneClass
           )}
         >
           <Icon className="h-8 w-8" />
         </div>
 
         <div className="mt-1 flex-1 pr-16 md:pr-0">
-          <h3 className={cn("mb-1 text-lg font-semibold text-white transition-colors", theme.titleHover)}>
-            {name}
-          </h3>
-          <p className="text-sm leading-relaxed text-slate-400">
+          <h3 className="mb-1 text-lg font-semibold text-slate-900 dark:text-white">{name}</h3>
+          <p className="text-sm leading-relaxed text-slate-500 dark:text-slate-400">
             {accountName ||
               "Connect this source to pull feedback, detect trends, and surface critical issues."}
           </p>
           <div className="mt-3 grid gap-2 text-xs sm:grid-cols-2">
-            <div className="rounded-xl border border-slate-800/70 bg-slate-950/40 px-3 py-2">
-              <p className="uppercase tracking-[0.18em] text-slate-500">Source health</p>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-800/70 dark:bg-slate-950/40">
+              <p className="uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">Source health</p>
               <p className={cn("mt-1 font-medium", healthToneClass)}>{healthLabel}</p>
             </div>
-            <div className="rounded-xl border border-slate-800/70 bg-slate-950/40 px-3 py-2">
-              <p className="uppercase tracking-[0.18em] text-slate-500">Last synced</p>
-              <p className="mt-1 font-medium text-slate-300">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-800/70 dark:bg-slate-950/40">
+              <p className="uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">Last synced</p>
+              <p className="mt-1 font-medium text-slate-700 dark:text-slate-300">
                 {lastSync ?? (connected ? "Awaiting first sync" : "Not synced yet")}
               </p>
             </div>
@@ -267,7 +211,7 @@ export default function SourceCard({
         <button
           type="button"
           onClick={() => setExpanded((current) => !current)}
-          className="mb-4 flex w-full items-center justify-between rounded-xl border border-slate-800/80 bg-slate-950/55 px-4 py-3 text-left text-sm font-medium text-slate-200 transition hover:border-slate-700 hover:bg-slate-950/80"
+          className="mb-4 flex w-full items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-left text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-200 dark:hover:border-slate-700 dark:hover:bg-slate-950/80"
         >
           <span>{expanded ? "Hide setup" : collapsedLabel}</span>
           <ChevronDown
@@ -293,7 +237,7 @@ export default function SourceCard({
             {onSync && (
               <Button
                 variant="secondary"
-                className="w-full justify-between group-hover:border-slate-600"
+                className="w-full justify-between border-slate-200 bg-slate-50 text-slate-700 shadow-none hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700 dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-300 dark:hover:border-emerald-500/40 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-300"
                 onClick={onSync}
                 disabled={syncing}
               >
@@ -304,7 +248,7 @@ export default function SourceCard({
             {!onSync && onConnect && (
               <Button
                 variant="secondary"
-                className="w-full justify-between group-hover:border-slate-600"
+                className="w-full justify-between border-slate-200 bg-slate-50 text-slate-700 shadow-none hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700 dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-300 dark:hover:border-emerald-500/40 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-300"
                 onClick={onConnect}
                 disabled={syncing}
               >
@@ -314,7 +258,7 @@ export default function SourceCard({
             )}
             <Button
               variant="secondary"
-              className="w-full justify-between border border-slate-800 bg-slate-950/70 text-slate-300 hover:bg-slate-900"
+              className="w-full justify-between border border-red-200 bg-red-50 text-red-600 shadow-none hover:border-red-300 hover:bg-red-100 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300 dark:hover:bg-red-500/15"
               onClick={onDisconnect}
             >
               Disconnect
@@ -324,8 +268,7 @@ export default function SourceCard({
         ) : (
           <Button
             className={cn(
-              "w-full justify-between border border-slate-700 bg-slate-800 text-slate-300 shadow-none transition-all",
-              theme.button
+              "w-full justify-between border border-slate-200 bg-slate-50 text-slate-700 shadow-none transition-all hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700 dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-300 dark:hover:border-emerald-500/40 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-300"
             )}
             onClick={onConnect}
           >

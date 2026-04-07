@@ -2,8 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  Activity,
   AlertTriangle,
   CheckCircle2,
+  Eye,
   ExternalLink,
   FileCode2,
   GitBranch,
@@ -13,6 +15,7 @@ import {
   Sparkles,
   WandSparkles,
 } from "lucide-react";
+import { parsePatch } from "diff";
 import Link from "next/link";
 import DecisionFeedbackBar from "@/components/DecisionFeedbackBar";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +28,7 @@ import type {
   GitHubConnectionStatus,
   GitHubRepository,
   IssueDetail,
+  UnifiedIssueIntelligence,
 } from "@/lib/api";
 import { api } from "@/lib/api";
 import { toUserFacingError } from "@/lib/user-facing-errors";
@@ -42,6 +46,15 @@ interface CodeInsightPanelProps {
 
 type ToastTone = "success" | "neutral";
 type PrStage = "branch" | "patch" | "pull-request" | null;
+type DiffLineKind = "added" | "removed" | "context" | "meta";
+type ParsedDiffLine = {
+  id: string;
+  kind: DiffLineKind;
+  content: string;
+  indicator: string;
+  oldLineNumber: number | null;
+  newLineNumber: number | null;
+};
 
 const GITHUB_STATUS_CACHE_KEY = "product-pulse:github-status";
 
@@ -102,7 +115,7 @@ function getConfidence(result: CodeInsightResult) {
     return {
       label: "High",
       variant: "success" as const,
-      tone: "text-emerald-300",
+      tone: "text-emerald-600 dark:text-emerald-300",
     };
   }
 
@@ -110,14 +123,14 @@ function getConfidence(result: CodeInsightResult) {
     return {
       label: "Medium",
       variant: "secondary" as const,
-      tone: "text-amber-200",
+      tone: "text-amber-600 dark:text-amber-200",
     };
   }
 
   return {
     label: "Low",
     variant: "destructive" as const,
-    tone: "text-rose-300",
+    tone: "text-red-600 dark:text-rose-300",
   };
 }
 
@@ -185,39 +198,161 @@ function getPrimaryFileUrl(result: CodeInsightResult) {
   return `https://github.com/${owner}/${name}/blob/${defaultBranch}/${firstFile.path}`;
 }
 
-function getChangesOnlyLines(lines: string[]) {
-  return lines.filter((line) => {
-    if (
-      line.startsWith("diff --git") ||
-      line.startsWith("--- ") ||
-      line.startsWith("+++ ") ||
-      line.startsWith("@@")
-    ) {
-      return true;
-    }
-
-    return line.startsWith("+") || line.startsWith("-");
-  });
+function getDiffLineClasses(kind: DiffLineKind) {
+  switch (kind) {
+    case "added":
+      return "border-l-2 border-emerald-500 bg-emerald-50 text-emerald-900 dark:border-emerald-400 dark:bg-emerald-500/10 dark:text-emerald-100";
+    case "removed":
+      return "border-l-2 border-red-500 bg-red-50 text-red-900 dark:border-red-400 dark:bg-red-500/10 dark:text-red-100";
+    case "meta":
+      return "bg-slate-100 text-slate-700 dark:bg-slate-800/80 dark:text-slate-200";
+    default:
+      return "bg-transparent text-slate-700 dark:text-slate-300";
+  }
 }
 
-function getLineClasses(line: string) {
-  if (line.startsWith("+")) {
-    return "bg-emerald-500/10 text-emerald-200";
+function parseUnifiedDiff(patch: string) {
+  const normalizedPatch = String(patch || "").trim();
+  if (!normalizedPatch) {
+    return [] as ParsedDiffLine[];
   }
 
-  if (line.startsWith("-")) {
-    return "bg-rose-500/10 text-rose-200";
+  try {
+    const parsed = parsePatch(normalizedPatch);
+    const rows: ParsedDiffLine[] = [];
+
+    parsed.forEach((file, fileIndex) => {
+      rows.push({
+        id: `file-${fileIndex}`,
+        kind: "meta",
+        content: `diff -- ${file.oldFileName || "original"} -> ${file.newFileName || "updated"}`,
+        indicator: "…",
+        oldLineNumber: null,
+        newLineNumber: null,
+      });
+
+      file.hunks.forEach((hunk, hunkIndex) => {
+        rows.push({
+          id: `hunk-${fileIndex}-${hunkIndex}`,
+          kind: "meta",
+          content: `@@ -${hunk.oldStart},${hunk.oldLines} +${hunk.newStart},${hunk.newLines} @@`,
+          indicator: "@",
+          oldLineNumber: null,
+          newLineNumber: null,
+        });
+
+        let oldLine = hunk.oldStart;
+        let newLine = hunk.newStart;
+
+        hunk.lines.forEach((line, lineIndex) => {
+          const marker = line[0] || " ";
+          const content = line.slice(1);
+
+          if (marker === "\\") {
+            rows.push({
+              id: `note-${fileIndex}-${hunkIndex}-${lineIndex}`,
+              kind: "meta",
+              content: line,
+              indicator: "·",
+              oldLineNumber: null,
+              newLineNumber: null,
+            });
+            return;
+          }
+
+          if (marker === "+") {
+            rows.push({
+              id: `add-${fileIndex}-${hunkIndex}-${lineIndex}`,
+              kind: "added",
+              content,
+              indicator: "+",
+              oldLineNumber: null,
+              newLineNumber: newLine,
+            });
+            newLine += 1;
+            return;
+          }
+
+          if (marker === "-") {
+            rows.push({
+              id: `remove-${fileIndex}-${hunkIndex}-${lineIndex}`,
+              kind: "removed",
+              content,
+              indicator: "-",
+              oldLineNumber: oldLine,
+              newLineNumber: null,
+            });
+            oldLine += 1;
+            return;
+          }
+
+          rows.push({
+            id: `context-${fileIndex}-${hunkIndex}-${lineIndex}`,
+            kind: "context",
+            content,
+            indicator: " ",
+            oldLineNumber: oldLine,
+            newLineNumber: newLine,
+          });
+          oldLine += 1;
+          newLine += 1;
+        });
+      });
+    });
+
+    return rows;
+  } catch {
+    return normalizedPatch.split("\n").map((line, index) => ({
+      id: `raw-${index}`,
+      kind: (
+        line.startsWith("+")
+          ? "added"
+          : line.startsWith("-")
+            ? "removed"
+            : line.startsWith("@@") || line.startsWith("diff --git") || line.startsWith("--- ") || line.startsWith("+++ ")
+              ? "meta"
+              : "context"
+      ) as DiffLineKind,
+      content: line.replace(/^[-+ ]/, ""),
+      indicator: line[0] || " ",
+      oldLineNumber: null,
+      newLineNumber: null,
+    })) satisfies ParsedDiffLine[];
+  }
+}
+
+function getSeverityTone(severity?: string | null) {
+  const normalized = String(severity || "").toUpperCase();
+  if (normalized === "HIGH" || normalized === "CRITICAL") {
+    return {
+      badge: "destructive" as const,
+      text: "text-red-700 dark:text-red-300",
+    };
   }
 
-  if (line.startsWith("@@")) {
-    return "bg-indigo-500/10 text-indigo-200";
+  if (normalized === "MEDIUM") {
+    return {
+      badge: "secondary" as const,
+      text: "text-amber-700 dark:text-amber-200",
+    };
   }
 
-  if (line.startsWith("diff --git") || line.startsWith("--- ") || line.startsWith("+++ ")) {
-    return "bg-slate-800/80 text-slate-200";
+  return {
+    badge: "outline" as const,
+    text: "text-emerald-700 dark:text-emerald-300",
+  };
+}
+
+function getInspectionSignalCount(issueIntelligence?: UnifiedIssueIntelligence | null) {
+  if (!issueIntelligence) {
+    return 0;
   }
 
-  return "text-slate-500";
+  return (
+    issueIntelligence.inspection_data.logs.length +
+    issueIntelligence.inspection_data.failed_actions.length +
+    (issueIntelligence.inspection_data.observed_behavior ? 1 : 0)
+  );
 }
 
 export default function CodeInsightPanel({
@@ -320,9 +455,16 @@ export default function CodeInsightPanel({
     () => (patchDraft || analysis?.patch || "").split("\n"),
     [analysis?.patch, patchDraft]
   );
-  const visiblePatchLines = useMemo(
-    () => (showChangesOnly ? getChangesOnlyLines(allPatchLines) : allPatchLines),
-    [allPatchLines, showChangesOnly]
+  const parsedPatchLines = useMemo<ParsedDiffLine[]>(
+    () => parseUnifiedDiff(patchDraft || analysis?.patch || ""),
+    [analysis?.patch, patchDraft]
+  );
+  const visibleDiffLines = useMemo<ParsedDiffLine[]>(
+    () =>
+      showChangesOnly
+        ? parsedPatchLines.filter((line) => line.kind !== "context")
+        : parsedPatchLines,
+    [parsedPatchLines, showChangesOnly]
   );
   const changedLineCount = useMemo(
     () =>
@@ -352,6 +494,12 @@ export default function CodeInsightPanel({
             : ""
         }.`
       : null;
+  const issueIntelligence = analysis?.issueIntelligence ?? null;
+  const severityTone = getSeverityTone(issueIntelligence?.severity || issue.priority);
+  const affectedUsers =
+    issueIntelligence?.analytics.affected_users ?? issue.reportCount;
+  const inspectionSignalCount = getInspectionSignalCount(issueIntelligence);
+  const hasPatch = Boolean((patchDraft || analysis?.patch || "").trim());
   const actionLabel =
     prStage === "branch"
       ? "Creating branch..."
@@ -359,7 +507,7 @@ export default function CodeInsightPanel({
         ? "Applying patch..."
         : prStage === "pull-request"
           ? "Opening Pull Request..."
-          : "Apply Fix (Create PR)";
+          : "Approve & Create PR";
 
   if (dismissed) {
     return null;
@@ -404,7 +552,7 @@ export default function CodeInsightPanel({
   };
 
   const applyFix = async () => {
-    if (!token || !analysis) {
+    if (!token || !analysis || !hasPatch) {
       return;
     }
 
@@ -417,6 +565,13 @@ export default function CodeInsightPanel({
     setPrError(null);
 
     try {
+      await api.codeAgent.recordOutcome(token, issue.id, {
+        outcome: patchDraft !== analysis.patch ? "edit" : "accept",
+        confidence: analysis.patchConfidence,
+        edited: patchDraft !== analysis.patch,
+        repoOwner: repositoryOverride?.owner || analysis.repository.owner,
+        repoName: repositoryOverride?.name || analysis.repository.name,
+      });
       setPrStage("branch");
       await sleep(400);
       setPrStage("patch");
@@ -442,8 +597,22 @@ export default function CodeInsightPanel({
     }
   };
 
-  const rejectSuggestion = () => {
+  const rejectSuggestion = async () => {
+    if (token && analysis) {
+      try {
+        await api.codeAgent.recordOutcome(token, issue.id, {
+          outcome: "reject",
+          confidence: analysis.patchConfidence,
+          repoOwner: repositoryOverride?.owner || analysis.repository.owner,
+          repoName: repositoryOverride?.name || analysis.repository.name,
+        });
+      } catch {
+        // Best effort only. Rejection should still clear the panel.
+      }
+    }
+
     setAnalysis(null);
+    onAnalysisChange?.(null);
     setPatchDraft("");
     setPrError(null);
     setPrResult(null);
@@ -453,35 +622,69 @@ export default function CodeInsightPanel({
     });
   };
 
+  const copyPatch = async () => {
+    const value = patchDraft || analysis?.patch || "";
+    if (!value) return;
+
+    try {
+      await navigator.clipboard.writeText(value);
+      setToast({
+        message: "Patch copied to clipboard",
+        tone: "neutral",
+      });
+    } catch {
+      setToast({
+        message: "Could not copy patch",
+        tone: "neutral",
+      });
+    }
+  };
+
+  const applyPatchToPreview = () => {
+    if (!hasPatch) {
+      setToast({
+        message: "No patch is available to apply yet",
+        tone: "neutral",
+      });
+      return;
+    }
+
+    setEditingPatch(false);
+    setToast({
+      message: "Patch applied to preview",
+      tone: "success",
+    });
+  };
+
   return (
-    <section className="mt-12 rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-[0_22px_60px_-36px_rgba(15,23,42,0.95)] transition-all duration-200 hover:border-slate-700">
+    <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-transparent p-6 transition-all duration-200 hover:border-slate-300 dark:hover:border-slate-700">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <div className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.22em] text-slate-500">
+          <div className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.22em] text-slate-400 dark:text-slate-500">
             <GitBranch className="h-4 w-4" />
             AI Code Insight
           </div>
-          <h2 className="text-2xl font-semibold text-white">
+          <h2 className="text-2xl font-semibold text-slate-900 dark:text-white">
             Trace this issue into code and prepare a pull request
           </h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
-            Product Pulse searches only a few relevant files, drafts a minimal
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">
+            AgenticPulse searches only a few relevant files, drafts a minimal
             patch, and waits for your approval before opening a pull request.
           </p>
         </div>
 
         {githubStatus?.connected ? (
-          <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100 transition-all duration-200">
+          <div className="rounded-2xl border border-emerald-200 dark:border-emerald-500/20 bg-emerald-50 dark:bg-emerald-500/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-300 transition-all duration-200">
             <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-emerald-300" />
+              <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
               Connected as @{githubStatus.username}
             </div>
             {githubStatus.repository?.owner && githubStatus.repository?.name ? (
-              <p className="mt-1 text-xs text-emerald-200/80">
+              <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-300/80">
                 Repo: {githubStatus.repository.owner}/{githubStatus.repository.name}
               </p>
             ) : (
-              <p className="mt-1 text-xs text-amber-100/80">
+              <p className="mt-1 text-xs text-amber-600 dark:text-amber-300/80">
                 Repository not selected yet
               </p>
             )}
@@ -500,19 +703,19 @@ export default function CodeInsightPanel({
 
       {!statusLoaded ? (
         <div className="mt-6 space-y-3">
-          <Skeleton className="h-6 w-44 bg-slate-800" />
-          <Skeleton className="h-28 w-full rounded-2xl bg-slate-950" />
-          <Skeleton className="h-64 w-full rounded-2xl bg-slate-950/80" />
+          <Skeleton className="h-6 w-44 bg-slate-100 dark:bg-slate-800" />
+          <Skeleton className="h-28 w-full rounded-2xl bg-slate-100 dark:bg-slate-800" />
+          <Skeleton className="h-64 w-full rounded-2xl bg-slate-100 dark:bg-slate-800" />
         </div>
       ) : null}
 
       {statusLoaded && !codeInsightsEnabled ? (
-        <div className="mt-6 rounded-2xl border border-dashed border-slate-800 bg-slate-950/60 px-5 py-6 text-sm text-slate-400">
-          <p className="font-medium text-slate-200">
+        <div className="mt-6 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-transparent px-5 py-6 text-sm text-slate-500 dark:text-slate-400">
+          <p className="font-medium text-slate-800 dark:text-slate-200">
             Code insights are currently disabled
           </p>
           <p className="mt-2 max-w-2xl">
-            Turn on the Code Insights toggle in GitHub Workspace to analyze code,
+            Turn on the Code Insights toggle to analyze code,
             generate patch suggestions, and open pull requests.
           </p>
         </div>
@@ -520,12 +723,12 @@ export default function CodeInsightPanel({
 
       {statusLoaded &&
       (!githubStatus?.connected || !githubStatus.repository?.owner || !githubStatus.repository?.name) ? (
-        <div className="mt-6 rounded-2xl border border-dashed border-slate-800 bg-slate-950/60 px-5 py-6 text-sm text-slate-400">
-          <p className="font-medium text-slate-200">
+        <div className="mt-6 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-transparent px-5 py-6 text-sm text-slate-500 dark:text-slate-400">
+          <p className="font-medium text-slate-800 dark:text-slate-200">
             Connect GitHub to enable code insights
           </p>
           <p className="mt-2 max-w-2xl">
-            Choose a repository in GitHub Workspace so Product Pulse can match issue
+            Choose a repository so AgenticPulse can match issue
             patterns against real code and open a pull request for your approval.
           </p>
           <Link href="/dashboard/github" className="mt-4 inline-flex">
@@ -540,15 +743,15 @@ export default function CodeInsightPanel({
       githubStatus.repository?.name ? (
         <div className="mt-6">
           {!analysis && !analyzing ? (
-            <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-950/60 px-5 py-6">
-              <p className="text-sm text-slate-400">
+            <div className="rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-transparent px-5 py-6">
+              <p className="text-sm text-slate-500 dark:text-slate-400">
                 No relevant code suggestion found yet. Run analysis to inspect the
                 connected repository for a minimal fix.
               </p>
               <div className="mt-4 flex flex-col gap-3 sm:flex-row">
                 <Button
                   onClick={runAnalysis}
-                  className="w-full transition-all duration-200 hover:shadow-lg hover:shadow-indigo-950/40 sm:w-auto"
+                  className="w-full sm:w-auto"
                 >
                   <WandSparkles className="h-4 w-4" />
                   Generate Suggestion
@@ -564,34 +767,136 @@ export default function CodeInsightPanel({
 
           {analyzing ? (
             <div className="space-y-4">
-              <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-5">
-                <p className="mb-4 text-sm text-slate-400">
+              <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-transparent p-5">
+                <p className="mb-4 text-sm text-slate-500 dark:text-slate-400">
                   Searching relevant files and preparing a patch...
                 </p>
-                <Skeleton className="h-5 w-48 bg-slate-800" />
-                <Skeleton className="mt-3 h-20 w-full rounded-2xl bg-slate-800/80" />
+                <Skeleton className="h-5 w-48 bg-slate-100 dark:bg-slate-800" />
+                <Skeleton className="mt-3 h-20 w-full rounded-2xl bg-slate-100 dark:bg-slate-800" />
               </div>
-              <Skeleton className="h-72 w-full rounded-2xl bg-slate-950" />
+              <Skeleton className="h-72 w-full rounded-2xl bg-slate-100 dark:bg-slate-800" />
             </div>
           ) : null}
 
           {analysisError ? (
-            <div className="mt-4 rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+            <div className="mt-4 rounded-2xl border border-red-200 dark:border-red-500/20 bg-red-50 dark:bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-300">
               {analysisError}
             </div>
           ) : null}
 
           {analysis ? (
             <div className="space-y-5 transition-all duration-200">
+              <div className="grid gap-4 xl:grid-cols-[minmax(0,1.25fr)_0.9fr]">
+                <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-transparent p-5">
+                  <div className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">
+                    <Activity className="h-4 w-4" />
+                    Unified Issue Intelligence
+                  </div>
+                  <p className="text-base font-semibold text-slate-900 dark:text-white">
+                    {issueIntelligence?.title || analysis.issue.title}
+                  </p>
+                  <p className="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                    {issueIntelligence?.summary || analysis.issue.summary || analysis.issue.description}
+                  </p>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <Badge variant={severityTone.badge}>
+                      Severity: {issueIntelligence?.severity || issue.priority}
+                    </Badge>
+                    <Badge variant="outline">Affected users: {affectedUsers}</Badge>
+                    <Badge variant="outline">
+                      Frequency: {issueIntelligence?.frequency ?? issue.reportCount}
+                    </Badge>
+                    <Badge variant="outline">
+                      Inspection signals: {inspectionSignalCount}
+                    </Badge>
+                  </div>
+                  {issueIntelligence?.feedback_signals?.length ? (
+                    <div className="mt-4">
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
+                        Feedback Signals
+                      </p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {issueIntelligence.feedback_signals.slice(0, 5).map((signal) => (
+                          <Badge key={signal} variant="outline">
+                            {signal}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+
+                <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-transparent p-5">
+                  <div className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">
+                    <Eye className="h-4 w-4" />
+                    Probable Context
+                  </div>
+                  <div className="space-y-3 text-sm">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
+                        Area
+                      </p>
+                      <p className="mt-1 text-slate-700 dark:text-slate-300">
+                        {issueIntelligence?.affected_area || "General product surface"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
+                        Page
+                      </p>
+                      <p className="mt-1 text-slate-700 dark:text-slate-300">
+                        {issueIntelligence?.probable_context.page || "Not identified"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
+                        API
+                      </p>
+                      <p className="mt-1 text-slate-700 dark:text-slate-300">
+                        {issueIntelligence?.probable_context.api || "Not identified"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
+                        Component Hint
+                      </p>
+                      <p className="mt-1 text-slate-700 dark:text-slate-300">
+                        {issueIntelligence?.probable_context.component_hint || "Not identified"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_240px_240px]">
-                <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-5">
-                  <div className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.2em] text-indigo-300">
+                <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-transparent p-5">
+                  <div className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.2em] text-red-600 dark:text-red-400">
                     <Sparkles className="h-4 w-4" />
                     Root Cause
                   </div>
-                  <p className="text-sm leading-6 text-slate-300">
+                  <p className="text-sm leading-6 text-slate-700 dark:text-slate-300">
                     {analysis.selectedRootCause || analysis.rootCause}
                   </p>
+                  {analysis.patchExplanation ? (
+                    <div className="mt-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-transparent p-4">
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
+                        Patch Explanation
+                      </p>
+                      <p className="mt-2 text-sm leading-6 text-slate-700 dark:text-slate-300">
+                        {analysis.patchExplanation}
+                      </p>
+                    </div>
+                  ) : null}
+                  {analysis.impact ? (
+                    <div className="mt-4 rounded-2xl border border-emerald-200 dark:border-emerald-500/20 bg-emerald-50 dark:bg-emerald-500/10 p-4">
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">
+                        Expected Impact
+                      </p>
+                      <p className="mt-2 text-sm leading-6 text-emerald-800 dark:text-emerald-200">
+                        {analysis.impact}
+                      </p>
+                    </div>
+                  ) : null}
                   {analysis.reasoningSummary ? (
                     <p className="mt-3 text-sm leading-6 text-slate-400">
                       {analysis.reasoningSummary}
@@ -599,7 +904,7 @@ export default function CodeInsightPanel({
                   ) : null}
                   {analysis.possibleCauses?.length ? (
                     <div className="mt-4">
-                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
                         Considered Causes
                       </p>
                       <div className="mt-3 flex flex-wrap gap-2">
@@ -613,8 +918,8 @@ export default function CodeInsightPanel({
                   ) : null}
                 </div>
 
-                <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-5">
-                  <div className="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
+                <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-transparent p-5">
+                  <div className="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">
                     Confidence
                   </div>
                   {confidence ? (
@@ -631,14 +936,14 @@ export default function CodeInsightPanel({
                         </p>
                       ) : null}
                       {confidence.label === "Low" ? (
-                        <div className="mt-3 flex items-start gap-2 rounded-xl border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
+                        <div className="mt-3 flex items-start gap-2 rounded-xl border border-amber-200 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-200">
                           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                           Low confidence suggestion. Review carefully.
                         </div>
                       ) : null}
                       {confidenceExplanation ? (
                         <div className="mt-3 space-y-2">
-                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
                             Based on
                           </p>
                           <p className={`text-sm leading-6 ${confidence.tone}`}>
@@ -650,15 +955,15 @@ export default function CodeInsightPanel({
                   ) : null}
                 </div>
 
-                <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-5">
-                  <div className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
+                <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-transparent p-5">
+                  <div className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">
                     <ShieldAlert className="h-4 w-4" />
                     Risk
                   </div>
                   {risk ? (
                     <>
                       <Badge variant={risk.variant}>{risk.label}</Badge>
-                      <p className="mt-3 text-sm leading-6 text-slate-300">
+                      <p className="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-300">
                         {risk.description}
                       </p>
                     </>
@@ -667,8 +972,8 @@ export default function CodeInsightPanel({
               </div>
 
               <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
-                <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-transparent p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
                     Affected File
                   </p>
                   {primaryFile ? (
@@ -676,21 +981,21 @@ export default function CodeInsightPanel({
                       href={primaryFileUrl ?? undefined}
                       target="_blank"
                       rel="noreferrer"
-                      className="mt-3 inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm font-medium text-slate-100 transition-all duration-200 hover:border-slate-500 hover:bg-slate-800"
+                      className="mt-3 inline-flex items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-transparent px-3 py-2 text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200 hover:border-red-300 dark:hover:border-red-500/40"
                     >
-                      <FileCode2 className="h-4 w-4 text-slate-400" />
+                      <FileCode2 className="h-4 w-4 text-slate-400 dark:text-slate-400" />
                       {primaryFile.path}
                       <ExternalLink className="h-4 w-4 text-slate-500" />
                     </a>
                   ) : (
-                    <p className="mt-3 text-sm text-slate-400">
+                    <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
                       No primary file identified.
                     </p>
                   )}
                 </div>
 
-                <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-transparent p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
                     Patch Footprint
                   </p>
                   <div className="mt-3 flex flex-wrap gap-2">
@@ -711,11 +1016,11 @@ export default function CodeInsightPanel({
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-slate-800 bg-slate-950/70">
-                <div className="flex flex-col gap-3 border-b border-slate-800 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-transparent">
+                <div className="flex flex-col gap-3 border-b border-slate-200 dark:border-slate-800 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <p className="text-sm font-semibold text-white">Suggested patch</p>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-sm font-semibold text-slate-900 dark:text-white">Suggested patch</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500">
                       Generated against {analysis.repository.owner}/
                       {analysis.repository.name}
                     </p>
@@ -725,6 +1030,7 @@ export default function CodeInsightPanel({
                       variant="secondary"
                       size="sm"
                       onClick={() => setShowChangesOnly((current) => !current)}
+                      disabled={!hasPatch}
                     >
                       {showChangesOnly ? "View Full File" : "View Changes Only"}
                     </Button>
@@ -732,9 +1038,18 @@ export default function CodeInsightPanel({
                       variant="secondary"
                       size="sm"
                       onClick={() => setEditingPatch((current) => !current)}
+                      disabled={!hasPatch}
                     >
                       <PencilLine className="h-4 w-4" />
                       {editingPatch ? "Preview Diff" : "Edit Suggestion"}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={copyPatch}
+                      disabled={!hasPatch}
+                    >
+                      Copy Code
                     </Button>
                     {onAskAssistant ? (
                       <Button
@@ -755,12 +1070,20 @@ export default function CodeInsightPanel({
                       variant="ghost"
                       size="sm"
                       className="hover:bg-rose-500/10 hover:text-rose-300"
-                      onClick={rejectSuggestion}
+                      onClick={() => void rejectSuggestion()}
                     >
                       Reject
                     </Button>
                   </div>
                 </div>
+
+                {!hasPatch ? (
+                  <div className="border-b border-slate-200 dark:border-slate-800 px-5 py-4">
+                    <div className="rounded-2xl border border-amber-200 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-200">
+                      AgenticPulse found likely root-cause reasoning for this issue, but it could not draft a safe minimal patch from the current repository context yet. You can still inspect the reasoning, ask AI for a narrower explanation, or retry after connecting a more relevant repo or branch.
+                    </div>
+                  </div>
+                ) : null}
 
                 {editingPatch ? (
                   <div className="p-5">
@@ -768,36 +1091,95 @@ export default function CodeInsightPanel({
                       value={patchDraft}
                       onChange={(event) => setPatchDraft(event.target.value)}
                       rows={18}
-                      className="min-h-[360px] w-full rounded-2xl border border-slate-800 bg-slate-950 px-4 py-3 font-mono text-sm leading-6 text-slate-200 outline-none transition-all duration-200 focus:border-slate-600 focus:ring-2 focus:ring-slate-500/30"
+                      className="min-h-[360px] w-full rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#0a0a0a] px-4 py-3 font-mono text-sm leading-6 text-slate-800 dark:text-slate-200 outline-none transition-all duration-200 focus:border-red-300 dark:focus:border-red-500/40 focus:ring-2 focus:ring-red-500/20"
                     />
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <Button size="sm" onClick={applyPatchToPreview}>
+                        Apply Patch
+                      </Button>
+                      <Button size="sm" variant="secondary" onClick={copyPatch}>
+                        Copy Code
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={applyFix}
+                        disabled={Boolean(prStage) || !hasPatch}
+                      >
+                        <GitPullRequest className="h-4 w-4" />
+                        Create PR
+                      </Button>
+                    </div>
                   </div>
                 ) : (
-                  <div className="max-h-[460px] overflow-auto p-5 font-mono text-sm">
-                    <div className="min-w-full rounded-2xl border border-slate-800 bg-[#070b16] p-4 transition-all duration-200">
-                      {visiblePatchLines.map((line, index) => (
-                        <div
-                          key={`${index}-${line}`}
-                          className={`rounded-md px-3 py-1.5 leading-6 transition-colors duration-200 ${getLineClasses(
-                            line
-                          )}`}
-                        >
-                          <span className="mr-4 inline-block w-7 select-none text-right text-slate-500">
-                            {index + 1}
+                  <div className="p-5">
+                    {hasPatch ? (
+                      <>
+                        <div className="mb-3 flex flex-wrap items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+                          <span className="inline-flex items-center gap-1.5">
+                            <span className="h-2.5 w-2.5 rounded-full bg-emerald-500/80" />
+                            Added
                           </span>
-                          <span>{line || " "}</span>
+                          <span className="inline-flex items-center gap-1.5">
+                            <span className="h-2.5 w-2.5 rounded-full bg-red-500/80" />
+                            Removed
+                          </span>
+                          <span className="inline-flex items-center gap-1.5">
+                            <span className="h-2.5 w-2.5 rounded-full bg-slate-300 dark:bg-slate-600" />
+                            Context
+                          </span>
                         </div>
-                      ))}
-                    </div>
+                        <div className="max-h-[460px] overflow-auto rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#070b16] font-mono text-sm transition-all duration-200">
+                          <div className="sticky top-0 z-10 grid grid-cols-[72px_72px_32px_minmax(0,1fr)] border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-[#0b1220]/95 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500 backdrop-blur">
+                            <span>Old</span>
+                            <span>New</span>
+                            <span />
+                            <span>Code</span>
+                          </div>
+                          {visibleDiffLines.map((line) => (
+                            <div
+                              key={line.id}
+                              className={`grid grid-cols-[72px_72px_32px_minmax(0,1fr)] items-start gap-0 border-b border-slate-200/70 dark:border-slate-800/70 px-4 py-1.5 leading-6 transition-colors hover:bg-slate-100/70 dark:hover:bg-white/[0.04] ${getDiffLineClasses(
+                                line.kind
+                              )}`}
+                            >
+                              <span className="select-none text-right text-xs text-slate-400 dark:text-slate-500">
+                                {line.oldLineNumber ?? ""}
+                              </span>
+                              <span className="select-none text-right text-xs text-slate-400 dark:text-slate-500">
+                                {line.newLineNumber ?? ""}
+                              </span>
+                              <span
+                                className={line.kind === "added"
+                                  ? "text-emerald-700 dark:text-emerald-300"
+                                  : line.kind === "removed"
+                                    ? "text-red-700 dark:text-red-300"
+                                    : "text-slate-400 dark:text-slate-500"}
+                              >
+                                {line.indicator}
+                              </span>
+                              <span className="overflow-x-auto whitespace-pre-wrap break-words">
+                                {line.content || " "}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    ) : (
+                      <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#070b16] px-4 py-5 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                        No unified diff is available yet. Review the reasoning summary and relevant files, or regenerate after narrowing the repository context.
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
 
-              <div className="sticky bottom-4 z-10 rounded-2xl border border-slate-800 bg-slate-900/95 p-3 shadow-2xl shadow-slate-950/40 backdrop-blur sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none">
+              <div className="sticky bottom-4 z-10 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-[#161616]/95 p-3 shadow-2xl backdrop-blur sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none">
                 <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
                   <Button
                     onClick={applyFix}
-                    disabled={Boolean(prStage)}
-                    className="w-full transition-all duration-200 hover:shadow-lg hover:shadow-indigo-950/40 sm:w-auto"
+                    disabled={Boolean(prStage) || !hasPatch}
+                    className="w-full sm:w-auto"
                   >
                     <GitPullRequest className="h-4 w-4" />
                     {actionLabel}
@@ -829,30 +1211,30 @@ export default function CodeInsightPanel({
               ) : null}
 
               {prError ? (
-                <div className="rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+                <div className="rounded-2xl border border-red-200 dark:border-red-500/20 bg-red-50 dark:bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-300">
                   {prError}
                 </div>
               ) : null}
 
               {prResult ? (
-                <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-5 py-4">
+                <div className="rounded-2xl border border-emerald-200 dark:border-emerald-500/20 bg-emerald-50 dark:bg-emerald-500/10 px-5 py-4">
                   <div className="flex items-start gap-3">
-                    <CheckCircle2 className="mt-0.5 h-5 w-5 text-emerald-300" />
+                    <CheckCircle2 className="mt-0.5 h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                     <div>
-                      <p className="text-sm font-semibold text-emerald-100">
+                      <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">
                         Pull Request Created
                       </p>
-                      <p className="mt-1 text-sm text-emerald-200/90">
+                      <p className="mt-1 text-sm text-emerald-700 dark:text-emerald-300">
                         {prResult.pullRequest?.title || prResult.prTitle}
                       </p>
-                      <p className="mt-1 text-xs text-emerald-100/75">
+                      <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400">
                         Branch: {prResult.branchName}
                       </p>
                       <a
                         href={prResult.pullRequest?.url || prResult.prUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-emerald-100 transition-all duration-200 hover:text-white"
+                        className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-emerald-700 dark:text-emerald-300 transition-all duration-200 hover:text-emerald-900 dark:hover:text-white"
                       >
                         View on GitHub
                         <ExternalLink className="h-4 w-4" />
@@ -862,7 +1244,7 @@ export default function CodeInsightPanel({
                 </div>
               ) : null}
 
-              <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+              <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                   Relevant files
                 </p>
@@ -878,7 +1260,7 @@ export default function CodeInsightPanel({
                           filePath: file.path,
                         })
                       }
-                      className="rounded-full border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:border-slate-500 hover:bg-slate-800"
+                      className="rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-transparent px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 transition hover:border-red-300 dark:hover:border-red-500/40 hover:text-red-600 dark:hover:text-red-400"
                     >
                       {file.path}
                     </button>
@@ -887,9 +1269,9 @@ export default function CodeInsightPanel({
               </div>
 
               {analysis.alternativeFixes?.length ? (
-                <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+                <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 p-4">
                   <div className="flex items-center justify-between gap-3">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
                       Alternative Fixes
                     </p>
                     <p className="text-xs text-slate-500">
@@ -902,28 +1284,28 @@ export default function CodeInsightPanel({
                         key={`${option.rank}-${option.title}`}
                         className={`rounded-2xl border p-4 ${
                           option.recommended
-                            ? "border-emerald-500/20 bg-emerald-500/5"
-                            : "border-slate-800 bg-slate-900/70"
+                            ? "border-emerald-200 dark:border-emerald-500/20 bg-emerald-50 dark:bg-emerald-500/5"
+                            : "border-slate-200 dark:border-slate-800 bg-white dark:bg-transparent"
                         }`}
                       >
                         <div className="flex items-center justify-between gap-2">
-                          <p className="text-sm font-semibold text-slate-100">
+                          <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                             {option.title}
                           </p>
                           <Badge variant={option.recommended ? "success" : "outline"}>
                             #{option.rank}
                           </Badge>
                         </div>
-                        <p className="mt-3 text-sm leading-6 text-slate-400">
+                        <p className="mt-3 text-sm leading-6 text-slate-500 dark:text-slate-400">
                           {option.summary}
                         </p>
                         {option.pros.length ? (
-                          <p className="mt-3 text-xs text-emerald-200">
+                          <p className="mt-3 text-xs text-emerald-600 dark:text-emerald-300">
                             Pros: {option.pros.join(" • ")}
                           </p>
                         ) : null}
                         {option.cons.length ? (
-                          <p className="mt-2 text-xs text-rose-200/80">
+                          <p className="mt-2 text-xs text-red-600 dark:text-red-300/80">
                             Cons: {option.cons.join(" • ")}
                           </p>
                         ) : null}
@@ -934,18 +1316,18 @@ export default function CodeInsightPanel({
               ) : null}
 
               {analysis.prDescription ? (
-                <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-transparent p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
                     Pull Request Draft
                   </p>
                   <div className="mt-4 space-y-3">
-                    <p className="text-sm font-semibold text-white">
+                    <p className="text-sm font-semibold text-slate-900 dark:text-white">
                       {analysis.prDescription.title}
                     </p>
                     <p className="text-sm leading-6 text-slate-400">
                       {analysis.prDescription.summary}
                     </p>
-                    <p className="text-sm leading-6 text-slate-300">
+                    <p className="text-sm leading-6 text-slate-700 dark:text-slate-300">
                       Root cause: {analysis.prDescription.rootCause}
                     </p>
                     {analysis.prDescription.changes.length ? (
@@ -970,8 +1352,8 @@ export default function CodeInsightPanel({
         <div
           className={`fixed bottom-6 right-6 z-50 rounded-2xl border px-4 py-3 text-sm shadow-2xl transition-all duration-200 ${
             toast.tone === "success"
-              ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-100"
-              : "border-slate-700 bg-slate-900 text-slate-200"
+              ? "border-emerald-200 dark:border-emerald-500/20 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+              : "border-slate-200 dark:border-slate-700 bg-white dark:bg-[#1a1a1a] text-slate-700 dark:text-slate-200"
           }`}
         >
           {toast.message}

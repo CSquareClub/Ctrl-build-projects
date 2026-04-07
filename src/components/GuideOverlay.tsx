@@ -2,7 +2,20 @@
 
 import type { ComponentType } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Info, Sparkles, Cable, LayoutDashboard, Bot, History, Package, CheckCircle2, X } from "lucide-react";
+import {
+  Info,
+  Sparkles,
+  Cable,
+  LayoutDashboard,
+  Bot,
+  History,
+  Package,
+  CheckCircle2,
+  X,
+  Globe2,
+  Smartphone,
+  ArrowRight,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -10,68 +23,79 @@ export type GuideStep = {
   title: string;
   description: string;
   icon: ComponentType<{ className?: string }>;
+  routeHint?: string;
 };
 
 export const guideSteps: GuideStep[] = [
   {
-    title: "Welcome to Product Pulse",
+    title: "Welcome to AgenticPulse",
     description:
-      "Product Pulse is your AI product intelligence system. It listens to feedback across channels, detects issues, reasons about impact, and helps your team take action automatically.",
+      "AgenticPulse is your product intelligence system. It listens to feedback, detects issues, inspects experiences, and helps your team move from signal to action without losing context.",
     icon: Sparkles,
+    routeHint: "Start with the left sidebar and top navigation",
   },
   {
-    title: "Connect Sources",
+    title: "Connect your data sources",
     description:
-      "Start in Data Sources. Connect Gmail to ingest feedback emails, then add Reddit Listening, Social Listening, App Store Reviews, Google Play Reviews, Outlook, IMAP inboxes, or the Website SDK. Each source shows health and last synced state so you always know what is feeding the system.",
+      "Open Data Sources to connect Gmail, Outlook, social listening, reviews, inboxes, and the SDK. Every connected source contributes evidence, context, and health signals to the rest of the system.",
     icon: Cable,
+    routeHint: "Sidebar → Data Sources",
   },
   {
-    title: "Google Workspace Actions",
+    title: "Set up website inspection",
     description:
-      "When you connect Gmail, Product Pulse can also use your Google Calendar connection. The agent can schedule follow-ups automatically, create reminders, and find the next available time slot using your calendar before placing an event.",
-    icon: Bot,
+      "Website Inspection lets AgenticPulse watch critical product flows, run guided checks, and turn failures into readable inspection reports instead of making you guess what broke.",
+    icon: Globe2,
+    routeHint: "Sidebar → Website Inspection",
   },
   {
-    title: "Control Room Dashboard",
+    title: "Set up mobile inspection",
     description:
-      "The Control Room is your live command center. It combines incoming feedback, issue clusters, alerts, trend cards, source signals, and health status so you can understand what is happening in the product at a glance.",
+      "Mobile Inspection gives the system a way to inspect your application on cloud devices, monitor key journeys, and surface app-specific failures with the same structure as web inspections.",
+    icon: Smartphone,
+    routeHint: "Sidebar → Mobile Inspection",
+  },
+  {
+    title: "Use the Control Room",
+    description:
+      "The Control Room gives you the live product pulse: issue clusters, source health, alerts, trends, and operational pressure. It is the fastest way to understand what matters right now.",
     icon: LayoutDashboard,
+    routeHint: "Sidebar → Control Room",
   },
   {
-    title: "Issues, Tickets, and Reminders",
+    title: "Track inspections and decisions",
     description:
-      "Product Pulse groups similar feedback into real issues, shows evidence and source/location breakdowns, then helps the agent create tickets, reminders, notifications, and follow-up actions when something important needs attention.",
-    icon: LayoutDashboard,
-  },
-  {
-    title: "Agent Actions",
-    description:
-      "The autonomous agent watches for spikes, repeated complaints, unresolved high-severity issues, and growing trends. When needed, it can acknowledge emails and SDK feedback automatically, create tickets, send notifications, schedule reminders, and log exactly why each action happened.",
+      "Command Center brings inspections, signals, predictions, and decisions into one operational view so you can see what the agent is monitoring, why it reacted, and what happened next.",
     icon: Sparkles,
+    routeHint: "Sidebar → Command Center",
   },
   {
-    title: "Timeline",
+    title: "Open Pulse AI",
     description:
-      "Use Timeline to track how issue volume changes over time, inspect spike days, monitor system health, and review the weekly product insight report powered by structured metrics and AI summaries.",
-    icon: History,
-  },
-  {
-    title: "AI Helper",
-    description:
-      "AI Helper lets you ask natural questions about your live product data, like what to fix first, what is trending, which users are most affected, or what changed this week. It works on top of the same feedback and issue pipeline you see across the dashboard.",
+      "Pulse AI is your command interface. Ask what changed, what to fix first, why a decision happened, or which issue deserves attention. It works on the same live system context as the rest of the dashboard.",
     icon: Bot,
+    routeHint: "Top bar → Robot icon",
   },
   {
-    title: "Website SDK",
+    title: "Install the SDK",
     description:
-      "Add one script to your product to collect real-time user feedback, website events, and front-end errors. Those signals flow into the same feedback pipeline as emails, reviews, and social mentions.",
+      "The SDK captures behavior signals, friction, and smart feedback prompts from your product experience. Those signals feed directly into the same issue and insight pipeline as the rest of your sources.",
     icon: Package,
+    routeHint: "Sidebar → SDK Integration",
   },
   {
-    title: "You’re all set",
+    title: "Review timeline and reports",
     description:
-      "Connect your sources, sync them once, and let Product Pulse keep listening. From there, the system can cluster issues, surface insights, notify you about important changes, and help your team move from feedback to action much faster.",
+      "Timeline helps you follow issue growth, inspect spikes, and read weekly reports with enough context to explain what changed across the product and why.",
+    icon: History,
+    routeHint: "Sidebar → Timeline",
+  },
+  {
+    title: "You are ready",
+    description:
+      "Once sources are connected and inspections are configured, AgenticPulse keeps listening in the background, surfaces what needs attention, and helps your team take action with confidence.",
     icon: CheckCircle2,
+    routeHint: "Reopen this guide anytime from the sidebar",
   },
 ];
 
@@ -122,33 +146,18 @@ export default function GuideOverlay({
             transition={{ duration: 0.22, ease: "easeOut" }}
             className="pointer-events-auto absolute inset-4 flex items-center justify-center md:inset-6"
           >
-            <div className="relative w-full max-w-[470px] overflow-hidden rounded-3xl p-[1px] shadow-[0_24px_90px_rgba(2,6,23,0.55)]">
-              <motion.div
-                aria-hidden="true"
-                className="pointer-events-none absolute -inset-[130%] opacity-95"
-                animate={{ rotate: 360 }}
-                transition={{
-                  duration: 6,
-                  ease: "linear",
-                  repeat: Number.POSITIVE_INFINITY,
-                }}
-                style={{
-                  background:
-                    "conic-gradient(from 0deg, rgba(239,68,68,0) 0deg, rgba(239,68,68,0) 280deg, rgba(248,113,113,0.95) 320deg, rgba(239,68,68,0.35) 345deg, rgba(239,68,68,0) 360deg)",
-                }}
-              />
-              <div className="relative overflow-hidden rounded-[calc(1.5rem-1px)] border border-rose-400/20 bg-slate-950/96 backdrop-blur-xl">
-              <div className="bg-[radial-gradient(circle_at_top_right,rgba(99,102,241,0.18),transparent_34%),radial-gradient(circle_at_top_left,rgba(34,211,238,0.14),transparent_28%)] p-6">
+            <div className="relative w-full max-w-[490px] overflow-hidden rounded-3xl border border-border bg-background shadow-xl">
+              <div className="p-6">
                 <div className="mb-5 flex items-start justify-between gap-4">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-cyan-400/20 bg-cyan-400/10 text-cyan-200">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-emerald-200 bg-emerald-50 text-emerald-600 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400">
                       <Icon className="h-5 w-5" />
                     </div>
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-300">
-                        In-App Guide
+                      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-600 dark:text-emerald-400">
+                        Product Guide
                       </p>
-                      <p className="mt-1 text-sm text-slate-400">
+                      <p className="mt-1 text-sm text-muted-foreground">
                         Step {stepIndex + 1} of {guideSteps.length}
                       </p>
                     </div>
@@ -156,18 +165,24 @@ export default function GuideOverlay({
                   <button
                     type="button"
                     onClick={onClose}
-                    className="rounded-full border border-white/10 bg-white/5 p-2 text-slate-400 transition hover:border-white/20 hover:text-white"
+                    className="rounded-full border border-border bg-background p-2 text-muted-foreground transition hover:border-foreground/20 hover:text-foreground"
                     aria-label="Close guide"
                   >
                     <X className="h-4 w-4" />
                   </button>
                 </div>
 
-                <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-5">
-                  <h3 className="text-xl font-semibold text-white">{step.title}</h3>
-                  <p className="mt-3 text-sm leading-7 text-slate-300">
+                <div className="rounded-2xl border border-border bg-muted/30 p-5">
+                  <h3 className="text-xl font-semibold text-foreground">{step.title}</h3>
+                  <p className="mt-3 text-sm leading-7 text-muted-foreground">
                     {step.description}
                   </p>
+                  {step.routeHint ? (
+                    <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300">
+                      <ArrowRight className="h-3.5 w-3.5" />
+                      {step.routeHint}
+                    </div>
+                  ) : null}
                 </div>
 
                 <div className="mt-5 flex items-center justify-between gap-4">
@@ -180,28 +195,28 @@ export default function GuideOverlay({
                         className={cn(
                           "h-2.5 rounded-full transition-all",
                           index === stepIndex
-                            ? "w-7 bg-cyan-300"
-                            : "w-2.5 bg-slate-700 hover:bg-slate-500"
+                            ? "w-7 bg-emerald-500"
+                            : "w-2.5 bg-slate-300 dark:bg-slate-700 hover:bg-slate-400 dark:hover:bg-slate-500"
                         )}
                         aria-label={`Go to step ${index + 1}`}
                       />
                     ))}
                   </div>
 
-                  <div className="hidden items-center gap-2 rounded-full border border-slate-800 bg-slate-900/80 px-3 py-2 text-xs text-slate-300 sm:inline-flex">
-                    <Info className="h-3.5 w-3.5 text-cyan-300" />
-                    Reopen anytime from the sidebar
+                  <div className="hidden items-center gap-2 rounded-full border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground sm:inline-flex">
+                    <Info className="h-3.5 w-3.5 text-emerald-500 dark:text-emerald-400" />
+                    Follow the hints to learn the layout faster
                   </div>
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/8 px-6 py-4">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-6 py-4">
                 <div className="flex items-center gap-2">
                   <Button
                     type="button"
                     variant="ghost"
                     onClick={onSkip}
-                    className="rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white"
+                    className="rounded-xl"
                   >
                     Skip
                   </Button>
@@ -210,7 +225,7 @@ export default function GuideOverlay({
                     variant="ghost"
                     onClick={onPrevious}
                     disabled={isFirst}
-                    className="rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white disabled:opacity-40"
+                    className="rounded-xl disabled:opacity-40"
                   >
                     Previous
                   </Button>
@@ -219,11 +234,10 @@ export default function GuideOverlay({
                 <Button
                   type="button"
                   onClick={isLast ? onClose : onNext}
-                  className="rounded-xl border-0 bg-[linear-gradient(90deg,#22d3ee_0%,#6366f1_55%,#8b5cf6_100%)] px-5 text-white shadow-[0_14px_28px_rgba(99,102,241,0.28)] transition hover:scale-[1.01] hover:brightness-105"
+                  className="rounded-xl px-5"
                 >
                   {isLast ? "Done" : "Next"}
                 </Button>
-              </div>
               </div>
             </div>
           </motion.div>

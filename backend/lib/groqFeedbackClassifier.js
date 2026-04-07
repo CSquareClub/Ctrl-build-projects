@@ -7,6 +7,8 @@ const {
   matchesQueryTerms,
   isRelevantCategory,
 } = require('./feedbackRuleEngine');
+const { detectSentiment, findGroup } = require('./issueAggregator');
+const { classifyFeedbackScope } = require('./feedbackScope');
 
 function getGroqApiKey() {
   const apiKey = process.env.GROQ_API_KEY;
@@ -81,6 +83,16 @@ function normalizeDecision(message, rawDecision) {
     externalId: message.externalId,
     include,
     sentiment,
+    issueType:
+      rawDecision?.issueType === 'personal' || rawDecision?.issueType === 'global'
+        ? rawDecision.issueType
+        : message.issueType || 'global',
+    issueGroupSlug: rawDecision?.issueGroupSlug || message.ruleIssueGroup?.slug || null,
+    issueGroupTitle: rawDecision?.issueGroupTitle || message.ruleIssueGroup?.title || null,
+    classificationConfidence:
+      rawDecision?.classificationConfidence == null
+        ? Number(message.ruleConfidenceScore || 0)
+        : Number(rawDecision.classificationConfidence || 0),
     reason,
   };
 }
@@ -99,6 +111,7 @@ async function sendToGroq(data) {
         'If a query or keyword context is present, only include items that are clearly about that query.',
         'Review the structured JSON and decide if each item should still be included as genuine product feedback.',
         'Also label the sentiment as positive, neutral, or negative based on the user message itself.',
+        'Preserve the provided issueType unless the examples clearly show the opposite.',
         'Reject anything that still looks transactional, promotional, automated, or not about real product experience.',
         'If uncertain, exclude the email.',
         'Return JSON only.',
@@ -108,7 +121,7 @@ async function sendToGroq(data) {
       role: 'user',
       content: [
         'Return strict JSON with this shape:',
-        '{"classifications":[{"externalId":"string","include":true,"sentiment":"positive|neutral|negative","reason":"string"}]}',
+        '{"classifications":[{"externalId":"string","include":true,"sentiment":"positive|neutral|negative","issueType":"personal|global","issueGroupSlug":"string","issueGroupTitle":"string","classificationConfidence":0.0,"reason":"string"}]}',
         'Classify these feedback items:',
         JSON.stringify(data),
       ].join('\n'),
@@ -124,8 +137,74 @@ async function sendToGroq(data) {
   return data.map((message) => normalizeDecision(message, byId.get(message.externalId)));
 }
 
+function createThemeKey(message, context = {}) {
+  const theme = findGroup(`${message.title || ''} ${message.snippet || message.body || ''}`);
+  const queryKey = String(context.query || '').trim().toLowerCase() || 'all';
+  if (message.issueType === 'personal') {
+    return `personal:${theme.slug}:${message.externalId}`;
+  }
+  return `${theme.slug}:${message.ruleCategory}:${queryKey}`;
+}
+
+function buildGroupedPayload(messages, context = {}) {
+  return messages.map((group) => ({
+    groupId: group.groupId,
+    source: context.source || 'unknown',
+    query: context.query || null,
+    theme: group.theme.title,
+    themeKey: group.theme.slug,
+    category: group.ruleCategory,
+    issueType: group.issueType,
+    size: group.items.length,
+    examples: group.items.slice(0, 3).map((message) => ({
+      externalId: message.externalId,
+      subject: message.title || '',
+      text: message.snippet || message.body || '',
+      timestamp: message.occurredAt || new Date().toISOString(),
+    })),
+  }));
+}
+
+async function sendGroupedToGroq(groups, context = {}) {
+  if (groups.length === 0) {
+    return [];
+  }
+
+  const parsed = await groqJsonRequest([
+    {
+      role: 'system',
+      content: [
+        'You classify grouped user feedback for Product Pulse.',
+        'Each group already passed a rule-based filter and represents a likely shared theme.',
+        'Decide once per group whether the theme should be kept as genuine product feedback.',
+        'Also assign the dominant sentiment across the examples.',
+        'Reject groups that are clearly transactional, promotional, automated, or unrelated to real product experience.',
+        'Return JSON only.',
+      ].join(' '),
+    },
+    {
+      role: 'user',
+      content: [
+        'Return strict JSON with this shape:',
+        '{"groups":[{"groupId":"string","include":true,"sentiment":"positive|neutral|negative","issueType":"personal|global","classificationConfidence":0.0,"reason":"string"}]}',
+        'Classify these grouped feedback themes:',
+        JSON.stringify(buildGroupedPayload(groups, context)),
+      ].join('\n'),
+    },
+  ]);
+
+  const byGroupId = new Map(
+    (Array.isArray(parsed?.groups) ? parsed.groups : []).map((group) => [group?.groupId, group])
+  );
+
+  return groups.flatMap((group) =>
+    group.items.map((message) => normalizeDecision(message, byGroupId.get(group.groupId)))
+  );
+}
+
 async function classifyFeedbackEvents(messages, context = {}) {
   const allResults = [];
+  const directRuleResults = [];
   const relevantMessages = messages
     .map((message) => {
       const ruleResult = classifyFeedback(
@@ -137,6 +216,10 @@ async function classifyFeedbackEvents(messages, context = {}) {
         ...message,
         ruleCategory: ruleResult.category,
         ruleConfidence: ruleResult.confidence,
+        ruleConfidenceScore: Number(ruleResult.confidenceScore || 0),
+        ruleIssueGroup: ruleResult.issueGroup || null,
+        needsAiFallback: ruleResult.needsAiFallback === true,
+        ...classifyFeedbackScope(message),
       };
     })
     .filter((message) => isRelevantCategory(message.ruleCategory))
@@ -156,6 +239,10 @@ async function classifyFeedbackEvents(messages, context = {}) {
     .map((message) => ({
       externalId: message.externalId,
       include: false,
+      issueType: classifyFeedbackScope(message).issueType,
+      issueGroupSlug: null,
+      issueGroupTitle: null,
+      classificationConfidence: 0,
       reason: context.query
         ? 'Filtered out by rule or keyword matching before Groq.'
         : 'Filtered out by rule-based classifier before Groq.',
@@ -165,16 +252,71 @@ async function classifyFeedbackEvents(messages, context = {}) {
     return filteredOut;
   }
 
-  for (const batch of chunk(relevantMessages, MAX_BATCH_SIZE)) {
+  const fallbackMessages = [];
+  for (const message of relevantMessages) {
+    if (message.needsAiFallback) {
+      fallbackMessages.push(message);
+      continue;
+    }
+
+    directRuleResults.push({
+      externalId: message.externalId,
+      include: true,
+      sentiment: detectSentiment(`${message.title || ''} ${message.snippet || message.body || ''}`),
+      issueType: message.issueType || 'global',
+      issueGroupSlug: message.ruleIssueGroup?.slug || null,
+      issueGroupTitle: message.ruleIssueGroup?.title || null,
+      classificationConfidence: Number(message.ruleConfidenceScore || 0),
+      reason: `High-confidence rule classification matched ${message.ruleIssueGroup?.title || message.ruleCategory}.`,
+    });
+  }
+
+  if (fallbackMessages.length === 0) {
+    return [...directRuleResults, ...filteredOut];
+  }
+
+  const groupedByTheme = fallbackMessages.reduce((acc, message) => {
+    const key = createThemeKey(message, context);
+    if (!acc.has(key)) {
+      acc.set(key, {
+        groupId: key,
+        ruleCategory: message.ruleCategory,
+        issueType: message.issueType,
+        theme: findGroup(`${message.title || ''} ${message.snippet || message.body || ''}`),
+        items: [],
+      });
+    }
+
+    acc.get(key).items.push(message);
+    return acc;
+  }, new Map());
+
+  const groupedBatches = [];
+  const singletonMessages = [];
+  for (const group of groupedByTheme.values()) {
+    if (group.issueType === 'global' && group.items.length > 1) {
+      groupedBatches.push(group);
+    } else {
+      singletonMessages.push(group.items[0]);
+    }
+  }
+
+  for (const batch of chunk(groupedBatches, MAX_BATCH_SIZE)) {
+    const batchResults = await sendGroupedToGroq(batch, context);
+    allResults.push(...batchResults);
+  }
+
+  for (const batch of chunk(singletonMessages, MAX_BATCH_SIZE)) {
     const structuredBatch = buildStructuredFeedback(batch, context);
     const batchResults = await sendToGroq(structuredBatch);
     allResults.push(...batchResults);
   }
 
-  return [...allResults, ...filteredOut];
+  return [...directRuleResults, ...allResults, ...filteredOut];
 }
 
 module.exports = {
   classifyFeedbackEvents,
+  groqJsonRequest,
   sendToGroq,
 };

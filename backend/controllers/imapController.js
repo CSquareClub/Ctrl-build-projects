@@ -1,12 +1,14 @@
+const crypto = require('crypto');
 const supabase = require('../lib/supabaseClient');
 const { encryptSecret } = require('../lib/credentialCipher');
 const { insertFeedbackEventsDeduped } = require('../lib/feedbackDedup');
-const { detectSentiment, rebuildIssuesFromFeedback } = require('../lib/issueAggregator');
+const { detectSentiment } = require('../lib/issueAggregator');
 const { classifyFeedbackEvents } = require('../lib/groqFeedbackClassifier');
 const { ensureUserRecords } = require('../lib/ensureUserRecords');
 const { connectIMAP, fetchEmails, MAX_EMAILS_PER_SYNC } = require('../services/imapService');
 const { extractLocation } = require('../services/locationService');
-const { runAgent } = require('../services/agentService');
+const { enqueueSystemEvent, EVENT_TYPES } = require('../services/eventPipelineService');
+const { processClaimedFeedback } = require('../services/feedbackProcessingService');
 
 function getErrorMessage(error, fallback) {
   if (error instanceof Error && error.message) {
@@ -35,6 +37,51 @@ function sanitizeMetadata(metadata = {}) {
   delete nextMetadata.encrypted_password;
   delete nextMetadata.encryptedPassword;
   return nextMetadata;
+}
+
+function filterRowsAfterTimestamp(rows, lastProcessedAt) {
+  const cutoff = Date.parse(lastProcessedAt || '');
+  if (!Number.isFinite(cutoff)) {
+    return {
+      rows,
+      skipped: 0,
+    };
+  }
+
+  const nextRows = rows.filter((row) => {
+    const occurredAt = Date.parse(row.occurred_at || row.occurredAt || '');
+    return Number.isFinite(occurredAt) && occurredAt > cutoff;
+  });
+
+  return {
+    rows: nextRows,
+    skipped: rows.length - nextRows.length,
+  };
+}
+
+function getLatestProcessedAt(rows, fallback = null) {
+  const latest = rows.reduce((currentLatest, row) => {
+    const occurredAt = Date.parse(row.occurred_at || row.occurredAt || '');
+    if (!Number.isFinite(occurredAt)) {
+      return currentLatest;
+    }
+
+    return currentLatest === null || occurredAt > currentLatest
+      ? occurredAt
+      : currentLatest;
+  }, null);
+
+  return latest === null ? fallback : new Date(latest).toISOString();
+}
+
+function buildImapFeedbackDedupeKey(userId, rows) {
+  const hash = crypto
+    .createHash('sha1')
+    .update((rows || []).map((row) => row.unique_key || row.id || '').join('|'))
+    .digest('hex')
+    .slice(0, 12);
+
+  return `feedback:imap:${userId}:${hash}`;
 }
 
 function mapConnection(connection) {
@@ -250,6 +297,13 @@ async function syncImapAccount(req, res) {
             accountEmail: email.accountEmail,
             uid: email.uid,
             classificationReason: classification.reason,
+            issueType: classification.issueType || 'global',
+            issueGroupSlug: classification.issueGroupSlug || null,
+            issueGroupTitle: classification.issueGroupTitle || null,
+            classificationConfidence:
+              classification.classificationConfidence == null
+                ? null
+                : Number(classification.classificationConfidence),
             groqSentiment: classification.sentiment || 'neutral',
             isProductFeedback: true,
           },
@@ -257,14 +311,43 @@ async function syncImapAccount(req, res) {
       ];
     });
 
-    const filteredOut = rawEmails.length - rows.length;
+    let filteredOut = rawEmails.length - rows.length;
+    const processingWindow = filterRowsAfterTimestamp(
+      rows,
+      connection.last_processed_at || connection.metadata?.lastProcessedAt || null
+    );
+    rows = processingWindow.rows;
+    filteredOut += processingWindow.skipped;
+    const nextLastProcessedAt = getLatestProcessedAt(
+      rows,
+      connection.last_processed_at || connection.metadata?.lastProcessedAt || null
+    );
+
     const insertResult = await insertFeedbackEventsDeduped(req.user.id, rows, {
       logLabel: 'imap',
     });
 
-    if (insertResult.inserted > 0) {
-      await rebuildIssuesFromFeedback(req.user.id);
-      await runAgent(req.user);
+    if (insertResult.inserted > 0 && DEMO_DIRECT_PROCESSING) {
+      await processClaimedFeedback(req.user, insertResult.rows, {
+        background: false,
+        mode: 'sync:imap:inline',
+        skipAutoInspection: true,
+      }).catch(() => null);
+    }
+
+    if (insertResult.inserted > 0 && !DEMO_DIRECT_PROCESSING && req.body?._skipAgentProcessing !== true) {
+      await enqueueSystemEvent({
+        type: EVENT_TYPES.FEEDBACK_RECEIVED,
+        userId: req.user.id,
+        source: 'imap',
+        dedupeKey: buildImapFeedbackDedupeKey(req.user.id, insertResult.rows),
+        payload: {
+          uniqueKeys: insertResult.rows.map((row) => row.unique_key).filter(Boolean),
+          background: true,
+          mode: 'sync:imap',
+        },
+        priority: 1,
+      }).catch(() => null);
     }
 
     const lastSyncedAt = new Date().toISOString();
@@ -272,16 +355,26 @@ async function syncImapAccount(req, res) {
       .from('connected_accounts')
       .update({
         metadata: {
-          ...(connection.metadata || {}),
-          lastSyncedAt,
-          syncedCount: insertResult.inserted,
-          skippedCount: filteredOut + insertResult.duplicatesSkipped,
-          duplicatesSkipped: insertResult.duplicatesSkipped,
-        },
-        last_synced_at: lastSyncedAt,
-        status: 'connected',
-        last_error: null,
-      })
+            ...(connection.metadata || {}),
+            lastSyncedAt,
+            lastProcessedAt:
+              nextLastProcessedAt ||
+              connection.last_processed_at ||
+              connection.metadata?.lastProcessedAt ||
+              null,
+            syncedCount: insertResult.inserted,
+            skippedCount: filteredOut + insertResult.duplicatesSkipped,
+            duplicatesSkipped: insertResult.duplicatesSkipped,
+          },
+          last_synced_at: lastSyncedAt,
+          last_processed_at:
+            nextLastProcessedAt ||
+            connection.last_processed_at ||
+            connection.metadata?.lastProcessedAt ||
+            null,
+          status: 'connected',
+          last_error: null,
+        })
       .eq('id', connection.id);
 
     res.json({
@@ -318,3 +411,4 @@ module.exports = {
   getImapStatus,
   syncImapAccount,
 };
+const DEMO_DIRECT_PROCESSING = process.env.DEMO_DIRECT_PROCESSING !== 'false';

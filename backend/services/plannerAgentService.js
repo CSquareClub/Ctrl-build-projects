@@ -4,6 +4,7 @@ const { getAnomalyForIssue } = require('./anomalyService');
 const { getPredictionForIssue } = require('./predictionService');
 const { getTrendForIssue } = require('./trendService');
 const { getIssueSignalSummary } = require('./issueIntelligenceService');
+const { getIssueChurnSignals } = require('./churnDetectionService');
 
 function normalizePriorityScore(value) {
   return Math.max(0, Math.min(100, Number(value || 0)));
@@ -23,7 +24,7 @@ function getAnomalyWeight(spikeLevel) {
   return 0;
 }
 
-function buildPlanReasoning({ anomaly, confidence, trend, prediction }) {
+function buildPlanReasoning({ anomaly, confidence, trend, prediction, churn }) {
   const reasons = [];
 
   if (anomaly.spike_detected) {
@@ -40,18 +41,26 @@ function buildPlanReasoning({ anomaly, confidence, trend, prediction }) {
     )}%.`
   );
 
+  if (churn.affectedUsers > 0) {
+    reasons.push(
+      `${churn.affectedUsers} at-risk user${churn.affectedUsers === 1 ? '' : 's'} map to this issue, with peak churn risk at ${churn.highestRiskScore}%.`
+    );
+  }
+
   return reasons.join(' ');
 }
 
-function buildPlannerDecision({ issue, confidence, anomaly, trend, prediction, signals }) {
+function buildPlannerDecision({ issue, confidence, anomaly, trend, prediction, signals, churn }) {
   const frequencyScore = Math.min((Number(signals.frequencyCount || 0) / 20) * 100, 100);
   const trendGrowthScore = Math.min(Math.max(Number(trend.trend_growth_percent || 0), 0), 100);
   const anomalyScore = getAnomalyWeight(anomaly.spike_level);
+  const churnScore = Math.min(Number(churn.highestRiskScore || 0), 100);
   const priorityScore = normalizePriorityScore(
     confidence.confidenceScore * 0.4 +
       frequencyScore * 0.3 +
-      trendGrowthScore * 0.2 +
-      anomalyScore * 0.1
+      trendGrowthScore * 0.15 +
+      anomalyScore * 0.1 +
+      churnScore * 0.05
   );
   const priority = toPriorityLevel(priorityScore);
 
@@ -77,6 +86,10 @@ function buildPlannerDecision({ issue, confidence, anomaly, trend, prediction, s
     }
   }
 
+  if (churn.highestRiskLevel === 'high_risk') {
+    actions.push('notify_user', 'schedule_reminder');
+  }
+
   return {
     issueId: issue.id,
     issueType: confidence.issueType,
@@ -87,23 +100,26 @@ function buildPlannerDecision({ issue, confidence, anomaly, trend, prediction, s
     anomaly,
     trend,
     prediction,
+    churn,
     reasoning: buildPlanReasoning({
       anomaly,
       confidence,
       trend,
       prediction,
+      churn,
     }),
     confidence,
   };
 }
 
 async function planIssue(userId, issue, confidenceOverride = null) {
-  const [confidence, anomaly, trend, prediction, signals] = await Promise.all([
+  const [confidence, anomaly, trend, prediction, signals, churn] = await Promise.all([
     confidenceOverride || getConfidenceForIssue(userId, issue.id),
     getAnomalyForIssue(userId, issue),
     getTrendForIssue(userId, issue),
     getPredictionForIssue(userId, issue),
     getIssueSignalSummary(userId, issue),
+    getIssueChurnSignals(userId, issue),
   ]);
 
   return buildPlannerDecision({
@@ -113,6 +129,7 @@ async function planIssue(userId, issue, confidenceOverride = null) {
     trend,
     prediction,
     signals,
+    churn,
   });
 }
 
@@ -147,6 +164,7 @@ async function getPriorityForIssue(userId, issueId) {
     anomaly: plan.anomaly,
     trend: plan.trend,
     prediction: plan.prediction,
+    churn: plan.churn,
     actions: plan.actions,
     execution_mode: plan.executionMode,
   };

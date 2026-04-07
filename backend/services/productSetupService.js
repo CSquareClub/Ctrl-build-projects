@@ -14,6 +14,21 @@ function suggestProductName(repoName) {
     .trim();
 }
 
+function normalizeInspectionAccess(setup) {
+  const loginUrl = String(setup?.inspection_login_url || '').trim();
+  const username = String(setup?.inspection_username || '').trim();
+  const postLoginSelector = String(setup?.inspection_post_login_selector || '').trim();
+  const passwordConfigured = Boolean(String(setup?.inspection_password || '').trim());
+
+  return {
+    enabled: Boolean(loginUrl && username && passwordConfigured),
+    loginUrl,
+    username,
+    postLoginSelector,
+    passwordConfigured,
+  };
+}
+
 async function getProductSetup(userId) {
   const { data, error } = await supabase
     .from('product_setup')
@@ -49,10 +64,14 @@ async function getProductSetupStatus(user) {
     null;
   const suggestedProductName = suggestProductName(repoName);
   const productName = setup?.product_name || suggestedProductName || '';
+  const websiteUrl = String(setup?.website_url || '').trim();
+  const inspectionAccess = normalizeInspectionAccess(setup);
 
   return {
-    complete: Boolean(productName && repoOwner && repoName),
+    complete: Boolean(productName || websiteUrl || inspectionAccess.enabled || (repoOwner && repoName)),
     productName,
+    websiteUrl,
+    inspectionAccess,
     suggestedProductName,
     repository: repoOwner && repoName
       ? {
@@ -68,6 +87,11 @@ async function saveProductSetup(userId, input) {
   const payload = {
     user_id: userId,
     product_name: String(input.productName || '').trim(),
+    website_url: String(input.websiteUrl || '').trim(),
+    inspection_login_url: String(input.inspectionLoginUrl || '').trim(),
+    inspection_username: String(input.inspectionUsername || '').trim(),
+    inspection_password: String(input.inspectionPassword || '').trim(),
+    inspection_post_login_selector: String(input.inspectionPostLoginSelector || '').trim(),
     repo_owner: String(input.repoOwner || '').trim(),
     repo_name: String(input.repoName || '').trim(),
     updated_at: new Date().toISOString(),
@@ -89,6 +113,7 @@ async function saveProductSetup(userId, input) {
 module.exports = {
   getProductSetup,
   getProductSetupStatus,
+  normalizeInspectionAccess,
   saveProductSetup,
   suggestProductName,
 };

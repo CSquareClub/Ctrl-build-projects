@@ -94,6 +94,17 @@ async function writeGeneratedTest(workspacePath, generatedTest) {
   return generatedTest.path;
 }
 
+async function writeFileOverride(workspacePath, fileOverride) {
+  if (!fileOverride?.path || typeof fileOverride.content !== 'string') {
+    return null;
+  }
+
+  const targetPath = path.join(workspacePath, fileOverride.path);
+  await fs.mkdir(path.dirname(targetPath), { recursive: true });
+  await fs.writeFile(targetPath, fileOverride.content, 'utf8');
+  return fileOverride.path;
+}
+
 async function readPackageJson(workspacePath) {
   const packageJsonPath = path.join(workspacePath, 'package.json');
   if (!(await fileExists(packageJsonPath))) {
@@ -178,6 +189,47 @@ function detectValidationCommand(packageJson, packageManager, generatedTest) {
   }
 
   return null;
+}
+
+function detectRepositoryValidationCommands(packageJson, packageManager) {
+  const scripts = packageJson?.scripts || {};
+  const commands = [];
+
+  if (scripts.lint) {
+    commands.push({
+      command: packageManager.command,
+      args: ['run', 'lint'],
+      type: 'lint',
+    });
+  }
+
+  if (scripts['test:ci']) {
+    commands.push({
+      command: packageManager.command,
+      args: ['run', 'test:ci'],
+      type: 'test:ci',
+    });
+  } else if (scripts.test) {
+    const args = ['run', 'test'];
+    if (packageManager.command === 'npm') {
+      args.push('--', '--runInBand');
+    }
+    commands.push({
+      command: packageManager.command,
+      args,
+      type: 'test',
+    });
+  }
+
+  if (scripts.build) {
+    commands.push({
+      command: packageManager.command,
+      args: ['run', 'build'],
+      type: 'build',
+    });
+  }
+
+  return commands;
 }
 
 async function cloneRepositoryToSandbox(repository) {
@@ -294,6 +346,99 @@ async function validatePatchInSandbox({
   }
 }
 
+async function runRepositoryChecksInSandbox({
+  repository,
+  fileOverride = null,
+}) {
+  let sandbox;
+
+  try {
+    sandbox = await cloneRepositoryToSandbox(repository);
+    const overriddenPath = await writeFileOverride(sandbox.repoDir, fileOverride);
+    const packageJson = await readPackageJson(sandbox.repoDir);
+
+    if (!packageJson) {
+      return {
+        status: 'inconclusive',
+        summary: 'No package.json found in the repository root for validation.',
+        touchedFiles: overriddenPath ? [overriddenPath] : [],
+        checks: [],
+      };
+    }
+
+    const packageManager = await detectPackageManager(sandbox.repoDir, packageJson);
+    const installResult = await runCommand(
+      packageManager.command,
+      packageManager.installArgs,
+      { cwd: sandbox.repoDir, timeoutMs: DEFAULT_TIMEOUT_MS }
+    );
+
+    if (installResult.code !== 0) {
+      return {
+        status: 'failed',
+        summary: 'Dependency installation failed in sandbox.',
+        touchedFiles: overriddenPath ? [overriddenPath] : [],
+        installLog: `${installResult.stdout}\n${installResult.stderr}`.trim(),
+        checks: [],
+      };
+    }
+
+    const validationCommands = detectRepositoryValidationCommands(
+      packageJson,
+      packageManager
+    );
+
+    if (!validationCommands.length) {
+      return {
+        status: 'inconclusive',
+        summary: 'No lint, test, or build scripts were available for repository validation.',
+        touchedFiles: overriddenPath ? [overriddenPath] : [],
+        installLog: `${installResult.stdout}\n${installResult.stderr}`.trim(),
+        checks: [],
+      };
+    }
+
+    const checks = [];
+    for (const validationCommand of validationCommands) {
+      const validationResult = await runCommand(
+        validationCommand.command,
+        validationCommand.args,
+        { cwd: sandbox.repoDir, timeoutMs: DEFAULT_TIMEOUT_MS }
+      );
+
+      checks.push({
+        type: validationCommand.type,
+        status: validationResult.code === 0 ? 'passed' : 'failed',
+        command: [validationCommand.command, ...validationCommand.args].join(' '),
+        logs: `${validationResult.stdout}\n${validationResult.stderr}`.trim(),
+      });
+
+      if (validationResult.code !== 0) {
+        return {
+          status: 'failed',
+          summary: `Repository validation failed during ${validationCommand.type}.`,
+          touchedFiles: overriddenPath ? [overriddenPath] : [],
+          installLog: `${installResult.stdout}\n${installResult.stderr}`.trim(),
+          checks,
+        };
+      }
+    }
+
+    return {
+      status: 'passed',
+      summary: `Repository validation passed using ${checks
+        .map((check) => check.type)
+        .join(', ')}.`,
+      touchedFiles: overriddenPath ? [overriddenPath] : [],
+      installLog: `${installResult.stdout}\n${installResult.stderr}`.trim(),
+      checks,
+    };
+  } finally {
+    await removeSandbox(sandbox?.sandboxRoot);
+  }
+}
+
 module.exports = {
+  runRepositoryChecksInSandbox,
   validatePatchInSandbox,
 };

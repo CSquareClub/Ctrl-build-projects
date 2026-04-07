@@ -19,11 +19,46 @@ async function getSetupStatus(req, res) {
 async function completeSetup(req, res) {
   try {
     const productName = String(req.body?.productName || '').trim();
+    const websiteUrl = String(req.body?.websiteUrl || '').trim();
+    const inspectionLoginUrl = String(req.body?.inspectionLoginUrl || '').trim();
+    const inspectionUsername = String(req.body?.inspectionUsername || '').trim();
+    const inspectionPassword = String(req.body?.inspectionPassword || '').trim();
+    const inspectionPostLoginSelector = String(req.body?.inspectionPostLoginSelector || '').trim();
     const requestedRepoOwner = String(req.body?.repoOwner || '').trim();
     const requestedRepoName = String(req.body?.repoName || '').trim();
 
-    if (!productName) {
-      return res.status(400).json({ error: 'productName is required.' });
+    if (websiteUrl) {
+      try {
+        const parsed = new URL(websiteUrl);
+        if (!['http:', 'https:'].includes(parsed.protocol)) {
+          throw new Error('invalid');
+        }
+      } catch {
+        return res.status(400).json({ error: 'websiteUrl must be a valid http/https URL.' });
+      }
+    }
+
+    const hasInspectionAccessInput = Boolean(
+      inspectionLoginUrl || inspectionUsername || inspectionPassword || inspectionPostLoginSelector
+    );
+
+    if (hasInspectionAccessInput) {
+      if (!inspectionLoginUrl || !inspectionUsername || !inspectionPassword) {
+        return res.status(400).json({
+          error: 'inspectionLoginUrl, inspectionUsername, and inspectionPassword are required together.',
+        });
+      }
+
+      try {
+        const parsed = new URL(inspectionLoginUrl);
+        if (!['http:', 'https:'].includes(parsed.protocol)) {
+          throw new Error('invalid');
+        }
+      } catch {
+        return res.status(400).json({
+          error: 'inspectionLoginUrl must be a valid http/https URL.',
+        });
+      }
     }
 
     if (Boolean(requestedRepoOwner) !== Boolean(requestedRepoName)) {
@@ -32,7 +67,7 @@ async function completeSetup(req, res) {
       });
     }
 
-    let githubConnection = await getGitHubConnection(req.user.id);
+    let githubConnection = await getGitHubConnection(req.user.id).catch(() => null);
 
     if (requestedRepoOwner && requestedRepoName) {
       if (!githubConnection) {
@@ -48,32 +83,53 @@ async function completeSetup(req, res) {
     const repoOwner =
       requestedRepoOwner ||
       githubConnection?.repoOwner ||
-      githubConnection?.metadata?.repo_owner;
+      githubConnection?.metadata?.repo_owner ||
+      '';
     const repoName =
       requestedRepoName ||
       githubConnection?.repoName ||
-      githubConnection?.metadata?.repo_name;
-
-    if (!repoOwner || !repoName) {
-      return res.status(400).json({
-        error: 'Connect GitHub and select a primary repository before continuing.',
-      });
-    }
+      githubConnection?.metadata?.repo_name ||
+      '';
 
     const record = await saveProductSetup(req.user.id, {
       productName,
+      websiteUrl,
+      inspectionLoginUrl,
+      inspectionUsername,
+      inspectionPassword,
+      inspectionPostLoginSelector,
       repoOwner,
       repoName,
     });
 
     res.json({
-      complete: true,
+      complete: Boolean(
+        record.product_name ||
+          record.website_url ||
+          record.inspection_login_url ||
+          (record.repo_owner && record.repo_name)
+      ),
       productName: record.product_name,
-      repository: {
-        owner: record.repo_owner,
-        name: record.repo_name,
+      websiteUrl: record.website_url,
+      inspectionAccess: {
+        enabled: Boolean(
+          record.inspection_login_url &&
+            record.inspection_username &&
+            record.inspection_password
+        ),
+        loginUrl: record.inspection_login_url || '',
+        username: record.inspection_username || '',
+        postLoginSelector: record.inspection_post_login_selector || '',
+        passwordConfigured: Boolean(record.inspection_password),
       },
-      githubConnected: true,
+      repository:
+        record.repo_owner && record.repo_name
+          ? {
+              owner: record.repo_owner,
+              name: record.repo_name,
+            }
+          : null,
+      githubConnected: Boolean(githubConnection),
     });
   } catch (error) {
     res.status(500).json({

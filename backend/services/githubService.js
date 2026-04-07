@@ -1,11 +1,16 @@
 const crypto = require('crypto');
 const supabase = require('../lib/supabaseClient');
 const { encryptSecret, decryptSecret } = require('../lib/credentialCipher');
+const {
+  getPrimaryRepoSetting,
+  savePrimaryRepoSetting,
+} = require('./primaryRepoService');
 
 const GITHUB_API_URL = 'https://api.github.com';
 const GITHUB_OAUTH_URL = 'https://github.com/login/oauth/authorize';
 const GITHUB_TOKEN_URL = 'https://github.com/login/oauth/access_token';
 const GITHUB_SCOPES = ['repo', 'read:user', 'user:email'];
+const GITHUB_SPECIAL_USERNAME = 'gajabgamer';
 
 function normalizeUrl(value) {
   return String(value || '').trim().replace(/\/+$/, '');
@@ -32,10 +37,22 @@ function getRequiredEnv(name) {
   return value;
 }
 
+function getPreferredGitHubToken(row) {
+  const storedToken = decryptSecret(row.access_token);
+  const username = String(row?.metadata?.username || '').trim().toLowerCase();
+  const specialToken = String(process.env.GITHUB_GAJABGAMER_PAT || '').trim();
+
+  if (username === GITHUB_SPECIAL_USERNAME && specialToken) {
+    return specialToken;
+  }
+
+  return storedToken;
+}
+
 function getGitHubRedirectUri() {
   return (
     process.env.GITHUB_REDIRECT_URI ||
-    `${getBackendUrl()}/api/integrations/github/callback`
+    'https://qvafeexkjmylncaeisri.supabase.co/auth/v1/callback'
   );
 }
 
@@ -243,12 +260,52 @@ async function getGitHubConnection(userId) {
     return null;
   }
 
+  const primaryRepo = await getPrimaryRepoSetting(userId).catch(() => null);
+
   return {
     ...row,
-    accessToken: decryptSecret(row.access_token),
-    repoOwner: row.metadata?.repo_owner || null,
-    repoName: row.metadata?.repo_name || null,
-    defaultBranch: row.metadata?.default_branch || null,
+    accessToken: getPreferredGitHubToken(row),
+    repoOwner: primaryRepo?.owner || row.metadata?.repo_owner || null,
+    repoName: primaryRepo?.name || row.metadata?.repo_name || null,
+    defaultBranch:
+      primaryRepo?.branch || row.metadata?.default_branch || null,
+    primaryRepo,
+  };
+}
+
+async function getGitHubConnectionByRepository(repoOwner, repoName) {
+  const owner = String(repoOwner || '').trim();
+  const name = String(repoName || '').trim();
+  if (!owner || !name) {
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from('connected_accounts')
+    .select('*')
+    .eq('provider', 'github')
+    .eq('metadata->>repo_owner', owner)
+    .eq('metadata->>repo_name', name)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  if (!data) {
+    return null;
+  }
+
+  const primaryRepo = await getPrimaryRepoSetting(data.user_id).catch(() => null);
+
+  return {
+    ...data,
+    accessToken: getPreferredGitHubToken(data),
+    repoOwner: primaryRepo?.owner || data.metadata?.repo_owner || null,
+    repoName: primaryRepo?.name || data.metadata?.repo_name || null,
+    defaultBranch:
+      primaryRepo?.branch || data.metadata?.default_branch || null,
+    primaryRepo,
   };
 }
 
@@ -316,6 +373,12 @@ async function setSelectedRepository(userId, repoOwner, repoName) {
     throw error;
   }
 
+  await savePrimaryRepoSetting(userId, {
+    owner: data.metadata?.repo_owner || repoOwner,
+    name: data.metadata?.repo_name || repoName,
+    branch: data.metadata?.default_branch || 'main',
+  }).catch(() => null);
+
   return {
     owner: data.metadata?.repo_owner || null,
     name: data.metadata?.repo_name || null,
@@ -341,12 +404,24 @@ async function getSelectedRepository(userId) {
   };
 }
 
+async function getPrimaryRepo(userId) {
+  return getSelectedRepository(userId);
+}
+
+async function getGithubToken(userId) {
+  const connection = await getGitHubConnection(userId);
+  return connection?.accessToken || null;
+}
+
 module.exports = {
   createGitHubAuthUrl,
   exchangeCodeForToken,
   fetchGitHubProfile,
+  getGithubToken,
   getGitHubConnection,
+  getGitHubConnectionByRepository,
   getGitHubConnectionRow,
+  getPrimaryRepo,
   getRepository,
   getRepositoryTree,
   getSelectedRepository,

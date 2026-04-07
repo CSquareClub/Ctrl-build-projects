@@ -66,19 +66,19 @@ export default function DecisionFeedbackBar({
   };
 
   return (
-    <div className="sticky bottom-4 z-10 rounded-2xl border border-slate-800 bg-slate-950/90 p-4 shadow-2xl shadow-slate-950/30 backdrop-blur sm:static sm:bg-slate-950/60 sm:shadow-none">
+    <div className="sticky bottom-4 z-10 w-full max-w-full overflow-hidden rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-lg backdrop-blur sm:static dark:border-slate-800 dark:bg-[#141414]/95 dark:shadow-none">
       <div className="flex flex-col gap-3">
         <div>
-          <p className="text-sm font-medium text-slate-200">Was this helpful?</p>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Was this helpful?</p>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-500">
             Your feedback improves future confidence and actions.
           </p>
         </div>
 
-        <div className="flex flex-col gap-2 sm:flex-row">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           <Button
             variant={submittedAction === "accept" ? "default" : "secondary"}
-            className={`w-full ${compact ? "sm:w-auto" : ""}`}
+            className={`w-full min-w-0 ${compact ? "sm:w-auto" : ""}`}
             onClick={() => void submit("accept")}
             disabled={Boolean(submitting || submittedAction)}
           >
@@ -87,11 +87,11 @@ export default function DecisionFeedbackBar({
             ) : (
               <ThumbsUp className="h-4 w-4" />
             )}
-            👍 Accept
+            Accept
           </Button>
           <Button
             variant={submittedAction === "reject" ? "destructive" : "secondary"}
-            className={`w-full ${compact ? "sm:w-auto" : ""}`}
+            className={`w-full min-w-0 ${compact ? "sm:w-auto" : ""}`}
             onClick={() => void submit("reject")}
             disabled={Boolean(submitting || submittedAction)}
           >
@@ -100,11 +100,11 @@ export default function DecisionFeedbackBar({
             ) : (
               <ThumbsDown className="h-4 w-4" />
             )}
-            👎 Reject
+            Reject
           </Button>
           <Button
             variant={submittedAction === "edit" ? "default" : "secondary"}
-            className={`w-full ${compact ? "sm:w-auto" : ""}`}
+            className={`w-full min-w-0 ${compact ? "sm:w-auto" : ""}`}
             onClick={() => void submit("edit")}
             disabled={Boolean(submitting || submittedAction)}
           >
@@ -113,13 +113,13 @@ export default function DecisionFeedbackBar({
             ) : (
               <Pencil className="h-4 w-4" />
             )}
-            ✏️ Edit
+            Edit
           </Button>
         </div>
       </div>
 
       {toast ? (
-        <div className="mt-3 rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-slate-300">
+        <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
           {toast}
         </div>
       ) : null}

@@ -1,0 +1,26 @@
+{
+  "name": "@smosm/agenticpulse",
+  "version": "0.1.0",
+  "description": "AgenticPulse behavior intelligence SDK for tracking friction, feedback, and product signals.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "keywords": [
+    "agenticpulse",
+    "sdk",
+    "analytics",
+    "feedback",
+    "friction",
+    "behavior-intelligence"
+  ],
+  "license": "MIT",
+  "sideEffects": [
+    "./dist/agenticpulse.js"
+  ]
+}

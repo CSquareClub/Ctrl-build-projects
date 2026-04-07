@@ -34,6 +34,13 @@ const DEFAULT_SETTINGS = {
   lastRunAt: null,
   lastSummary: null,
 };
+const AGENT_MAX_FEEDBACK_ITEMS = 10;
+const AGENT_MAX_ISSUES = 5;
+const AGENT_MAX_ACTIONS = 20;
+const AGENT_MAX_CANDIDATES = 1;
+const AGENT_REPLY_LIMIT = 5;
+const AGENT_STATUS_TIMEOUT_MS = 3000;
+const AGENT_AI_TIMEOUT_MS = 1500;
 const STOP_WORDS = new Set([
   'about',
   'after',
@@ -75,6 +82,20 @@ const STOP_WORDS = new Set([
   'would',
   'your',
 ]);
+
+function withTimeout(promise, timeoutMs, fallbackFactory) {
+  let timer = null;
+  return Promise.race([
+    Promise.resolve(promise).finally(() => {
+      if (timer) clearTimeout(timer);
+    }),
+    new Promise((resolve) => {
+      timer = setTimeout(() => {
+        resolve(typeof fallbackFactory === 'function' ? fallbackFactory() : fallbackFactory);
+      }, timeoutMs);
+    }),
+  ]);
+}
 
 function buildAcknowledgementMessage({ senderName, userEmail, sentiment }) {
   const name = String(senderName || '').trim() || 'there';
@@ -859,13 +880,7 @@ async function getAgentStatus(userId) {
   ]);
 
   const latestAction = actions[0] || null;
-  const state = settings.enabled
-    ? settings.state === 'processing'
-      ? 'processing'
-      : actions.length > 0
-        ? 'active'
-        : 'idle'
-    : 'idle';
+  const state = settings.enabled ? 'active' : 'idle';
 
   return {
     enabled: settings.enabled,
@@ -924,19 +939,20 @@ async function runAgent(user, options = {}) {
       { data: pendingReminders, error: remindersError },
       timeline,
       existingActions,
-    ] = await Promise.all([
+    ] = await withTimeout(Promise.all([
       supabase
         .from('feedback_events')
         .select('id, title, body, source, occurred_at, sentiment, metadata, replied')
         .eq('user_id', userId)
         .gte('occurred_at', since)
         .order('occurred_at', { ascending: false })
-        .limit(200),
+        .limit(AGENT_MAX_FEEDBACK_ITEMS),
       supabase
         .from('issues')
         .select('*')
         .eq('user_id', userId)
-        .order('report_count', { ascending: false }),
+        .order('report_count', { ascending: false })
+        .limit(AGENT_MAX_ISSUES),
       supabase
         .from('tickets')
         .select('id, title, description, status, priority, linked_issue_id, created_at, updated_at')
@@ -948,7 +964,14 @@ async function runAgent(user, options = {}) {
         .eq('user_id', userId)
         .eq('status', 'pending'),
       getDailyIssueStats(userId),
-      listAgentActions(userId, 50),
+      listAgentActions(userId, AGENT_MAX_ACTIONS),
+    ]), AGENT_STATUS_TIMEOUT_MS, [
+      { data: [], error: null },
+      { data: [], error: null },
+      { data: [], error: null },
+      { data: [], error: null },
+      [],
+      [],
     ]);
 
     if (feedbackError && !isMissingRelationError(feedbackError)) throw feedbackError;
@@ -956,7 +979,7 @@ async function runAgent(user, options = {}) {
     if (ticketsError && !isMissingRelationError(ticketsError)) throw ticketsError;
     if (remindersError && !isMissingRelationError(remindersError)) throw remindersError;
 
-    const feedback = feedbackEvents || [];
+    const feedback = (feedbackEvents || []).slice(0, AGENT_MAX_FEEDBACK_ITEMS);
     const issueRows = issues || [];
     const openTickets = unresolvedTickets || [];
     const reminders = pendingReminders || [];
@@ -970,13 +993,13 @@ async function runAgent(user, options = {}) {
         return buildIssueCandidate(issue, unresolvedTicketCount, repeatedKeywords, spike);
       })
       .sort((a, b) => b.weight - a.weight)
-      .slice(0, 3);
+      .slice(0, AGENT_MAX_CANDIDATES);
 
-    const newActions = await sendAgentReplies(
+    const newActions = await withTimeout(sendAgentReplies(
       userId,
-      Array.isArray(options.newFeedbackRows) ? options.newFeedbackRows : [],
+      Array.isArray(options.newFeedbackRows) ? options.newFeedbackRows.slice(0, AGENT_REPLY_LIMIT) : [],
       existingActions
-    );
+    ), AGENT_AI_TIMEOUT_MS, []);
 
     if (spike && !hasRecentAction(existingActions, 'spike_detected', 'timeline-spike')) {
       const action = await logAgentAction(
@@ -1001,35 +1024,63 @@ async function runAgent(user, options = {}) {
     }
 
     for (const candidate of candidates) {
-      const reasoning = await getGroqReasoning(candidate, { spike });
-      const confidence = await calculateConfidence(userId, candidate.issue, {
+      const reasoning = await withTimeout(
+        getGroqReasoning(candidate, { spike }),
+        AGENT_AI_TIMEOUT_MS,
+        () => ({
+          summary: buildFallbackRecommendation(candidate),
+          action: candidate.actionRequired ? 'create_ticket_and_reminder' : 'monitor',
+        })
+      );
+      const confidence = await withTimeout(calculateConfidence(userId, candidate.issue, {
         frequencyCount: candidate.userCount,
         sourceCount: Array.isArray(candidate.issue.sources)
           ? candidate.issue.sources.length
           : 0,
         repeatedKeywords: candidate.repeatedKeywords,
-      });
-      await updateLearningConfidence(
+      }), AGENT_AI_TIMEOUT_MS, () => ({
+        issueType: candidate.issueType,
+        issueTypeLabel: candidate.issueTypeLabel,
+        confidenceScore: candidate.severity === 'critical' ? 90 : candidate.severity === 'high' ? 78 : 64,
+        confidenceLevel: candidate.severity === 'critical' ? 'high' : 'medium',
+        reasoning: 'Fallback confidence based on issue severity and report volume.',
+      }));
+      await withTimeout(updateLearningConfidence(
         userId,
         confidence.issueType,
         confidence.confidenceScore / 100
+      ), 500, null);
+      const decision = await withTimeout(
+        planIssue(userId, candidate.issue, confidence),
+        AGENT_AI_TIMEOUT_MS,
+        () => ({
+          priority: candidate.severity === 'critical' ? 'critical' : candidate.severity === 'high' ? 'high' : 'medium',
+          priorityScore: candidate.weight * 10,
+          executionMode: candidate.actionRequired ? 'auto' : 'observe',
+          reasoning: 'Fallback planner decision based on deterministic issue scoring.',
+          confidence,
+          anomaly: { spike_detected: false, spike_level: 'none' },
+          trend: { trend_growth_percent: Number(candidate.issue.trend_percent || 0) },
+          prediction: { escalating: false, prediction: '' },
+          churn: { affectedUsers: 0, highestRiskScore: 0, highestRiskLevel: 'safe' },
+          actions: candidate.actionRequired ? ['create_ticket', 'schedule_reminder'] : ['monitor'],
+        })
       );
-      const decision = await planIssue(userId, candidate.issue, confidence);
-      const ticketGuidance = await getOutcomeGuidance(userId, {
+      const ticketGuidance = await withTimeout(getOutcomeGuidance(userId, {
         issueType: confidence.issueType,
         actionType: 'create_ticket',
         confidence: confidence.confidenceScore / 100,
-      });
-      const reminderGuidance = await getOutcomeGuidance(userId, {
+      }), 700, () => ({ shouldSuppress: false, summary: 'Fallback guidance allowed ticket creation.' }));
+      const reminderGuidance = await withTimeout(getOutcomeGuidance(userId, {
         issueType: confidence.issueType,
         actionType: 'schedule_reminder',
         confidence: confidence.confidenceScore / 100,
-      });
-      const suggestionGuidance = await getOutcomeGuidance(userId, {
+      }), 700, () => ({ shouldSuppress: false, summary: 'Fallback guidance allowed reminder scheduling.' }));
+      const suggestionGuidance = await withTimeout(getOutcomeGuidance(userId, {
         issueType: confidence.issueType,
         actionType: 'suggest_fix',
         confidence: confidence.confidenceScore / 100,
-      });
+      }), 700, () => ({ shouldSuppress: false, summary: 'Fallback guidance allowed suggestion flow.' }));
       const openTicketForIssue = openTickets.find(
         (ticket) => ticket.linked_issue_id === candidate.issue.id
       );

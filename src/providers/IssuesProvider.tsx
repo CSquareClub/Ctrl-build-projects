@@ -10,6 +10,7 @@ import {
 } from "react";
 import type { Issue } from "@/lib/api";
 import { api } from "@/lib/api";
+import { DASHBOARD_DEMO_MODE, dashboardDemoIssues } from "@/lib/dashboard-demo";
 import { toUserFacingError } from "@/lib/user-facing-errors";
 import { useAuth } from "./AuthProvider";
 import { useLiveEvents } from "./LiveEventsProvider";
@@ -36,6 +37,18 @@ export function IssuesProvider({ children }: { children: ReactNode }) {
   const { subscribeToEvents } = useLiveEvents();
 
   const refreshIssues = useCallback(async (options?: { silent?: boolean }) => {
+    if (DASHBOARD_DEMO_MODE) {
+      if (!options?.silent) {
+        setLoading(true);
+      }
+      setError(null);
+      window.setTimeout(() => {
+        setIssues(dashboardDemoIssues);
+        setLoading(false);
+      }, options?.silent ? 0 : 900);
+      return;
+    }
+
     if (!session?.access_token) {
       setIssues([]);
       setError(null);
@@ -86,6 +99,18 @@ export function IssuesProvider({ children }: { children: ReactNode }) {
       }
     );
   }, [refreshIssues, session?.access_token, subscribeToEvents]);
+
+  useEffect(() => {
+    if (!session?.access_token) {
+      return;
+    }
+
+    const timer = window.setInterval(() => {
+      void refreshIssues({ silent: true });
+    }, 15000);
+
+    return () => window.clearInterval(timer);
+  }, [refreshIssues, session?.access_token]);
 
   return (
     <IssuesContext.Provider

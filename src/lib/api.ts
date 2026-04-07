@@ -24,10 +24,12 @@ async function request<T>(
   options: RequestInit = {}
 ): Promise<T> {
   const url = `${API_BASE}${endpoint}`;
+  const isFormDataBody =
+    typeof FormData !== "undefined" && options.body instanceof FormData;
 
   // Get token from Supabase session if available
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
+    ...(isFormDataBody ? {} : { "Content-Type": "application/json" }),
   };
 
   const nextHeaders: Record<string, string> = {
@@ -82,6 +84,22 @@ export const api = {
         method: "POST",
         body: JSON.stringify(data),
       }),
+    syncGitHubSession: (
+      token: string,
+      data: { providerToken: string }
+    ) =>
+      request<{
+        success: boolean;
+        github: {
+          username: string | null;
+          avatarUrl: string | null;
+          id: number | null;
+        };
+      }>("/auth/github/callback", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify(data),
+      }),
   },
 
   user: {
@@ -113,6 +131,11 @@ export const api = {
         productName: string;
         repoOwner?: string;
         repoName?: string;
+        websiteUrl?: string;
+        inspectionLoginUrl?: string;
+        inspectionUsername?: string;
+        inspectionPassword?: string;
+        inspectionPostLoginSelector?: string;
       }
     ) =>
       request<SetupStatus>("/setup/complete", {
@@ -316,6 +339,187 @@ export const api = {
           body: JSON.stringify({ codeInsightsEnabled }),
         }
       ),
+    automations: (token: string) =>
+      request<{
+        automations: GitHubAutomationRun[];
+        repository?: {
+          owner: string | null;
+          name: string | null;
+          defaultBranch: string | null;
+        };
+      }>("/integrations/github/automations", {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    runAutomation: (
+      token: string,
+      type: string,
+      data?: {
+        repoOwner?: string;
+        repoName?: string;
+        defaultBranch?: string;
+        localRepoPath?: string;
+        changedFiles?: string[];
+        createPullRequest?: boolean;
+      }
+    ) =>
+      request<{
+        success: boolean;
+        automation: GitHubAutomationRun;
+        result: GitHubAutomationResult;
+      }>(`/integrations/github/automations/${encodeURIComponent(type)}/run`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify(data || {}),
+      }),
+    startAnalysis: (
+      token: string,
+      data: { code: string; source?: string; language?: string; filePath?: string }
+    ) =>
+      request<CodeAnalysisJobStartResponse>("/code/analyze", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify(data),
+      }),
+    getAnalysisResult: (token: string, jobId: string) =>
+      request<CodeAnalysisJobStatusResponse>(`/code/result/${jobId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    generateFix: (
+      token: string,
+      data: {
+        code: string;
+        language?: string;
+        filePath?: string;
+        issue?: {
+          title?: string;
+          severity?: string;
+          detail?: string;
+          startLine?: number | null;
+          endLine?: number | null;
+        };
+      }
+    ) =>
+      request<CodeAutoFixResponse>("/code/fix", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify(data),
+      }),
+    createCodePullRequest: (
+      token: string,
+      data: {
+        patch: string;
+        repoOwner: string;
+        repoName: string;
+        baseBranch?: string;
+        filePath?: string;
+        title?: string;
+        body?: string;
+        confidence?: number;
+        impact?: string | null;
+        issue?: {
+          title?: string;
+          severity?: string;
+          detail?: string;
+        };
+        explanation?: {
+          what?: string;
+          why?: string;
+          impact?: string;
+          fix?: string;
+        };
+      }
+    ) =>
+      request<CodeInsightPullRequestResult>("/code/pull-request", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify(data),
+      }),
+    repoFile: (
+      token: string,
+      data: {
+        repoOwner: string;
+        repoName: string;
+        path: string;
+        ref?: string;
+      }
+    ) =>
+      request<{
+        path: string;
+        content: string;
+        size: number;
+        sha: string;
+        language: string;
+        lineCount: number;
+      }>("/code/repo-file", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify(data),
+      }),
+    generateTests: (
+      token: string,
+      data: {
+        code: string;
+        language?: string;
+        repoOwner?: string;
+        repoName?: string;
+        repoPath?: string;
+        ref?: string;
+        issue?: {
+          title?: string;
+          severity?: string;
+          detail?: string;
+          startLine?: number | null;
+          endLine?: number | null;
+        };
+        analysis?: Partial<CodeRiskAnalysisResponse> | null;
+      }
+    ) =>
+      request<CodeGeneratedTestsResponse>("/tests/generate", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify(data),
+      }),
+    runTests: (
+      token: string,
+      data: {
+        code: string;
+        testCode?: string;
+        language?: string;
+        repoOwner?: string;
+        repoName?: string;
+        repoPath?: string;
+        defaultBranch?: string;
+      }
+    ) =>
+      request<CodeTestRunResponse>("/tests/run", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify(data),
+      }),
+    startSelfHeal: (
+      token: string,
+      data: {
+        code: string;
+        testCode?: string;
+        language?: string;
+        issue?: {
+          title?: string;
+          severity?: string;
+          detail?: string;
+          startLine?: number | null;
+          endLine?: number | null;
+        };
+      }
+    ) =>
+      request<SelfHealJobStatusResponse>("/self-heal", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify(data),
+      }),
+    getSelfHealResult: (token: string, jobId: string) =>
+      request<SelfHealJobStatusResponse>(`/self-heal/${jobId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
   },
 
   social: {
@@ -345,6 +549,184 @@ export const api = {
         headers: { Authorization: `Bearer ${token}` },
         body: JSON.stringify(data),
       }),
+  },
+
+  inspect: {
+    start: (
+      token: string,
+      data: {
+        url: string;
+        issue?: string;
+        issueId?: string;
+        jobType?: string;
+        context?: {
+          page?: string;
+          steps?: unknown[];
+        };
+      }
+    ) =>
+      request<{
+        success: boolean;
+        message: string;
+        jobId?: string | null;
+        inspectionId?: string | null;
+      }>("/inspect/start", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify(data),
+      }),
+    activity: (
+      token: string,
+      params?: { issueId?: string; limit?: number }
+    ) => {
+      const query = new URLSearchParams(
+        Object.entries({
+          issueId: params?.issueId || "",
+          limit: params?.limit ? String(params.limit) : "",
+        }).filter(([, value]) => value)
+      ).toString();
+
+      return request<{ activity: InspectionActivity[] }>(
+        `/inspect/activity${query ? `?${query}` : ""}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+    },
+    results: (
+      token: string,
+      params?: { issueId?: string; limit?: number }
+    ) => {
+      const query = new URLSearchParams(
+        Object.entries({
+          issueId: params?.issueId || "",
+          limit: params?.limit ? String(params.limit) : "",
+        }).filter(([, value]) => value)
+      ).toString();
+
+      return request<{ results: InspectionResult[] }>(
+        `/inspect/results${query ? `?${query}` : ""}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+    },
+  },
+
+  mobile: {
+    status: (token: string, appId?: string) =>
+      request<{
+        apps: MobileApp[];
+        inspections: MobileInspection[];
+      }>(`/mobile/status${appId ? `?appId=${encodeURIComponent(appId)}` : ""}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    results: (token: string, appId?: string) =>
+      request<{ results: MobileInspectionResult[] }>(
+        `/mobile/results${appId ? `?appId=${encodeURIComponent(appId)}` : ""}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      ),
+    activity: (token: string, limit?: number, appId?: string) => {
+      const query = new URLSearchParams(
+        Object.entries({
+          limit: limit ? String(limit) : "",
+          appId: appId || "",
+        }).filter(([, value]) => value)
+      ).toString();
+
+      return request<{ activity: InspectionActivity[] }>(
+        `/mobile/activity${query ? `?${query}` : ""}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+    },
+    connect: (token: string, formData: FormData) =>
+      request<{
+        success: boolean;
+        app: MobileApp;
+      }>("/mobile/connect", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      }),
+    inspect: (
+      token: string,
+      data: {
+        appId?: string;
+        issue?: string;
+        steps?: unknown[];
+      }
+    ) =>
+      request<{
+        success: boolean;
+        message: string;
+        jobId?: string | null;
+        inspection?: MobileInspection | null;
+      }>("/mobile/inspect", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify(data),
+      }),
+  },
+
+  mobileInspect: {
+    start: (
+      token: string,
+      data: {
+        appId?: string;
+        issue?: string;
+        steps?: unknown[];
+      }
+    ) =>
+      request<{
+        success: boolean;
+        message: string;
+        jobId?: string | null;
+        inspection?: MobileInspection | null;
+      }>("/mobile/inspect", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify(data),
+      }),
+    activity: (
+      token: string,
+      params?: { limit?: number; appId?: string }
+    ) => {
+      const query = new URLSearchParams(
+        Object.entries({
+          limit: params?.limit ? String(params.limit) : "",
+          appId: params?.appId || "",
+        }).filter(([, value]) => value)
+      ).toString();
+
+      return request<{ activity: InspectionActivity[] }>(
+        `/mobile/activity${query ? `?${query}` : ""}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+    },
+    results: (
+      token: string,
+      params?: { appId?: string; limit?: number }
+    ) => {
+      const query = new URLSearchParams(
+        Object.entries({
+          appId: params?.appId || "",
+          limit: params?.limit ? String(params.limit) : "",
+        }).filter(([, value]) => value)
+      ).toString();
+
+      return request<{ results: MobileInspectionResult[] }>(
+        `/mobile/results${query ? `?${query}` : ""}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+    },
   },
 
   issues: {
@@ -1027,6 +1409,14 @@ export interface SetupStatus {
   complete: boolean;
   productName: string;
   suggestedProductName: string;
+  websiteUrl?: string;
+  inspectionAccess?: {
+    enabled: boolean;
+    loginUrl?: string;
+    username?: string;
+    postLoginSelector?: string;
+    passwordConfigured?: boolean;
+  };
   repository: {
     owner: string;
     name: string;
@@ -1068,6 +1458,7 @@ export interface AgentAnomaly {
   last_hour_count: number;
   last_six_hours_count: number;
   spike_ratio: number;
+  trend_growth_percent?: number;
 }
 
 export interface AgentPrediction {
@@ -1079,6 +1470,7 @@ export interface AgentPrediction {
   trend_delta: number;
   repeated_within_short_interval: boolean;
   prediction: string;
+  confidence?: number;
 }
 
 export interface AgentTrend {
@@ -1122,6 +1514,70 @@ export interface AgentMemoryHighlight {
   memoryType: "issue" | "action" | "decision" | "chat" | string;
   content: Record<string, unknown>;
   importanceScore: number;
+  createdAt: string;
+}
+
+export interface InspectionActivity {
+  id: string;
+  message: string;
+  status: "queued" | "running" | "success" | "error" | string;
+  timestamp: string;
+  issueId?: string | null;
+  metadata?: Record<string, unknown> | null;
+}
+
+export interface InspectionResult {
+  id: string;
+  userId?: string;
+  projectId?: string | null;
+  issueId?: string | null;
+  issue: string;
+  url?: string | null;
+  observedBehavior: string;
+  suspectedCause: string;
+  suggestedFix: string;
+  confidence: number;
+  rawData?: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+export interface MobileApp {
+  id: string;
+  userId?: string;
+  appName: string;
+  packageName?: string | null;
+  appUrl?: string | null;
+  uploadUrl?: string | null;
+  platform?: string | null;
+  metadata?: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+export interface MobileInspection {
+  id: string;
+  userId: string;
+  appId: string;
+  issue: string;
+  status: "queued" | "running" | "completed" | "failed" | string;
+  resultJson?: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+export interface MobileInspectionResult {
+  id: string;
+  userId?: string;
+  projectId?: string | null;
+  issueId?: string | null;
+  issue: string;
+  deviceName?: string | null;
+  platformName?: string | null;
+  platformVersion?: string | null;
+  appUrl?: string | null;
+  observedBehavior: string;
+  suspectedCause: string;
+  suggestedFix: string;
+  confidence: number;
+  rawData?: Record<string, unknown> | null;
   createdAt: string;
 }
 
@@ -1187,6 +1643,58 @@ export interface GitHubWorkspaceSettings {
   codeInsightsEnabled: boolean;
 }
 
+export interface GitHubAutomationResult {
+  issues: Array<{
+    title: string;
+    detail?: string;
+    severity?: string;
+    confidence?: number;
+    explanation?: string;
+    filePath?: string | null;
+  }>;
+  patches: Array<{
+    path?: string;
+    suggestedTestPath?: string;
+    confidence?: number;
+  }>;
+  fixApplied?: boolean;
+  testResults?: {
+    before: {
+      lint: string;
+      test: string;
+    };
+    after: {
+      lint: string;
+      test: string;
+      build: string;
+    };
+  };
+  confidence: number;
+  logs: string[] | string;
+  summary: string;
+  commit?: {
+    branchName?: string | null;
+    commitSha?: string | null;
+    changedPaths?: string[];
+  } | null;
+  prUrl?: string | null;
+}
+
+export interface GitHubAutomationRun {
+  type: "codeRiskScan" | "testGapDetection" | "regressionCheck" | "codeQualityPipeline" | string;
+  name: string;
+  description: string;
+  status: "idle" | "running" | "success" | "failed" | string;
+  lastRun: string | null;
+  issuesFound: number;
+  summary: string | null;
+  branchName: string | null;
+  commitSha: string | null;
+  prUrl: string | null;
+  changedFiles: string[];
+  logs: string[];
+}
+
 export interface RepoMapping {
   id: string;
   user_id: string;
@@ -1212,6 +1720,164 @@ export interface RepoStructure {
   keyFiles: string[];
   fileCount: number;
   analyzedAt: string | null;
+}
+
+export interface CodeRiskAnalysisResponse {
+  risk_score: number;
+  confidence: number;
+  issues: Array<{
+    title: string;
+    source: string;
+    severity: "low" | "medium" | "high" | string;
+    detail: string;
+    startLine: number | null;
+    endLine: number | null;
+    location: {
+      line: number;
+      column: number;
+    } | null;
+  }>;
+  suggestions: string[];
+  meta: {
+    parser: string;
+    parse_mode: string;
+    ast_issue_count: number;
+    llm_issue_count: number;
+    llm_fallback: boolean;
+    llm_timed_out: boolean;
+    complexity_signals: number;
+  };
+  patch?: CodeAutoFixResponse | null;
+  explanation?: {
+    what: string;
+    why: string;
+    impact: string;
+    fix: string;
+    targeted_lines?: {
+      start: number;
+      end: number;
+    };
+    preview?: string;
+  } | null;
+  fixSummary?: string | null;
+  impact?: "low" | "medium" | "high" | "critical" | string | null;
+  topIssue?: {
+    title: string;
+    source: string;
+    severity: "low" | "medium" | "high" | string;
+    detail: string;
+    startLine: number | null;
+    endLine: number | null;
+    location: {
+      line: number;
+      column: number;
+    } | null;
+  } | null;
+  completedAt?: string | null;
+}
+
+export interface CodeAnalysisJobStartResponse {
+  jobId: string;
+  status: string;
+  result?: CodeRiskAnalysisResponse | null;
+  mode?: "inline" | "queue" | string;
+}
+
+export interface CodeAnalysisJobStatusResponse {
+  id: string;
+  status: "waiting" | "active" | "completed" | "failed" | "delayed" | string;
+  result: CodeRiskAnalysisResponse | null;
+  error: string | null;
+  createdAt: string | null;
+  processedAt: string | null;
+  completedAt: string | null;
+}
+
+export interface CodeGeneratedTestsResponse {
+  framework: string;
+  summary: string;
+  testCode: string;
+  source: string;
+}
+
+export interface CodeTestRunResponse {
+  status: "passed" | "failed" | string;
+  passed: number;
+  failed: number;
+  total: number;
+  failures: Array<{
+    name: string;
+    message: string;
+  }>;
+  logs: string;
+}
+
+export interface SelfHealAttempt {
+  attempt: number;
+  status: "failed" | "passed" | string;
+  summary: string;
+  passed: number;
+  failed: number;
+  logs: string;
+  confidence: number;
+  fixSummary: string | null;
+}
+
+export interface SelfHealResult {
+  success: boolean;
+  attempts: SelfHealAttempt[];
+  finalFix: CodeAutoFixResponse | null;
+  logs: string;
+  analysis: CodeRiskAnalysisResponse | null;
+  generatedTests: CodeGeneratedTestsResponse | null;
+  finalTestResult: CodeTestRunResponse | null;
+  completedAt: string | null;
+}
+
+export interface SelfHealJobStatusResponse {
+  id: string;
+  status: "waiting" | "active" | "completed" | "failed" | string;
+  progress: {
+    phase?: string;
+    message?: string;
+    attempt?: number;
+    attempts?: SelfHealAttempt[];
+  } | null;
+  result: SelfHealResult | null;
+  error: string | null;
+  createdAt: string | null;
+  processedAt: string | null;
+  completedAt: string | null;
+}
+
+export interface CodeAutoFixResponse {
+  original: string;
+  updated: string;
+  patch: string;
+  target: {
+    nodeType: string;
+    startLine: number;
+    endLine: number;
+    contextCode: string;
+    severity: string;
+  };
+  confidence: number;
+  explanation: {
+    what: string;
+    why: string;
+    impact: string;
+    fix: string;
+    targeted_lines: {
+      start: number;
+      end: number;
+    };
+    preview: string;
+  };
+  meta: {
+    llm_fallback: boolean;
+    llm_timed_out: boolean;
+    syntax_safe: boolean;
+  };
 }
 
 export interface CodeInsightFile {

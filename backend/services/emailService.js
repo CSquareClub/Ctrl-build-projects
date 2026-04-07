@@ -2,6 +2,7 @@ const supabase = require('../lib/supabaseClient');
 const { refreshAccessToken } = require('../lib/gmail');
 
 const GMAIL_SEND_URL = 'https://gmail.googleapis.com/gmail/v1/users/me/messages/send';
+const AUTO_REPLY_SUBJECT_MARKER = '[ProductPulse-AutoReply]';
 
 function toBase64Url(value) {
   return Buffer.from(value, 'utf8')
@@ -128,10 +129,14 @@ async function sendReply({ userId, to, subject, message, threadId = null, inRepl
     };
   }
 
+  const normalizedSubject = String(subject || '').includes(AUTO_REPLY_SUBJECT_MARKER)
+    ? String(subject || '').trim()
+    : `${AUTO_REPLY_SUBJECT_MARKER} ${String(subject || 'Your feedback').trim()}`;
+
   const raw = toBase64Url(
     buildReplyMessage({
       to: recipient,
-      subject,
+      subject: normalizedSubject,
       message,
       inReplyTo,
       references,

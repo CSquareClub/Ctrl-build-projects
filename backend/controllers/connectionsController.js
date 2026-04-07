@@ -22,21 +22,23 @@ const {
   refreshAccessToken: refreshOutlookAccessToken,
   verifyState: verifyOutlookState,
 } = require('../lib/outlook');
-const { detectSentiment } = require('../lib/issueAggregator');
+const { detectSentiment, rebuildIssuesFromFeedback } = require('../lib/issueAggregator');
 const { classifyFeedbackEvents } = require('../lib/groqFeedbackClassifier');
 const { insertFeedbackEventsDeduped } = require('../lib/feedbackDedup');
+const { isDemoUser } = require('../lib/demoMode');
+const { buildDemoGmailFeedbackRows, wait } = require('../lib/demoFixtures');
 const { extractLocation } = require('../services/locationService');
 const { ensureUserRecords } = require('../lib/ensureUserRecords');
 const { ensureCalendarAccessToken } = require('../services/calendarService');
+const { runAgent } = require('../services/agentService');
 const { QUEUE_NAMES } = require('../services/jobQueueService');
 const { publishSystemEvent } = require('../services/liveEventsService');
-const { emitDomainEvent } = require('../lib/eventBus');
 
 const APP_URL = String(process.env.APP_URL || 'http://localhost:3000')
   .trim()
   .replace(/\/+$/, '');
-const GMAIL_PREVIEW_LIMIT = 15;
-const GMAIL_DETAIL_LIMIT = 8;
+const GMAIL_PREVIEW_LIMIT = 40;
+const GMAIL_DETAIL_LIMIT = 20;
 const OUTLOOK_DETAIL_LIMIT = 8;
 
 function getSettledValues(results) {
@@ -443,6 +445,11 @@ async function connectProvider(req, res) {
 
 async function syncConnection(req, res) {
   try {
+    console.log('Sync started', {
+      provider: req.params?.provider || null,
+      userId: req.user?.id || null,
+      demoMode: isDemoUser(req.user),
+    });
     const requestedProvider = req.params.provider;
     const provider =
       requestedProvider === 'google-calendar'
@@ -504,6 +511,14 @@ async function syncConnection(req, res) {
     };
 
     if (provider === 'gmail') {
+      if (isDemoUser(req.user)) {
+        console.log('Using hybrid demo Gmail payload');
+        await wait(1100);
+        rows = buildDemoGmailFeedbackRows({
+          userId: req.user.id,
+          accountEmail: connection.metadata?.email || req.user.email || null,
+        });
+      } else {
       let accessToken = connection.access_token;
 
       if (connection.refresh_token) {
@@ -596,6 +611,7 @@ async function syncConnection(req, res) {
       }));
 
       updatePayload.access_token = accessToken;
+      }
     } else if (provider === 'outlook') {
       let accessToken = connection.access_token;
 
@@ -792,23 +808,17 @@ async function syncConnection(req, res) {
           })
         : { fetched: 0, inserted: 0, duplicatesSkipped: 0 };
     duplicatesSkipped = insertResult.duplicatesSkipped;
+    let workflowResult = { issues: [] };
 
     if (rows.length > 0 && insertResult.inserted > 0) {
-      await emitDomainEvent(
-        'new_feedback',
-        {
-          userId: req.user.id,
-          provider,
-          inserted: insertResult.inserted,
-          duplicatesSkipped,
-          mode: 'new_feedback',
-        },
-        {
-          userId: req.user.id,
-          queueName: QUEUE_NAMES.AGENT,
-          priority: 'high',
-        }
-      ).catch(() => null);
+      console.log('Feedback inserted:', insertResult.inserted);
+      console.log('Triggering workflow');
+      workflowResult = await rebuildIssuesFromFeedback(req.user.id);
+      await runAgent(req.user, {
+        newFeedbackRows: insertResult.rows,
+      });
+      console.log('Workflow completed');
+      console.log('Issues created:', workflowResult?.issues?.length || 0);
     }
 
     const lastSyncedAt = new Date().toISOString();
@@ -833,8 +843,12 @@ async function syncConnection(req, res) {
     res.json({
       success: true,
       provider,
+      demoMode: provider === 'gmail' && isDemoUser(req.user),
       fetched: rows.length,
       imported: insertResult.inserted,
+      feedbackCount: insertResult.inserted,
+      result: workflowResult,
+      issues: Array.isArray(workflowResult?.issues) ? workflowResult.issues : [],
       skipped: filteredOut + duplicatesSkipped,
       duplicatesSkipped,
       lastSyncedAt,

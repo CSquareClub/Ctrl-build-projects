@@ -163,49 +163,49 @@ export default function IssueCollaborationPanel({
 
   if (!activeWorkspace) {
     return (
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5 text-sm text-slate-400">
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 text-sm text-slate-500 dark:border-slate-800 dark:bg-[#141414] dark:text-slate-400">
         Join or create a team workspace to assign issues, discuss with teammates, and approve AI suggestions together.
       </div>
     );
   }
 
   if (loading) {
-    return <Skeleton className="h-80 rounded-2xl bg-slate-900" />;
+    return <Skeleton className="h-80 rounded-2xl border border-slate-200 bg-slate-100 dark:border-slate-800 dark:bg-slate-900/50" />;
   }
 
   const currentAssignment = data?.assignments[0] || null;
 
   return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5 shadow-[0_12px_40px_rgba(15,23,42,0.18)]">
-      <div className="flex flex-col gap-3 border-b border-slate-800/80 pb-4 sm:flex-row sm:items-start sm:justify-between">
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-[#141414]">
+      <div className="flex flex-col gap-3 border-b border-slate-200 pb-4 dark:border-slate-800/80 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h3 className="text-sm font-bold uppercase tracking-[0.2em] text-slate-500">
+          <h3 className="text-sm font-bold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-500">
             Collaboration
           </h3>
-          <p className="mt-2 text-sm text-slate-400">
+          <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
             Shared discussion, ownership, and approvals inside{" "}
-            <span className="text-slate-200">{activeWorkspace.workspace.name}</span>.
+            <span className="text-slate-900 dark:text-slate-200">{activeWorkspace.workspace.name}</span>.
           </p>
         </div>
         <Link
           href="/dashboard/workspace"
-          className="text-sm text-indigo-300 transition hover:text-indigo-200"
+          className="text-sm text-emerald-600 transition hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300"
         >
           Open Team Workspace
         </Link>
       </div>
 
       {error && (
-        <div className="mt-4 rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
+        <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300">
           {error}
         </div>
       )}
 
       <div className="mt-5 grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
         <div className="space-y-5">
-          <div className="rounded-2xl border border-slate-800/80 bg-slate-950/60 p-4">
-            <div className="flex items-center gap-2 text-sm font-medium text-white">
-              <UserRoundPlus className="h-4 w-4 text-indigo-300" />
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800/80 dark:bg-slate-950/40">
+            <div className="flex items-center gap-2 text-sm font-medium text-slate-900 dark:text-white">
+              <UserRoundPlus className="h-4 w-4 text-emerald-500 dark:text-emerald-400" />
               Assignment
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
@@ -219,12 +219,12 @@ export default function IssueCollaborationPanel({
                     onClick={() => handleAssign(member.userId)}
                     className={`rounded-full border px-3 py-1.5 text-xs transition ${
                       selected
-                        ? "border-indigo-500/40 bg-indigo-500/15 text-indigo-200"
-                        : "border-slate-800 bg-slate-900/70 text-slate-300 hover:border-slate-700 hover:text-white"
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300"
+                        : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:text-slate-900 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-300 dark:hover:border-slate-700 dark:hover:text-white"
                     }`}
                   >
                     {member.name || member.email || "Teammate"}
-                    <span className="ml-2 text-[10px] uppercase tracking-[0.18em] text-slate-500">
+                    <span className="ml-2 text-[10px] uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
                       {member.role}
                     </span>
                   </button>
@@ -233,9 +233,9 @@ export default function IssueCollaborationPanel({
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-800/80 bg-slate-950/60 p-4">
-            <div className="flex items-center gap-2 text-sm font-medium text-white">
-              <ShieldCheck className="h-4 w-4 text-amber-300" />
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800/80 dark:bg-slate-950/40">
+            <div className="flex items-center gap-2 text-sm font-medium text-slate-900 dark:text-white">
+              <ShieldCheck className="h-4 w-4 text-amber-500 dark:text-amber-400" />
               Approval Queue
             </div>
             <div className="mt-3 space-y-3">
@@ -243,14 +243,14 @@ export default function IssueCollaborationPanel({
                 data.approvals.map((approval) => (
                   <div
                     key={approval.id}
-                    className="rounded-xl border border-slate-800 bg-slate-900/70 p-3"
+                    className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900/70"
                   >
                     <div className="flex items-center justify-between gap-3">
                       <div>
-                        <p className="text-sm font-medium text-white">
+                        <p className="text-sm font-medium text-slate-900 dark:text-white">
                           {approval.actionType.replace(/_/g, " ")}
                         </p>
-                        <p className="mt-1 text-xs text-slate-400">
+                        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                           {approval.reasoning || "AI requested approval for this action."}
                         </p>
                       </div>
@@ -282,7 +282,7 @@ export default function IssueCollaborationPanel({
                   </div>
                 ))
               ) : (
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-slate-500 dark:text-slate-500">
                   No approvals pending for this issue right now.
                 </p>
               )}
@@ -290,9 +290,9 @@ export default function IssueCollaborationPanel({
           </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-800/80 bg-slate-950/60 p-4">
-          <div className="flex items-center gap-2 text-sm font-medium text-white">
-            <MessageSquareText className="h-4 w-4 text-cyan-300" />
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800/80 dark:bg-slate-950/40">
+          <div className="flex items-center gap-2 text-sm font-medium text-slate-900 dark:text-white">
+            <MessageSquareText className="h-4 w-4 text-emerald-500 dark:text-emerald-400" />
             Discussion
           </div>
           <div className="mt-3 max-h-72 space-y-3 overflow-y-auto pr-1">
@@ -300,26 +300,26 @@ export default function IssueCollaborationPanel({
               data.comments.map((entry) => (
                 <div
                   key={entry.id}
-                  className="rounded-xl border border-slate-800 bg-slate-900/70 p-3"
+                  className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900/70"
                 >
-                  <div className="flex items-center justify-between gap-3 text-xs text-slate-500">
-                    <span className="font-medium text-slate-200">
+                  <div className="flex items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-500">
+                    <span className="font-medium text-slate-900 dark:text-slate-200">
                       {entry.author.name || entry.author.email || "Teammate"}
                     </span>
                     <span>{new Date(entry.createdAt).toLocaleString()}</span>
                   </div>
-                  <p className="mt-2 text-sm leading-relaxed text-slate-300">
+                  <p className="mt-2 text-sm leading-relaxed text-slate-700 dark:text-slate-300">
                     {entry.body}
                   </p>
                   {entry.isAi && (
-                    <span className="mt-2 inline-flex rounded-full border border-cyan-500/20 bg-cyan-500/10 px-2 py-1 text-[10px] uppercase tracking-[0.18em] text-cyan-200">
+                    <span className="mt-2 inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-[10px] uppercase tracking-[0.18em] text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300">
                       AI Assistant
                     </span>
                   )}
                 </div>
               ))
             ) : (
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-slate-500 dark:text-slate-500">
                 No discussion yet. Add context so the team and AI stay aligned.
               </p>
             )}
@@ -330,7 +330,7 @@ export default function IssueCollaborationPanel({
               value={comment}
               onChange={(event) => setComment(event.target.value)}
               placeholder="Share context, ask the AI to clarify, or leave handoff notes for the team..."
-              className="min-h-28 w-full rounded-2xl border border-slate-800 bg-slate-900/70 px-4 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-indigo-500/40"
+              className="min-h-28 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-300 focus:ring-2 focus:ring-emerald-500/20 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-emerald-500/40"
             />
             <div className="flex justify-end">
               <Button

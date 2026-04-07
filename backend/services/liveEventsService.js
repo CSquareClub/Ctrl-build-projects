@@ -6,6 +6,7 @@ liveEventEmitter.setMaxListeners(200);
 
 function isMissingRelationError(error) {
   return (
+    error?.code === '23503' ||
     error?.code === '42P01' ||
     String(error?.message || '')
       .toLowerCase()

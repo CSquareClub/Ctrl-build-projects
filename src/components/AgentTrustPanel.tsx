@@ -33,7 +33,7 @@ function getBehaviorMessage(level: string) {
   if (level === "high") {
     return {
       icon: Target,
-      tone: "text-emerald-200 border-emerald-500/20 bg-emerald-500/10",
+      tone: "text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/20 bg-emerald-50 dark:bg-emerald-500/10",
       text: "High confidence - action auto-applied",
     };
   }
@@ -41,14 +41,14 @@ function getBehaviorMessage(level: string) {
   if (level === "medium") {
     return {
       icon: AlertTriangle,
-      tone: "text-amber-100 border-amber-500/20 bg-amber-500/10",
+      tone: "text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-500/10",
       text: "Suggested action - approval recommended",
     };
   }
 
   return {
     icon: ShieldAlert,
-    tone: "text-rose-100 border-rose-500/20 bg-rose-500/10",
+    tone: "text-red-700 dark:text-red-300 border-red-200 dark:border-red-500/20 bg-red-50 dark:bg-red-500/10",
     text: "Low confidence - review before taking action",
   };
 }
@@ -123,7 +123,7 @@ export default function AgentTrustPanel({ confidence }: AgentTrustPanelProps) {
               How confident the system is in this decision
             </TooltipContent>
           </Tooltip>
-          <div className="flex items-center gap-2 text-sm text-slate-400">
+          <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
             <span>Risk Level:</span>
             <Badge variant={risk.variant}>{risk.label}</Badge>
           </div>
@@ -156,21 +156,21 @@ export default function AgentTrustPanel({ confidence }: AgentTrustPanelProps) {
           expanded ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0 sm:max-h-[500px] sm:opacity-100"
         }`}
       >
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5">
-          <h3 className="text-sm font-semibold text-white">Why this decision?</h3>
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-[#141414]">
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Why this decision?</h3>
           <div className="mt-4 space-y-3">
             {reasoningPoints.map((point) => (
               <div
                 key={point.text}
-                className="flex items-start gap-3 text-sm text-slate-400"
+                className="flex items-start gap-3 text-sm text-slate-600 dark:text-slate-400"
               >
-                <point.icon className="mt-0.5 h-4 w-4 text-slate-500" />
+                <point.icon className="mt-0.5 h-4 w-4 text-slate-400 dark:text-slate-500" />
                 <p>{point.text}</p>
               </div>
             ))}
           </div>
 
-          <p className="mt-4 text-xs text-slate-500">
+          <p className="mt-4 text-xs text-slate-500 dark:text-slate-500">
             System accuracy for this issue type:{" "}
             {Math.round(confidence.metrics.acceptance_rate * 100)}%
           </p>

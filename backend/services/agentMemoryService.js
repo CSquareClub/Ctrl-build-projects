@@ -116,6 +116,180 @@ async function storeAgentMemory(userId, memoryType, content, importanceScore = n
   return data || payload;
 }
 
+async function hasFeedbackActionMemory(userId, feedbackId, actionType) {
+  if (!feedbackId || !actionType) {
+    return false;
+  }
+
+  const { data, error } = await supabase
+    .from('agent_memory')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('feedback_id', feedbackId)
+    .eq('action_type', actionType)
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    if (isMissingRelationError(error)) {
+      return false;
+    }
+    throw error;
+  }
+
+  return Boolean(data?.id);
+}
+
+async function recordFeedbackActionMemory(userId, feedbackId, actionType, content = {}) {
+  if (!feedbackId || !actionType) {
+    return null;
+  }
+
+  const payload = {
+    user_id: userId,
+    memory_type: 'action',
+    action_type: actionType,
+    feedback_id: feedbackId,
+    content,
+    importance_score: 0.7,
+  };
+
+  const { data, error } = await supabase
+    .from('agent_memory')
+    .upsert(payload, {
+      onConflict: 'user_id,feedback_id,action_type',
+    })
+    .select('*')
+    .maybeSingle();
+
+  if (error) {
+    if (isMissingRelationError(error)) {
+      return null;
+    }
+    throw error;
+  }
+
+  return data || payload;
+}
+
+async function hasRecentReplyMemory(userId, senderEmail, issueType, windowHours = 72) {
+  const normalizedSender = String(senderEmail || '').trim().toLowerCase();
+  const normalizedIssueType = String(issueType || '').trim().toLowerCase();
+
+  if (!normalizedSender || !normalizedIssueType) {
+    return false;
+  }
+
+  const since = new Date(Date.now() - windowHours * 60 * 60 * 1000).toISOString();
+  const { data, error } = await supabase
+    .from('agent_memory')
+    .select('content, created_at')
+    .eq('user_id', userId)
+    .eq('action_type', 'email_reply_sent')
+    .gte('created_at', since)
+    .order('created_at', { ascending: false })
+    .limit(50);
+
+  if (error) {
+    if (isMissingRelationError(error)) {
+      return false;
+    }
+    throw error;
+  }
+
+  return (data || []).some((row) => {
+    const content = row.content || {};
+    return (
+      String(content.senderEmail || '').trim().toLowerCase() === normalizedSender &&
+      String(content.issueType || '').trim().toLowerCase() === normalizedIssueType
+    );
+  });
+}
+
+async function hasRecentUserIssueActionMemory(
+  userId,
+  senderEmail,
+  issueType,
+  actionType,
+  windowHours = 120
+) {
+  const normalizedSender = String(senderEmail || '').trim().toLowerCase();
+  const normalizedIssueType = String(issueType || '').trim().toLowerCase();
+  const normalizedActionType = String(actionType || '').trim().toLowerCase();
+
+  if (!normalizedSender || !normalizedIssueType || !normalizedActionType) {
+    return false;
+  }
+
+  const since = new Date(Date.now() - windowHours * 60 * 60 * 1000).toISOString();
+  const { data, error } = await supabase
+    .from('agent_memory')
+    .select('content, created_at')
+    .eq('user_id', userId)
+    .eq('action_type', normalizedActionType)
+    .gte('created_at', since)
+    .order('created_at', { ascending: false })
+    .limit(50);
+
+  if (error) {
+    if (isMissingRelationError(error)) {
+      return false;
+    }
+    throw error;
+  }
+
+  return (data || []).some((row) => {
+    const content = row.content || {};
+    return (
+      String(content.senderEmail || '').trim().toLowerCase() === normalizedSender &&
+      String(content.issueType || '').trim().toLowerCase() === normalizedIssueType
+    );
+  });
+}
+
+async function recordUserIssueActionMemory(
+  userId,
+  senderEmail,
+  issueType,
+  actionType,
+  content = {}
+) {
+  const normalizedSender = String(senderEmail || '').trim().toLowerCase();
+  const normalizedIssueType = String(issueType || '').trim().toLowerCase();
+  const normalizedActionType = String(actionType || '').trim().toLowerCase();
+
+  if (!normalizedSender || !normalizedIssueType || !normalizedActionType) {
+    return null;
+  }
+
+  const payload = {
+    user_id: userId,
+    memory_type: 'action',
+    action_type: normalizedActionType,
+    content: {
+      ...content,
+      senderEmail: normalizedSender,
+      issueType: normalizedIssueType,
+    },
+    importance_score: 0.68,
+  };
+
+  const { data, error } = await supabase
+    .from('agent_memory')
+    .insert(payload)
+    .select('*')
+    .maybeSingle();
+
+  if (error) {
+    if (isMissingRelationError(error)) {
+      return payload;
+    }
+    throw error;
+  }
+
+  return data || payload;
+}
+
 async function listMemoryHighlights(userId, options = {}) {
   const limit = Math.min(Number(options.limit || 8), 20);
   const queryText = String(options.query || '').trim().toLowerCase();
@@ -154,7 +328,12 @@ async function listMemoryHighlights(userId, options = {}) {
 }
 
 module.exports = {
+  hasFeedbackActionMemory,
+  hasRecentReplyMemory,
+  hasRecentUserIssueActionMemory,
   inferImportance,
   listMemoryHighlights,
+  recordFeedbackActionMemory,
+  recordUserIssueActionMemory,
   storeAgentMemory,
 };

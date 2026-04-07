@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowUpRight, BellRing } from "lucide-react";
 import { api, type Reminder } from "@/lib/api";
+import { DASHBOARD_DEMO_MODE, dashboardDemoReminders } from "@/lib/dashboard-demo";
 import { toUserFacingError } from "@/lib/user-facing-errors";
 import { useAuth } from "@/providers/AuthProvider";
 import ReminderCard from "@/components/ReminderCard";
@@ -25,6 +26,14 @@ export default function UpcomingRemindersWidget() {
     let cancelled = false;
 
     async function loadReminders() {
+      if (DASHBOARD_DEMO_MODE) {
+        if (!cancelled) {
+          setReminders(dashboardDemoReminders);
+          setError(null);
+        }
+        return;
+      }
+
       try {
         const data = await api.reminders.list(safeToken);
         if (!cancelled) {
@@ -57,17 +66,17 @@ export default function UpcomingRemindersWidget() {
   );
 
   return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 shadow-[0_12px_40px_rgba(15,23,42,0.18)]">
+    <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-transparent p-5 transition-colors">
       <div className="mb-5 flex items-center justify-between">
         <div>
-          <h2 className="text-base font-semibold text-white">Upcoming Reminders</h2>
-          <p className="mt-1 text-sm text-slate-400">
+          <h2 className="text-base font-semibold text-slate-900 dark:text-white">Upcoming Reminders</h2>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             Follow-ups that need attention soon.
           </p>
         </div>
         <Link
           href="/dashboard/tickets"
-          className="inline-flex items-center gap-1 text-sm font-medium text-indigo-300 transition hover:text-indigo-200"
+          className="inline-flex items-center gap-1 text-sm font-medium text-red-600 dark:text-red-400 transition hover:text-red-700 dark:hover:text-red-300"
         >
           View all
           <ArrowUpRight className="h-4 w-4" />
@@ -75,7 +84,7 @@ export default function UpcomingRemindersWidget() {
       </div>
 
       {error ? (
-        <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
+        <div className="rounded-xl border border-red-200 dark:border-red-500/20 bg-red-50 dark:bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">
           {error}
         </div>
       ) : upcoming.length > 0 ? (
@@ -85,10 +94,10 @@ export default function UpcomingRemindersWidget() {
           ))}
         </div>
       ) : (
-        <div className="rounded-xl border border-dashed border-slate-800 bg-slate-950/30 p-6 text-center">
-          <BellRing className="mx-auto h-5 w-5 text-slate-500" />
-          <p className="mt-3 text-sm font-medium text-slate-300">No upcoming reminders</p>
-          <p className="mt-1 text-sm text-slate-500">
+        <div className="rounded-xl border border-dashed border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-transparent p-6 text-center">
+          <BellRing className="mx-auto h-5 w-5 text-slate-400 dark:text-slate-500" />
+          <p className="mt-3 text-sm font-medium text-slate-600 dark:text-slate-300">No upcoming reminders</p>
+          <p className="mt-1 text-sm text-slate-400 dark:text-slate-500">
             Add reminders from Tickets & Actions to keep follow-ups visible.
           </p>
         </div>

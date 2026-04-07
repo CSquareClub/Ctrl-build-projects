@@ -14,6 +14,15 @@ import { useIssues } from "./IssuesProvider";
 import { useAuth } from "./AuthProvider";
 import { isDemoUser } from "@/lib/demo-mode";
 import { useLiveEvents } from "./LiveEventsProvider";
+import {
+  DASHBOARD_DEMO_MODE,
+  dashboardDemoAgentActivity,
+  dashboardDemoFeedback,
+  dashboardDemoNotifications,
+  dashboardDemoReminders,
+  dashboardDemoTickets,
+  dashboardDemoTrendSeries,
+} from "@/lib/dashboard-demo";
 
 export interface LiveIssue extends Issue {
   category: "Bug" | "Problem" | "Feature Request" | "Praise";
@@ -39,6 +48,13 @@ export interface FeedbackFeedItem extends FeedbackMessage {
   sourceLabel: string;
 }
 
+export interface DashboardTicket {
+  id: string;
+  title: string;
+  status: string;
+  priority: string;
+}
+
 interface DashboardLiveContextType {
   liveIssues: LiveIssue[];
   criticalAlerts: LiveIssue[];
@@ -47,6 +63,9 @@ interface DashboardLiveContextType {
   trendSeries: TrendPoint[];
   recentFeedback: FeedbackFeedItem[];
   distribution: { bugs: number; problems: number; features: number; praise: number };
+  agentActivity: string[];
+  tickets: DashboardTicket[];
+  reminders: typeof dashboardDemoReminders;
   acknowledgeNotifications: () => void;
 }
 
@@ -54,33 +73,33 @@ const DashboardLiveContext = createContext<DashboardLiveContextType | null>(null
 
 const fallbackIssues: Issue[] = [
   {
-    id: "login-crash-spike",
-    title: "Login crash reports increased after latest mobile release",
-    sources: ["app-reviews", "gmail"],
-    reportCount: 34,
+    id: "audit-form-submission-glitch",
+    title: "Audit form submission glitch",
+    sources: ["gmail", "app-reviews"],
+    reportCount: 25,
     priority: "HIGH",
     trend: "increasing",
-    trendPercent: 60,
+    trendPercent: 58,
     createdAt: new Date().toISOString(),
   },
   {
-    id: "checkout-friction",
-    title: "Checkout flow friction showing up in support and social",
+    id: "login-auth-friction",
+    title: "Login and authentication friction",
     sources: ["gmail", "instagram"],
-    reportCount: 21,
+    reportCount: 9,
     priority: "MEDIUM",
     trend: "increasing",
-    trendPercent: 22,
+    trendPercent: 24,
     createdAt: new Date(Date.now() - 1000 * 60 * 20).toISOString(),
   },
   {
-    id: "dark-mode-praise",
-    title: "Users are praising the new dark mode polish",
-    sources: ["instagram", "app-reviews"],
-    reportCount: 12,
-    priority: "LOW",
+    id: "billing-and-payments",
+    title: "Billing and payment friction",
+    sources: ["gmail", "app-reviews"],
+    reportCount: 4,
+    priority: "MEDIUM",
     trend: "stable",
-    trendPercent: 8,
+    trendPercent: 11,
     createdAt: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
   },
 ];
@@ -192,6 +211,39 @@ function createInitialFeedback(issues: LiveIssue[], demoUser: boolean): Feedback
     return [];
   }
 
+  const auditIssue = issues.find((issue) => issue.title.toLowerCase().includes("audit form"));
+  const auditFeedback: FeedbackFeedItem[] = auditIssue
+    ? [
+        {
+          id: "audit-feedback-1",
+          text: "Audit form is not submitting, button does nothing after I fill every field.",
+          source: "gmail",
+          sourceLabel: "Gmail",
+          author: "Audit User 1",
+          timestamp: new Date(Date.now() - 1000 * 60 * 6).toISOString(),
+          sentiment: "negative",
+        },
+        {
+          id: "audit-feedback-2",
+          text: "I click submit on the audit page and the request never reaches the backend.",
+          source: "gmail",
+          sourceLabel: "Gmail",
+          author: "Audit User 7",
+          timestamp: new Date(Date.now() - 1000 * 60 * 12).toISOString(),
+          sentiment: "negative",
+        },
+        {
+          id: "audit-feedback-3",
+          text: "Audit page keeps spinning after submit and never confirms success.",
+          source: "gmail",
+          sourceLabel: "Gmail",
+          author: "Audit User 13",
+          timestamp: new Date(Date.now() - 1000 * 60 * 18).toISOString(),
+          sentiment: "negative",
+        },
+      ]
+    : [];
+
   const issueFeedback = issues.flatMap((issue, issueIndex) =>
     issue.sources.map((source, sourceIndex) => ({
       id: `${issue.id}-feedback-${sourceIndex}`,
@@ -213,7 +265,7 @@ function createInitialFeedback(issues: LiveIssue[], demoUser: boolean): Feedback
     }))
   );
 
-  return issueFeedback.slice(0, 10);
+  return [...auditFeedback, ...issueFeedback].slice(0, 10);
 }
 
 export function DashboardLiveProvider({ children }: { children: ReactNode }) {
@@ -233,23 +285,52 @@ export function DashboardLiveProvider({ children }: { children: ReactNode }) {
   const [notifications, setNotifications] = useState<DashboardNotification[]>([]);
   const [trendSeries, setTrendSeries] = useState<TrendPoint[]>([]);
   const [recentFeedback, setRecentFeedback] = useState<FeedbackFeedItem[]>([]);
+  const [agentActivity] = useState(dashboardDemoAgentActivity);
+  const [tickets] = useState(dashboardDemoTickets);
+  const [reminders] = useState(dashboardDemoReminders);
 
   useEffect(() => {
     const nextIssues = baseIssues.map(toLiveIssue);
     const resetTimer = window.setTimeout(() => {
       setLiveIssues(nextIssues);
-      setNotifications(createInitialNotifications(nextIssues, demoUser));
-      setTrendSeries(
-        demoUser ? createInitialTrendSeries(nextIssues) : createRealTrendSeries(nextIssues)
+      setNotifications(
+        DASHBOARD_DEMO_MODE
+          ? dashboardDemoNotifications.map((notification) => ({
+              id: notification.id,
+              title: notification.title,
+              kind:
+                notification.type === "spike"
+                  ? "critical"
+                  : notification.type === "ticket"
+                    ? "new"
+                    : "insight",
+              createdAt: notification.createdAt,
+              read: notification.read,
+            }))
+          : createInitialNotifications(nextIssues, demoUser)
       );
-      setRecentFeedback(createInitialFeedback(nextIssues, demoUser));
-    }, 0);
+      setTrendSeries(
+        DASHBOARD_DEMO_MODE
+          ? dashboardDemoTrendSeries
+          : demoUser
+            ? createInitialTrendSeries(nextIssues)
+            : createRealTrendSeries(nextIssues)
+      );
+      setRecentFeedback(
+        DASHBOARD_DEMO_MODE
+          ? dashboardDemoFeedback.map((item) => ({
+              ...item,
+              sourceLabel: sourceLabel(item.source),
+            }))
+          : createInitialFeedback(nextIssues, demoUser)
+      );
+    }, DASHBOARD_DEMO_MODE ? 950 : 0);
 
     return () => window.clearTimeout(resetTimer);
   }, [baseIssues, demoUser]);
 
   useEffect(() => {
-    if (!session?.access_token || demoUser) {
+    if (!session?.access_token || demoUser || DASHBOARD_DEMO_MODE) {
       return;
     }
 
@@ -264,72 +345,9 @@ export function DashboardLiveProvider({ children }: { children: ReactNode }) {
   }, [demoUser, refreshIssues, session?.access_token, subscribeToEvents]);
 
   useEffect(() => {
-    if (!demoUser || !liveIssues.length) return;
+    if (!demoUser || !liveIssues.length || DASHBOARD_DEMO_MODE) return;
 
-    const liveTimer = window.setInterval(() => {
-      setLiveIssues((current) =>
-        current.map((issue, index) => {
-          const bump =
-            index === 0 ? Math.ceil(Math.random() * 2) : Math.round(Math.random());
-          const nextReportCount =
-            issue.trend === "decreasing"
-              ? Math.max(4, issue.reportCount - bump)
-              : issue.reportCount + bump;
-
-          const nextSparkline = [...issue.sparkline.slice(1), nextReportCount];
-
-          return {
-            ...issue,
-            reportCount: nextReportCount,
-            trendPercent:
-              issue.trend === "increasing"
-                ? Math.min(issue.trendPercent + 2, 98)
-                : Math.max(issue.trendPercent - 1, 4),
-            sparkline: nextSparkline,
-            updatedAt: new Date().toISOString(),
-          };
-        })
-      );
-
-      setTrendSeries((current) => {
-        const last = current[current.length - 1];
-        const nextValue = Math.max(
-          6,
-          (last?.complaints ?? 18) + Math.round(Math.random() * 6 - 2)
-        );
-        const hour = (current.length + 9) % 24;
-        return [...current.slice(1), { time: `${hour}:00`, complaints: nextValue }];
-      });
-
-      setNotifications((current) => {
-        const [topIssue] = liveIssues;
-        if (!topIssue) return current;
-
-        const nextNotification: DashboardNotification = {
-          id: `notif-live-${Date.now()}`,
-          title:
-            current.length % 3 === 0
-              ? `Spike alert: ${topIssue.title} increased ${Math.max(
-                  18,
-                  topIssue.trendPercent
-                )}%`
-              : current.length % 3 === 1
-                ? `New issue detected in ${sourceLabel(topIssue.sources[0] ?? "feed")}`
-                : `System insight: ${topIssue.reportCount} active complaints require triage`,
-          kind:
-            current.length % 3 === 0
-              ? "critical"
-              : current.length % 3 === 1
-                ? "new"
-                : "insight",
-          createdAt: new Date().toISOString(),
-          read: false,
-        };
-
-        return [nextNotification, ...current].slice(0, 8);
-      });
-    }, 6500);
-
+    const liveTimer = window.setInterval(() => {}, 6500);
     return () => window.clearInterval(liveTimer);
   }, [demoUser, liveIssues]);
 
@@ -374,15 +392,21 @@ export function DashboardLiveProvider({ children }: { children: ReactNode }) {
       trendSeries,
       recentFeedback,
       distribution,
+      agentActivity,
+      tickets,
+      reminders,
       acknowledgeNotifications,
     }),
     [
       acknowledgeNotifications,
+      agentActivity,
       criticalAlerts,
       distribution,
       liveIssues,
       notifications,
       recentFeedback,
+      reminders,
+      tickets,
       trendSeries,
     ]
   );

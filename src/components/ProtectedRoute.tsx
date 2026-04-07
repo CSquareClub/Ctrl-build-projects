@@ -8,7 +8,7 @@ import { useSetup } from "@/providers/SetupProvider";
 
 export default function ProtectedRoute({
   children,
-  requireSetup = true,
+  requireSetup = false,
 }: {
   children: React.ReactNode;
   requireSetup?: boolean;

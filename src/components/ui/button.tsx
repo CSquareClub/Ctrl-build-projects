@@ -6,19 +6,19 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex shrink-0 items-center justify-center rounded-xl border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all duration-200 outline-none select-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "inline-flex shrink-0 items-center justify-center rounded-xl border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all duration-200 outline-none select-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
         default:
-          "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20 hover:bg-indigo-500",
+          "bg-primary text-primary-foreground shadow-sm hover:bg-primary/90 active:scale-[0.99]",
         outline:
-          "border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800",
+          "border-border bg-background text-foreground shadow-sm hover:bg-accent hover:text-accent-foreground active:scale-[0.99]",
         secondary:
-          "border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700",
-        ghost: "bg-transparent text-slate-300 hover:bg-slate-800",
+          "border-border bg-muted text-foreground shadow-sm hover:bg-accent active:scale-[0.99]",
+        ghost: "bg-transparent text-muted-foreground hover:bg-accent hover:text-foreground",
         destructive:
-          "bg-red-500 text-white shadow-lg shadow-red-500/20 hover:bg-red-600",
+          "bg-destructive text-white shadow-sm hover:bg-destructive/90 active:scale-[0.99]",
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {

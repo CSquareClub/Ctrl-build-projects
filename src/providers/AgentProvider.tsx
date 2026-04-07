@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { api, type AgentAction, type AgentStatus } from "@/lib/api";
+import { DEMO_UI_MODE, demoAgentActions, demoAgentStatus } from "@/lib/demo-ui-mode";
 import { toUserFacingError } from "@/lib/user-facing-errors";
 import { useAuth } from "./AuthProvider";
 import { useLiveEvents } from "./LiveEventsProvider";
@@ -44,6 +45,14 @@ export function AgentProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
 
   const refreshAgent = useCallback(async (options?: { silent?: boolean }) => {
+    if (DEMO_UI_MODE) {
+      setStatus(demoAgentStatus);
+      setActions(demoAgentActions);
+      setError(null);
+      setLoading(false);
+      return;
+    }
+
     if (!session?.access_token) {
       setStatus(EMPTY_STATUS);
       setActions([]);
@@ -82,6 +91,10 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    if (DEMO_UI_MODE) {
+      return;
+    }
+
     return subscribeToEvents(
       (event) => {
         if (event.type === "agent_status") {
@@ -89,6 +102,10 @@ export function AgentProvider({ children }: { children: ReactNode }) {
           setStatus((current) => ({
             ...current,
             ...payload,
+            state:
+              payload.state === "processing"
+                ? "active"
+                : (payload.state ?? current.state),
           }));
           return;
         }
@@ -127,8 +144,32 @@ export function AgentProvider({ children }: { children: ReactNode }) {
     );
   }, [refreshAgent, session?.access_token, subscribeToEvents]);
 
+  useEffect(() => {
+    if (!session?.access_token) {
+      return;
+    }
+
+    if (DEMO_UI_MODE) {
+      return;
+    }
+
+    const timer = window.setInterval(() => {
+      void refreshAgent({ silent: true });
+    }, 15000);
+
+    return () => window.clearInterval(timer);
+  }, [refreshAgent, session?.access_token]);
+
   const setAgentEnabled = useCallback(
     async (enabled: boolean) => {
+      if (DEMO_UI_MODE) {
+        setStatus((current) => ({
+          ...current,
+          enabled,
+        }));
+        return;
+      }
+
       if (!session?.access_token) {
         return;
       }

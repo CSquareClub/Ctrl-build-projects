@@ -4,6 +4,8 @@ const {
   exchangeCodeForToken,
   fetchGitHubProfile,
   getGitHubConnection,
+  getPrimaryRepo,
+  githubRequest,
   listRepositoriesForUser,
   setSelectedRepository,
   upsertGitHubConnection,
@@ -28,9 +30,16 @@ const { normalizeIssueType } = require('../services/learningService');
 const { recordAgentOutcome } = require('../services/selfHealingService');
 const { getRepoStructure, analyzeRepositoryStructure } = require('../services/repoStructureService');
 const { chatWithGitHubContext } = require('../services/githubAssistantService');
+const { buildIssueIntelligence } = require('../services/issueIntelligenceService');
+const { resolveIssueMultiFileAnalysis } = require('../services/issueGraphAnalysisService');
+const { buildGraphData } = require('../services/graphBuilderService');
+const { answerGraphQuestion } = require('../services/graphQueryService');
+const { analyzeLatestRepositoryCode } = require('../services/latestRepoFixService');
+const { analyzeAndFixLocalRepository } = require('../services/localRepoAnalyzeFixService');
 const { QUEUE_NAMES } = require('../services/jobQueueService');
 const { publishSystemEvent } = require('../services/liveEventsService');
 const { emitDomainEvent } = require('../lib/eventBus');
+const { detectCodeLanguage } = require('../services/codeLanguageService');
 
 const APP_URL = String(process.env.APP_URL || 'http://localhost:3000')
   .trim()
@@ -57,7 +66,7 @@ function setAnalysisCache(key, value) {
 }
 
 async function resolveIssueCodeAnalysis(userId, issueId, options = {}) {
-  const issue = await getIssueContext(userId, issueId);
+  const { issue, issueIntelligence } = await buildIssueIntelligence(userId, issueId);
   const cacheKey = JSON.stringify({
     userId,
     issueId,
@@ -91,6 +100,7 @@ async function resolveIssueCodeAnalysis(userId, issueId, options = {}) {
       issue,
       {
         repoStructure: resolvedRepository.repoStructure || null,
+        issueIntelligence,
       }
     );
 
@@ -101,6 +111,7 @@ async function resolveIssueCodeAnalysis(userId, issueId, options = {}) {
         defaultBranch: resolvedRepository.defaultBranch || 'main',
       },
       repoStructure: resolvedRepository.repoStructure || null,
+      issueIntelligence,
     });
     const generatedTest = await generateRegressionTest({
       issue,
@@ -126,6 +137,7 @@ async function resolveIssueCodeAnalysis(userId, issueId, options = {}) {
       issueType: resolvedRepository.issueType,
       routingScore: resolvedRepository.routingScore || 0,
       routingBreakdown: resolvedRepository.routingBreakdown || null,
+      issueIntelligence,
       keywords: searchResult.keywords,
       files: searchResult.files,
       totalLines: searchResult.totalLines,
@@ -137,6 +149,10 @@ async function resolveIssueCodeAnalysis(userId, issueId, options = {}) {
       reasoningSummary: patch.reasoningSummary,
       alternativeFixes: patch.alternativeFixes,
       prDescription: patch.prDescription,
+      patchExplanation: patch.reasoningSummary,
+      impact:
+        patch.prDescription?.impact ||
+        `Fixes ${issue.title} affecting ${issueIntelligence.analytics.affected_users} reported users.`,
       generatedTest,
       targetFiles: patch.targetFiles,
       changedFileCount: patch.changedFileCount,
@@ -170,46 +186,6 @@ function mapGithubStatus(connection) {
         }
       : null,
     connectedAt: connection?.metadata?.connectedAt || null,
-  };
-}
-
-async function getIssueContext(userId, issueId) {
-  const { data: issue, error } = await supabase
-    .from('issues')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('id', issueId)
-    .maybeSingle();
-
-  if (error) {
-    throw error;
-  }
-
-  if (!issue) {
-    throw new Error('Issue not found.');
-  }
-
-  const { data: feedback, error: feedbackError } = await supabase
-    .from('issue_feedback')
-    .select('text, source, sentiment, timestamp')
-    .eq('issue_id', issueId)
-    .order('timestamp', { ascending: false })
-    .limit(6);
-
-  if (feedbackError && feedbackError.code !== '42P01') {
-    throw feedbackError;
-  }
-
-  const evidence = (feedback || [])
-    .map((entry) => `[${entry.source}] ${entry.text}`)
-    .join('\n');
-
-  return {
-    id: issue.id,
-    title: issue.title,
-    summary: issue.summary || '',
-    description: [issue.summary || '', evidence].filter(Boolean).join('\n\n'),
-    priority: issue.priority,
   };
 }
 
@@ -497,13 +473,292 @@ async function analyzeIssueCode(req, res) {
       repoOwner: req.body?.repoOwner,
       repoName: req.body?.repoName,
     });
-    return res.json(response);
+    return res.json({
+      ...response,
+      approvalRequired: true,
+      approvalReason:
+        'AI can suggest fixes, but a human must review and approve before any pull request is created.',
+    });
+  } catch (error) {
+    try {
+      const { issue, issueIntelligence } = await buildIssueIntelligence(
+        req.user.id,
+        req.params.issueId
+      );
+
+      return res.json({
+        issue,
+        issueIntelligence,
+        repository: null,
+        repositorySource: 'unresolved',
+        repositoryStructure: null,
+        issueType: normalizeIssueType(issue).slug,
+        routingScore: 0,
+        routingBreakdown: null,
+        keywords: [],
+        files: [],
+        totalLines: 0,
+        possibleCauses: [
+          error instanceof Error
+            ? error.message
+            : 'Code analysis could not resolve repository context.',
+        ],
+        selectedRootCause:
+          error instanceof Error
+            ? error.message
+            : 'Repository context was unavailable.',
+        rootCause:
+          error instanceof Error
+            ? error.message
+            : 'Repository context was unavailable.',
+        rootCauseConfidence: 0,
+        patchConfidence: 0,
+        reasoningSummary:
+          error instanceof Error
+            ? error.message
+            : 'Code analysis could not complete.',
+        alternativeFixes: [],
+        prDescription: null,
+        patchExplanation:
+          error instanceof Error
+            ? error.message
+            : 'Code analysis could not complete.',
+        impact: 'Repository analysis could not be completed for this issue yet.',
+        generatedTest: null,
+        targetFiles: [],
+        changedFileCount: 0,
+        changedLineCount: 0,
+        patch: '',
+        model: null,
+        generatedAt: new Date().toISOString(),
+        approvalRequired: true,
+        approvalReason:
+          'AI can suggest fixes, but a human must review and approve before any pull request is created.',
+        degraded: true,
+      });
+    } catch (fallbackError) {
+      res.status(500).json({
+        error:
+          fallbackError instanceof Error
+            ? fallbackError.message
+            : error instanceof Error
+              ? error.message
+              : 'Failed to analyze code for this issue.',
+      });
+    }
+  }
+}
+
+async function analyzeIssueMultiFile(req, res) {
+  try {
+    const settings = await getGitHubSettings(req.user.id);
+    if (settings.code_insights_enabled === false) {
+      return res.status(403).json({
+        error: 'Enable Code Insights in GitHub Workspace before running multi-file analysis.',
+      });
+    }
+
+    const result = await resolveIssueMultiFileAnalysis(req.user.id, req.params.issueId, {
+      repoOwner: req.body?.repoOwner,
+      repoName: req.body?.repoName,
+    });
+    res.json(result);
   } catch (error) {
     res.status(500).json({
       error:
         error instanceof Error
           ? error.message
-          : 'Failed to analyze code for this issue.',
+          : 'Failed to run multi-file analysis.',
+    });
+  }
+}
+
+async function getIssueGraph(req, res) {
+  try {
+    const settings = await getGitHubSettings(req.user.id);
+    if (settings.code_insights_enabled === false) {
+      return res.status(403).json({
+        error: 'Enable Code Insights in GitHub Workspace before opening the dependency graph.',
+      });
+    }
+
+    const analysis = await resolveIssueMultiFileAnalysis(req.user.id, req.params.issueId, {
+      repoOwner: req.body?.repoOwner,
+      repoName: req.body?.repoName,
+    });
+    const graph = buildGraphData(analysis);
+
+    return res.json({
+      analysis,
+      graph,
+      suggestedPrompts: [
+        'What is the root cause?',
+        'Show the impact path',
+        'Highlight the critical path',
+        'Which files are most connected?',
+      ],
+    });
+  } catch (error) {
+    return res.status(500).json({
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Failed to build dependency graph for this issue.',
+    });
+  }
+}
+
+async function queryIssueGraph(req, res) {
+  try {
+    const settings = await getGitHubSettings(req.user.id);
+    if (settings.code_insights_enabled === false) {
+      return res.status(403).json({
+        error: 'Enable Code Insights in GitHub Workspace before using graph guidance.',
+      });
+    }
+
+    const question = String(req.body?.question || '').trim();
+    if (!question) {
+      return res.status(400).json({ error: 'question is required.' });
+    }
+
+    const analysis = await resolveIssueMultiFileAnalysis(req.user.id, req.params.issueId, {
+      repoOwner: req.body?.repoOwner,
+      repoName: req.body?.repoName,
+    });
+    const graph = buildGraphData(analysis);
+    const response = await answerGraphQuestion({
+      question,
+      analysis,
+      graphData: graph,
+    });
+
+    return res.json(response);
+  } catch (error) {
+    return res.status(500).json({
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Failed to answer the graph question.',
+    });
+  }
+}
+
+async function analyzeLatestCode(req, res) {
+  try {
+    const settings = await getGitHubSettings(req.user.id);
+    if (settings.code_insights_enabled === false) {
+      return res.status(403).json({
+        error: 'Enable Code Insights in GitHub Workspace before analyzing the latest code.',
+      });
+    }
+
+    const result = await analyzeLatestRepositoryCode(req.user.id);
+    return res.json(result);
+  } catch (error) {
+    return res.status(500).json({
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Failed to analyze and commit the latest repository code.',
+    });
+  }
+}
+
+async function analyzeAndFixGitHubRepo(req, res) {
+  try {
+    const result = await analyzeAndFixLocalRepository({
+      repoPath: req.body?.repoPath,
+    });
+
+    return res.json(result);
+  } catch (error) {
+    return res.status(500).json({
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Failed to analyze, fix, and push the local GitHub repository.',
+    });
+  }
+}
+
+async function loadRepositoryFile(req, res) {
+  try {
+    const explicitRepoOwner = String(req.body?.repoOwner || '').trim();
+    const explicitRepoName = String(req.body?.repoName || '').trim();
+    const filePath = String(req.body?.path || '').trim().replace(/^\/+/, '');
+    const ref = String(req.body?.ref || '').trim();
+
+    const primaryRepository =
+      !explicitRepoOwner || !explicitRepoName
+        ? await getPrimaryRepo(req.user.id)
+        : null;
+    const repoOwner = explicitRepoOwner || primaryRepository?.owner || '';
+    const repoName = explicitRepoName || primaryRepository?.name || '';
+
+    if (!repoOwner || !repoName || !filePath) {
+      return res.status(400).json({
+        error: 'Select a primary repository or provide repoOwner, repoName, and path.',
+      });
+    }
+
+    const connection = await getGitHubConnection(req.user.id);
+    if (!connection?.accessToken) {
+      return res.status(400).json({
+        error: 'Connect GitHub before loading repository files.',
+      });
+    }
+
+    const query = new URLSearchParams();
+    if (ref) {
+      query.set('ref', ref);
+    }
+
+    const encodedPath = filePath
+      .split('/')
+      .map((segment) => encodeURIComponent(segment))
+      .join('/');
+    const contentResult = await githubRequest(
+      connection.accessToken,
+      `/repos/${repoOwner}/${repoName}/contents/${encodedPath}${
+        query.toString() ? `?${query.toString()}` : ''
+      }`
+    );
+
+    if (!contentResult || Array.isArray(contentResult) || contentResult.type !== 'file') {
+      return res.status(400).json({
+        error: 'Requested path is not a file.',
+      });
+    }
+
+    const encoding = String(contentResult.encoding || '').toLowerCase();
+    const rawContent =
+      encoding === 'base64'
+        ? Buffer.from(String(contentResult.content || '').replace(/\n/g, ''), 'base64').toString(
+            'utf8'
+          )
+        : String(contentResult.content || '');
+
+    const normalizedContent = rawContent.replace(/\r\n/g, '\n');
+    const language = detectCodeLanguage({
+      code: normalizedContent,
+      filePath,
+    });
+
+    return res.json({
+      path: contentResult.path || filePath,
+      content: normalizedContent,
+      size: Number(contentResult.size || Buffer.byteLength(normalizedContent, 'utf8')),
+      sha: contentResult.sha || '',
+      language,
+      lineCount: normalizedContent ? normalizedContent.split('\n').length : 0,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Failed to load repository file.',
     });
   }
 }
@@ -572,7 +827,6 @@ async function createPatchPullRequest(req, res) {
       return res.status(400).json({ error: 'patch is required.' });
     }
 
-    const issue = await getIssueContext(req.user.id, req.params.issueId);
     const analysis = await resolveIssueCodeAnalysis(req.user.id, req.params.issueId, {
       repoOwner: req.body?.repoOwner,
       repoName: req.body?.repoName,
@@ -745,8 +999,57 @@ async function validateIssuePatch(req, res) {
   }
 }
 
+async function recordPatchReviewOutcome(req, res) {
+  try {
+    const outcome = String(req.body?.outcome || '').trim().toLowerCase();
+    if (!['accept', 'reject', 'edit'].includes(outcome)) {
+      return res.status(400).json({
+        error: 'outcome must be accept, reject, or edit.',
+      });
+    }
+
+    const analysis = await resolveIssueCodeAnalysis(req.user.id, req.params.issueId, {
+      repoOwner: req.body?.repoOwner,
+      repoName: req.body?.repoName,
+    });
+
+    await recordAgentOutcome(req.user.id, {
+      issueId: analysis.issue.id,
+      issueType: normalizeIssueType(analysis.issue).slug,
+      actionType: 'patch_review',
+      confidence:
+        req.body?.confidence == null
+          ? analysis.patchConfidence == null
+            ? null
+            : Number(analysis.patchConfidence) / 100
+          : Number(req.body.confidence),
+      outcome,
+      repoOwner: req.body?.repoOwner || analysis.repository.owner,
+      repoName: req.body?.repoName || analysis.repository.name,
+      metadata: {
+        edited: Boolean(req.body?.edited),
+        changedFileCount: analysis.changedFileCount || analysis.files.length,
+        changedLineCount: analysis.changedLineCount || 0,
+      },
+    });
+
+    return res.json({ success: true });
+  } catch (error) {
+    return res.status(500).json({
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Failed to record patch review outcome.',
+    });
+  }
+}
+
 module.exports = {
+  analyzeAndFixGitHubRepo,
+  analyzeLatestCode,
   analyzeIssueCode,
+  getIssueGraph,
+  analyzeIssueMultiFile,
   chatIssueCode,
   createPatchPullRequest,
   getGitHubStatus,
@@ -754,10 +1057,14 @@ module.exports = {
   githubOAuthCallback,
   listGitHubMappings,
   listGitHubRepos,
+  loadRepositoryFile,
   removeRepoMapping,
+  resolveIssueCodeAnalysis,
   saveRepoMapping,
   selectGitHubRepo,
   startGitHubOAuth,
+  queryIssueGraph,
   updateGitHubWorkspaceSettings,
   validateIssuePatch,
+  recordPatchReviewOutcome,
 };

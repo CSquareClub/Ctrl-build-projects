@@ -1,50 +1,15 @@
-const supabase = require('../lib/supabaseClient');
-const { insertFeedbackEventsDeduped } = require('../lib/feedbackDedup');
-const { rebuildIssuesFromFeedback } = require('../lib/issueAggregator');
-const { extractLocation } = require('../services/locationService');
-const { resolveUserIdFromSdkApiKey } = require('../lib/sdkAuth');
-const { normalizeEmail, sendReply } = require('../services/emailService');
-const { runAgent } = require('../services/agentService');
-
-async function resolveSdkUser(req) {
-  const apiKey = String(req.headers['x-product-pulse-key'] || req.body?.apiKey || '').trim();
-  const userId = resolveUserIdFromSdkApiKey(apiKey);
-
-  if (!userId) {
-    return { error: 'Invalid SDK API key.', user: null };
-  }
-
-  const { data: user, error } = await supabase
-    .from('users')
-    .select('id, email')
-    .eq('id', userId)
-    .maybeSingle();
-
-  if (error || !user) {
-    return { error: 'SDK account not found.', user: null };
-  }
-
-  return { error: null, user };
-}
-
-async function insertFeedbackEvent(row) {
-  return insertFeedbackEventsDeduped(row.user_id, [row], {
-    logLabel: row.source,
-  });
-}
-
-function normalizeUrl(value) {
-  const url = String(value || '').trim();
-  return url || null;
-}
+const {
+  enqueueSdkEventBatch,
+  getSdkAnalyticsFromInsights,
+  getLegacySdkAnalytics,
+  getLegacySdkConnectedApps,
+  getSdkConnectedApps: getSdkConnectedAppsFromInsights,
+  normalizeBehaviorPayload,
+  resolveSdkUser,
+} = require('../services/sdkPipelineService');
 
 function normalizeText(value) {
   return String(value || '').trim();
-}
-
-function isValidEmail(value) {
-  const email = normalizeEmail(value);
-  return Boolean(email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email));
 }
 
 function normalizeTimestamp(value) {
@@ -56,56 +21,16 @@ function normalizeTimestamp(value) {
   return parsed.toISOString();
 }
 
-function buildSdkAcknowledgementMessage({ name, userEmail, sentiment }) {
-  const greetingName = name || 'there';
-  const signature = `— ${userEmail || 'Product Pulse'}`;
-  const normalizedSentiment = String(sentiment || 'neutral').toLowerCase();
+function normalizeUrl(value) {
+  const url = String(value || '').trim();
+  return url || null;
+}
 
-  if (normalizedSentiment === 'negative') {
-    return [
-      `Hi ${greetingName},`,
-      '',
-      'We’re sorry you ran into this, and we really appreciate you taking the time to share it with us.',
-      '',
-      'Our team has received your feedback and is reviewing the issue carefully so we can work on it as soon as possible.',
-      '',
-      'If needed, we may reach out for a little more detail.',
-      '',
-      'Thanks again for helping us improve.',
-      '',
-      signature,
-    ].join('\n');
-  }
-
-  if (normalizedSentiment === 'positive') {
-    return [
-      `Hi ${greetingName},`,
-      '',
-      'Thank you for the kind feedback. We really appreciate you taking the time to share it with us.',
-      '',
-      'Our team has received your message, and it helps us understand what users are loving.',
-      '',
-      'If you ever have more to share, we’d love to hear from you.',
-      '',
-      'Thanks again for your support.',
-      '',
-      signature,
-    ].join('\n');
-  }
-
-  return [
-    `Hi ${greetingName},`,
-    '',
-    'We’ve received your feedback and really appreciate you taking the time to share it.',
-    '',
-    'Our team is currently reviewing it, and we’ll work on resolving the issue as soon as possible.',
-    '',
-    'If needed, we may reach out for more details.',
-    '',
-    'Thanks again for helping us improve.',
-    '',
-    signature,
-  ].join('\n');
+function buildBatchEnvelope(body, overrides = {}) {
+  return {
+    ...body,
+    ...overrides,
+  };
 }
 
 async function postSdkEvent(req, res) {
@@ -120,46 +45,110 @@ async function postSdkEvent(req, res) {
       return res.status(400).json({ error: 'Event name is required.' });
     }
 
-    const url = normalizeUrl(req.body?.url);
-    const timestamp = normalizeTimestamp(req.body?.timestamp);
-    const data = req.body?.data && typeof req.body.data === 'object' ? req.body.data : {};
-    const serialized = JSON.stringify(data);
-
-    const insertResult = await insertFeedbackEvent({
-      user_id: user.id,
-      source: 'sdk_event',
-      external_id: req.body?.event_id ? String(req.body.event_id).trim() : null,
-      title: `Event: ${event}`,
-      body: serialized.length > 4000 ? serialized.slice(0, 4000) : serialized || event,
-      author: 'website_visitor',
-      url,
-      occurred_at: timestamp,
-      sentiment: 'neutral',
-      location: extractLocation({
-        source: 'sdk_event',
-        title: event,
-        body: serialized,
-        author: 'website_visitor',
-        metadata: { url },
-      }),
-      metadata: {
-        isProductFeedback: false,
-        event,
-        data,
-        url,
-        userAgent: normalizeText(req.body?.userAgent),
-      },
+    const result = await enqueueSdkEventBatch({
+      user,
+      payloads: [
+        buildBatchEnvelope({
+          project_id: req.body?.project_id || req.body?.projectId || req.headers['x-product-pulse-key'],
+          user_id: req.body?.user_id || req.body?.userId || null,
+          session_id: req.body?.session_id || req.body?.sessionId || `sdk-session-${Date.now()}`,
+          page: req.body?.page || req.body?.url || null,
+          url: normalizeUrl(req.body?.url),
+          timestamp: normalizeTimestamp(req.body?.timestamp),
+          events: [
+            {
+              type: String(event || 'custom_event'),
+              at: normalizeTimestamp(req.body?.timestamp),
+              target: event,
+              value: null,
+              x: 0,
+              y: 0,
+              meta: req.body?.data && typeof req.body.data === 'object' ? req.body.data : {},
+            },
+          ],
+          signals: {},
+          metadata: {
+            ingestion: 'sdk_event',
+            userAgent: normalizeText(req.body?.userAgent),
+          },
+          userAgent: normalizeText(req.body?.userAgent),
+        }),
+      ],
     });
 
     return res.status(202).json({
       success: true,
-      fetched: 1,
-      inserted: insertResult.inserted,
-      duplicatesSkipped: insertResult.duplicatesSkipped,
+      message: 'SDK event batch queued',
+      batch_id: result.batchId,
+      event_count: result.eventCount,
     });
   } catch (error) {
     return res.status(500).json({
       error: error instanceof Error ? error.message : 'Failed to track event.',
+    });
+  }
+}
+
+async function postSdkEvents(req, res) {
+  try {
+    const { user, error: userError } = await resolveSdkUser(req);
+    if (userError) {
+      return res.status(401).json({ error: userError });
+    }
+
+    const result = await enqueueSdkEventBatch({
+      user,
+      payloads: [normalizeBehaviorPayload(req.body)],
+      batchId: req.body?.batch_id || req.body?.batchId || null,
+    });
+
+    return res.status(202).json({
+      success: true,
+      message: 'Behavior batch accepted',
+      batch_id: result.batchId,
+      event_count: result.eventCount,
+      flush_count: result.flushCount,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      error: error instanceof Error ? error.message : 'Failed to capture SDK behavior events.',
+    });
+  }
+}
+
+async function postSdkEventsBatch(req, res) {
+  try {
+    const { user, error: userError } = await resolveSdkUser(req);
+    if (userError) {
+      return res.status(401).json({ error: userError });
+    }
+
+    const payloads = Array.isArray(req.body?.batches)
+      ? req.body.batches.map((batch) => normalizeBehaviorPayload(batch))
+      : Array.isArray(req.body)
+        ? req.body.map((batch) => normalizeBehaviorPayload(batch))
+        : [];
+
+    if (!payloads.length) {
+      return res.status(400).json({ error: 'batches array is required.' });
+    }
+
+    const result = await enqueueSdkEventBatch({
+      user,
+      payloads,
+      batchId: req.body?.batch_id || req.body?.batchId || null,
+    });
+
+    return res.status(202).json({
+      success: true,
+      message: 'SDK event batch queued',
+      batch_id: result.batchId,
+      event_count: result.eventCount,
+      flush_count: result.flushCount,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      error: error instanceof Error ? error.message : 'Failed to queue SDK event batch.',
     });
   }
 }
@@ -176,91 +165,37 @@ async function postSdkFeedback(req, res) {
       return res.status(400).json({ error: 'Feedback message is required.' });
     }
 
-    const name = normalizeText(req.body?.name);
-    const email = normalizeEmail(req.body?.email);
-    if (email && !isValidEmail(email)) {
-      return res.status(400).json({ error: 'A valid email address is required.' });
-    }
-
-    const url = normalizeUrl(req.body?.url);
-    const timestamp = normalizeTimestamp(req.body?.timestamp);
-    const author = name || email || 'website_visitor';
-
-    const insertResult = await insertFeedbackEvent({
-      user_id: user.id,
-      source: 'sdk_feedback',
-      external_id: req.body?.feedback_id ? String(req.body.feedback_id).trim() : null,
-      title: 'Website feedback',
-      body: message,
-      author,
-      author_email: email,
-      url,
-      occurred_at: timestamp,
-      sentiment: 'neutral',
-      location: extractLocation({
-        source: 'sdk_feedback',
-        title: 'Website feedback',
-        body: message,
-        author,
-        metadata: { url, authorEmail: email },
-      }),
-      replied: false,
-      metadata: {
-        isProductFeedback: true,
-        url,
-        senderName: name || null,
-        senderEmail: email,
-        originalSubject: 'Website feedback',
-        userAgent: normalizeText(req.body?.userAgent),
-      },
+    const result = await enqueueSdkEventBatch({
+      user,
+      payloads: [
+        normalizeBehaviorPayload({
+          project_id: req.body?.project_id || req.headers['x-product-pulse-key'],
+          user_id: req.body?.user_id || null,
+          session_id: req.body?.session_id || `sdk-session-${Date.now()}`,
+          page: req.body?.page || req.body?.url || null,
+          url: req.body?.url,
+          timestamp: req.body?.timestamp,
+          events: [],
+          signals: {},
+          feedback: {
+            message,
+            intent: req.body?.intent || 'feedback',
+            severity: req.body?.severity || 'medium',
+          },
+          metadata: {
+            ingestion: 'sdk_feedback',
+            name: normalizeText(req.body?.name),
+            email: normalizeText(req.body?.email),
+          },
+          userAgent: normalizeText(req.body?.userAgent),
+        }),
+      ],
     });
 
-    if (insertResult.inserted > 0) {
-      await rebuildIssuesFromFeedback(user.id);
-      if (email) {
-        try {
-          const replyResult = await sendReply({
-            userId: user.id,
-            to: email,
-            subject: 'Re: Website feedback',
-            message: buildSdkAcknowledgementMessage({
-              name,
-              userEmail: user.email || null,
-              sentiment: insertResult.rows[0]?.sentiment || 'neutral',
-            }),
-          });
-
-          if (!replyResult.skipped && insertResult.rows[0]?.unique_key) {
-            await supabase
-              .from('feedback_events')
-              .update({
-                replied: true,
-                metadata: {
-                  ...(insertResult.rows[0].metadata || {}),
-                  senderName: name || null,
-                  senderEmail: email,
-                  repliedAt: new Date().toISOString(),
-                  replyMessageId: replyResult.id || null,
-                },
-              })
-              .eq('unique_key', insertResult.rows[0].unique_key)
-              .eq('user_id', user.id);
-          }
-        } catch {
-          // Best effort for hackathon-friendly SDK replies.
-        }
-      }
-
-      await runAgent(user, {
-        newFeedbackRows: insertResult.rows,
-      });
-    }
-
-    return res.status(201).json({
+    return res.status(202).json({
       success: true,
-      fetched: 1,
-      inserted: insertResult.inserted,
-      duplicatesSkipped: insertResult.duplicatesSkipped,
+      message: 'Feedback queued',
+      batch_id: result.batchId,
     });
   } catch (error) {
     return res.status(500).json({
@@ -281,45 +216,47 @@ async function postSdkError(req, res) {
       return res.status(400).json({ error: 'Error message is required.' });
     }
 
-    const url = normalizeUrl(req.body?.url);
-    const stack = normalizeText(req.body?.stack);
-    const timestamp = normalizeTimestamp(req.body?.timestamp);
-
-    const insertResult = await insertFeedbackEvent({
-      user_id: user.id,
-      source: 'sdk_error',
-      external_id: req.body?.error_id ? String(req.body.error_id).trim() : null,
-      title: 'Website error',
-      body: stack ? `${errorMessage}\n\n${stack}` : errorMessage,
-      author: 'website_runtime',
-      url,
-      occurred_at: timestamp,
-      sentiment: 'negative',
-      location: extractLocation({
-        source: 'sdk_error',
-        title: 'Website error',
-        body: errorMessage,
-        author: 'website_runtime',
-        metadata: { url },
-      }),
-      metadata: {
-        isProductFeedback: true,
-        stack,
-        url,
-        userAgent: normalizeText(req.body?.userAgent),
-      },
+    const result = await enqueueSdkEventBatch({
+      user,
+      payloads: [
+        normalizeBehaviorPayload({
+          project_id: req.body?.project_id || req.headers['x-product-pulse-key'],
+          user_id: req.body?.user_id || null,
+          session_id: req.body?.session_id || `sdk-session-${Date.now()}`,
+          page: req.body?.page || req.body?.url || null,
+          url: req.body?.url,
+          timestamp: req.body?.timestamp,
+          events: [
+            {
+              type: 'runtime_error',
+              at: normalizeTimestamp(req.body?.timestamp),
+              target: 'window.onerror',
+              value: errorMessage,
+              x: 0,
+              y: 0,
+              meta: {
+                stack: normalizeText(req.body?.stack),
+                filename: normalizeText(req.body?.filename),
+                lineno: req.body?.lineno || null,
+                colno: req.body?.colno || null,
+              },
+            },
+          ],
+          signals: {
+            error_loops: 1,
+          },
+          metadata: {
+            ingestion: 'sdk_error',
+          },
+          userAgent: normalizeText(req.body?.userAgent),
+        }),
+      ],
     });
 
-    if (insertResult.inserted > 0) {
-      await rebuildIssuesFromFeedback(user.id);
-      await runAgent(user);
-    }
-
-    return res.status(201).json({
+    return res.status(202).json({
       success: true,
-      fetched: 1,
-      inserted: insertResult.inserted,
-      duplicatesSkipped: insertResult.duplicatesSkipped,
+      message: 'Error event queued',
+      batch_id: result.batchId,
     });
   } catch (error) {
     return res.status(500).json({
@@ -328,8 +265,38 @@ async function postSdkError(req, res) {
   }
 }
 
+async function getSdkConnectedApps(req, res) {
+  try {
+    const apps =
+      (await getSdkConnectedAppsFromInsights(req.user.id)) ||
+      (await getLegacySdkConnectedApps(req.user.id));
+    return res.json({
+      apps: apps.sort((a, b) => new Date(b.lastActivity).getTime() - new Date(a.lastActivity).getTime()),
+    });
+  } catch (error) {
+    return res.status(500).json({
+      error: error instanceof Error ? error.message : 'Failed to load connected apps.',
+    });
+  }
+}
+
+async function getSdkAnalytics(req, res) {
+  try {
+    const analytics = (await getSdkAnalyticsFromInsights(req.user.id)) || (await getLegacySdkAnalytics(req.user.id));
+    return res.json(analytics);
+  } catch (error) {
+    return res.status(500).json({
+      error: error instanceof Error ? error.message : 'Failed to load SDK analytics.',
+    });
+  }
+}
+
 module.exports = {
+  getSdkAnalytics,
+  getSdkConnectedApps,
   postSdkEvent,
+  postSdkEvents,
+  postSdkEventsBatch,
   postSdkFeedback,
   postSdkError,
 };

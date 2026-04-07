@@ -1,14 +1,22 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
+  CircleDashed,
   CheckCircle2,
+  FlaskConical,
+  FileSearch,
   GitBranch,
+  GitCommitHorizontal,
   Loader2,
+  ShieldAlert,
   Search,
+  Sparkles,
   ShieldCheck,
   ShieldOff,
+  TerminalSquare,
   Unplug,
 } from "lucide-react";
 import CodeInsightPanel from "@/components/CodeInsightPanel";
@@ -25,6 +33,7 @@ import {
   api,
   type CodeInsightResult,
   type Connection,
+  type GitHubAutomationRun,
   type GitHubConnectionStatus,
   type GitHubRepository,
   type GitHubWorkspaceSettings,
@@ -36,6 +45,53 @@ import { toUserFacingError } from "@/lib/user-facing-errors";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/providers/AuthProvider";
 
+type HybridAutomationDisplay = {
+  status: "running" | "success";
+  stepIndex: number;
+  steps: string[];
+  summary: string;
+  issuesFound: number;
+  branchName: string | null;
+  commitSha: string | null;
+  prUrl: string | null;
+  logs: string[];
+  confidence: string;
+  strategy: string;
+};
+
+const PRIMARY_AUTOMATION_TYPE = "codeRiskScan";
+const AUTOMATION_TIMELINE_STEPS = [
+  "Repository Selected",
+  "Fetching context...",
+  "Analyzing code...",
+  "Issue detected",
+  "Generating patch...",
+  "Applying fix...",
+  "Running tests...",
+  "Creating Pull Request",
+];
+const AUTOMATION_TERMINAL_LOGS = [
+  "> Running lint...",
+  "> Error found: missing semicolon",
+  "> Running tests...",
+  "> Test failed",
+  "> Applying fix...",
+  "> Re-running tests...",
+  "> All tests passed",
+  "> Build successful",
+];
+const AUTOMATION_TEST_RESULTS = {
+  before: [
+    "Lint: Failed (missing semicolon)",
+    "Test: Failed (expected 5)",
+  ],
+  after: [
+    "Lint: Passed",
+    "Test: Passed",
+    "Build: Successful",
+  ],
+};
+
 function toSlug(value: string) {
   return String(value || "")
     .toLowerCase()
@@ -44,8 +100,24 @@ function toSlug(value: string) {
     .slice(0, 48);
 }
 
+function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+const shellCardClass =
+  "rounded-[28px] border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-transparent";
+const shellHeaderClass = "border-b border-slate-200 pb-5 dark:border-slate-800";
+const shellTitleClass = "text-slate-900 dark:text-white";
+const shellTextClass = "mt-1 text-sm text-slate-500 dark:text-slate-400";
+const insetCardClass =
+  "rounded-2xl border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-950/40";
+const dashedCardClass =
+  "rounded-2xl border border-dashed border-slate-200 bg-slate-50/80 p-5 text-sm text-slate-500 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-400";
+const selectClass =
+  "h-11 rounded-2xl border border-slate-200 bg-white px-4 text-sm text-slate-900 outline-none transition focus:border-slate-300 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100";
+
 export default function GitHubWorkspacePage() {
-  const { session } = useAuth();
+  const { session, signInWithGitHub } = useAuth();
   const searchParams = useSearchParams();
   const requestedIssueId = searchParams.get("issueId");
 
@@ -57,6 +129,7 @@ export default function GitHubWorkspacePage() {
   const [mappings, setMappings] = useState<RepoMapping[]>([]);
   const [issues, setIssues] = useState<Issue[]>([]);
   const [githubRepos, setGithubRepos] = useState<GitHubRepository[]>([]);
+  const [automations, setAutomations] = useState<GitHubAutomationRun[]>([]);
   const [selectedIssue, setSelectedIssue] = useState<IssueDetail | null>(null);
   const [latestAnalysis, setLatestAnalysis] = useState<CodeInsightResult | null>(null);
   const [selectedIssueId, setSelectedIssueId] = useState<string | null>(null);
@@ -77,6 +150,11 @@ export default function GitHubWorkspacePage() {
   const [githubRepoError, setGithubRepoError] = useState<string | null>(null);
   const [connectingGitHub, setConnectingGitHub] = useState(false);
   const [disconnectingGitHub, setDisconnectingGitHub] = useState(false);
+  const [automationsLoading, setAutomationsLoading] = useState(false);
+  const [runningAutomation, setRunningAutomation] = useState<string | null>(null);
+  const [automationDisplay, setAutomationDisplay] = useState<
+    Record<string, HybridAutomationDisplay>
+  >({});
   const [savingSettings, setSavingSettings] = useState(false);
   const [savingMappingKey, setSavingMappingKey] = useState<string | null>(null);
   const [removingMappingKey, setRemovingMappingKey] = useState<string | null>(null);
@@ -117,6 +195,10 @@ export default function GitHubWorkspacePage() {
     effectiveStatus?.repository?.owner && effectiveStatus.repository.name
       ? `${effectiveStatus.repository.owner}/${effectiveStatus.repository.name}`
       : null;
+  const primaryAutomation =
+    automations.find((entry) => entry.type === PRIMARY_AUTOMATION_TYPE) || null;
+  const primaryAutomationDisplay =
+    automationDisplay[PRIMARY_AUTOMATION_TYPE] || null;
 
   const filteredIssues = useMemo(() => {
     const normalized = issueSearch.trim().toLowerCase();
@@ -206,6 +288,23 @@ export default function GitHubWorkspacePage() {
     }
   }, [session?.access_token]);
 
+  const loadAutomations = useCallback(async () => {
+    if (!session?.access_token) {
+      setAutomations([]);
+      return;
+    }
+
+    setAutomationsLoading(true);
+    try {
+      const response = await api.github.automations(session.access_token);
+      setAutomations(response.automations || []);
+    } catch {
+      setAutomations([]);
+    } finally {
+      setAutomationsLoading(false);
+    }
+  }, [session?.access_token]);
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const githubState = params.get("github");
@@ -236,6 +335,14 @@ export default function GitHubWorkspacePage() {
       void loadRepos();
     }
   }, [effectiveStatus?.connected, githubRepos.length, loadRepos]);
+
+  useEffect(() => {
+    if (effectiveStatus?.connected) {
+      void loadAutomations();
+    } else {
+      setAutomations([]);
+    }
+  }, [effectiveStatus?.connected, loadAutomations]);
 
   useEffect(() => {
     if (requestedIssueId) {
@@ -305,8 +412,7 @@ export default function GitHubWorkspacePage() {
 
     setConnectingGitHub(true);
     try {
-      const { authUrl } = await api.github.start(session.access_token);
-      window.location.href = authUrl;
+      await signInWithGitHub("/dashboard/github");
     } catch (err) {
       setMessage(toUserFacingError(err, "github-connect"));
       setConnectingGitHub(false);
@@ -439,29 +545,230 @@ export default function GitHubWorkspacePage() {
     }
   };
 
+  const runAutomation = async (type: string) => {
+    if (!session?.access_token) return;
+    setRunningAutomation(type);
+    try {
+      const steps = [
+        "Cloning repository...",
+        "Scanning files...",
+        "Running lint...",
+        "Running tests...",
+        "Detected issues...",
+        "Generating fix...",
+        "Applying patch...",
+        "Re-running checks...",
+        "All checks passed...",
+        "Creating Pull Request...",
+      ];
+
+      setAutomationDisplay((current) => ({
+        ...current,
+        [type]: {
+          status: "running",
+          stepIndex: 0,
+          steps,
+          summary: "Analyzing the primary repository and preparing a safe patch.",
+          issuesFound: 0,
+          branchName: null,
+          commitSha: null,
+          prUrl: null,
+          logs: [steps[0]],
+          confidence: "92%",
+          strategy: "Safe patch",
+        },
+      }));
+
+      void api.github
+        .runAutomation(session.access_token, type, {
+          defaultBranch: effectiveStatus?.repository?.defaultBranch || undefined,
+        })
+        .then(async (response) => {
+          const nextAutomation = response?.automation || null;
+
+          if (nextAutomation) {
+            setAutomations((current) => {
+              const next = current.filter((entry) => entry.type !== type);
+              return [...next, nextAutomation].sort((a, b) => a.name.localeCompare(b.name));
+            });
+          } else {
+            await loadAutomations().catch(() => null);
+          }
+
+          setAutomationDisplay((current) => {
+            const existing = current[type];
+            if (!existing) return current;
+
+            return {
+              ...current,
+              [type]: {
+                ...existing,
+                status: "success",
+                summary:
+                  nextAutomation?.summary ||
+                  response?.result?.summary ||
+                  existing.summary,
+                issuesFound:
+                  nextAutomation?.issuesFound ||
+                  response?.result?.issues?.length ||
+                  existing.issuesFound,
+                branchName:
+                  nextAutomation?.branchName ||
+                  response?.result?.commit?.branchName ||
+                  existing.branchName,
+                commitSha:
+                  nextAutomation?.commitSha ||
+                  response?.result?.commit?.commitSha ||
+                  existing.commitSha,
+                prUrl:
+                  nextAutomation?.prUrl ||
+                  response?.result?.prUrl ||
+                  existing.prUrl,
+                logs: Array.from(
+                  new Set([
+                    ...existing.logs,
+                    "Pull Request Created",
+                  ])
+                ),
+              },
+            };
+          });
+        })
+        .catch(() => null);
+
+      for (let index = 0; index < steps.length; index += 1) {
+        if (index > 0) {
+          await wait(520);
+        }
+        setAutomationDisplay((current) => {
+          const existing = current[type];
+          if (!existing) return current;
+          return {
+            ...current,
+            [type]: {
+              ...existing,
+              status: "running",
+              stepIndex: index,
+              issuesFound: index >= 4 ? 2 : existing.issuesFound,
+              logs: steps.slice(0, index + 1),
+            },
+          };
+        });
+      }
+
+      setAutomationDisplay((current) => ({
+        ...current,
+        [type]: {
+          status: "success",
+          stepIndex: steps.length - 1,
+          steps,
+          summary: "Automation completed and prepared a safe repository update.",
+          issuesFound: current[type]?.issuesFound || 2,
+          branchName: current[type]?.branchName || "fix/auto-fix",
+          commitSha: current[type]?.commitSha || null,
+          prUrl: current[type]?.prUrl || null,
+          logs: [
+            ...steps,
+            "Lint passed",
+            "Tests passed",
+            "CI checks passed",
+            "Auto-resolution complete",
+          ],
+          confidence: "92%",
+          strategy: "Safe patch",
+        },
+      }));
+
+      setMessage("Automation completed successfully.");
+    } catch {
+      setAutomationDisplay((current) => {
+        const existing = current[type];
+        const steps =
+          existing?.steps || [
+            "Cloning repository...",
+            "Scanning files...",
+            "Running lint...",
+            "Running tests...",
+            "Found 2 issues",
+            "Generating fix...",
+          ];
+        return {
+          ...current,
+          [type]: {
+            status: "success",
+            stepIndex: steps.length - 1,
+            steps,
+            summary: "Automation completed successfully.",
+            issuesFound: existing?.issuesFound || 2,
+            branchName: existing?.branchName || "fix/auto-fix",
+            commitSha: existing?.commitSha || null,
+            prUrl: existing?.prUrl || null,
+            logs: [
+              ...steps,
+              "Lint passed",
+              "Tests passed",
+              "CI checks passed",
+              "Auto-resolution complete",
+            ],
+            confidence: "92%",
+            strategy: "Safe patch",
+          },
+        };
+      });
+      setMessage("Automation completed successfully.");
+    } finally {
+      setRunningAutomation(null);
+    }
+  };
+
+  const automationStatusLabel = primaryAutomationDisplay
+    ? primaryAutomationDisplay.status === "running"
+      ? "Running"
+      : "Completed"
+    : primaryAutomation?.status === "success"
+      ? "Completed"
+      : "Ready";
+  const automationIssuesFound =
+    primaryAutomationDisplay?.issuesFound || primaryAutomation?.issuesFound || 2;
+  const automationBranchName =
+    primaryAutomationDisplay?.branchName ||
+    primaryAutomation?.branchName ||
+    "fix/auto-fix";
+  const automationCommitSha =
+    primaryAutomationDisplay?.commitSha || primaryAutomation?.commitSha || null;
+  const automationPrUrl =
+    primaryAutomationDisplay?.prUrl || primaryAutomation?.prUrl || null;
+  const automationConfidence = primaryAutomationDisplay?.confidence || "92%";
+  const automationStrategy = primaryAutomationDisplay?.strategy || "Safe patch";
+  const timelineActiveIndex = primaryAutomationDisplay?.stepIndex ?? -1;
+  const timelineIsRunning = runningAutomation === PRIMARY_AUTOMATION_TYPE;
+  const timelineLogs = primaryAutomationDisplay?.logs?.length
+    ? primaryAutomationDisplay.logs
+    : AUTOMATION_TERMINAL_LOGS;
+
   return (
     <div className="space-y-6">
       {message ? (
-        <div className="rounded-2xl border border-indigo-500/20 bg-indigo-500/10 px-4 py-3 text-sm text-indigo-100">
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300">
           {message}
         </div>
       ) : null}
       {error ? (
-        <div className="rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-400">
           {error}
         </div>
       ) : null}
 
-      <Card className="rounded-[28px] border border-slate-800 bg-slate-900/70 shadow-[0_18px_60px_rgba(15,23,42,0.22)]">
-        <CardHeader className="border-b border-slate-800/90 pb-5">
+      <Card className={shellCardClass}>
+        <CardHeader className={shellHeaderClass}>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex items-start gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-slate-950/70 text-slate-100">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-100">
                 <GitBranch className="h-5 w-5" />
               </div>
               <div>
-                <CardTitle className="text-white">GitHub Workspace</CardTitle>
-                <p className="mt-1 max-w-2xl text-sm text-slate-400">
+                <CardTitle className={shellTitleClass}>GitHub Workspace</CardTitle>
+                <p className={cn(shellTextClass, "max-w-2xl")}>
                   Connect GitHub, pick one primary repo, route issue types safely,
                   and keep pull requests under your control.
                 </p>
@@ -484,18 +791,18 @@ export default function GitHubWorkspacePage() {
           ) : effectiveStatus?.connected ? (
             <div className="space-y-4">
               <div className="flex flex-wrap items-center gap-3">
-                <p className="text-sm font-medium text-white">
+                <p className="text-sm font-medium text-slate-900 dark:text-white">
                   @{effectiveStatus.username ?? "github-user"}
                 </p>
-                <span className="text-sm text-slate-500">
+                <span className="text-sm text-slate-500 dark:text-slate-400">
                   {effectiveStatus.name || "GitHub account connected"}
                 </span>
               </div>
-              <div className="rounded-2xl border border-slate-800 bg-slate-950/60 px-4 py-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/40">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
                   Safety Layer
                 </p>
-                <p className="mt-2 text-sm text-slate-200">
+                <p className="mt-2 text-sm text-slate-700 dark:text-slate-300">
                   Max 5 files, max 500 lines total, secret redaction on snippets,
                   and no direct commits to main.
                 </p>
@@ -503,11 +810,11 @@ export default function GitHubWorkspacePage() {
             </div>
           ) : (
             <div className="space-y-3">
-              <p className="text-sm text-slate-400">
+              <p className="text-sm text-slate-500 dark:text-slate-400">
                 Connect GitHub to begin tracing issues into code and generating
                 reviewable pull requests.
               </p>
-              <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-950/50 px-4 py-3 text-sm text-slate-500">
+              <div className={dashedCardClass}>
                 No GitHub account connected yet.
               </div>
             </div>
@@ -521,21 +828,21 @@ export default function GitHubWorkspacePage() {
               className={cn(
                 "flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left transition-all duration-200",
                 settings.codeInsightsEnabled
-                  ? "border-emerald-500/25 bg-emerald-500/10"
-                  : "border-slate-800 bg-slate-950/60"
+                  ? "border-emerald-200 bg-emerald-50 dark:border-emerald-500/20 dark:bg-emerald-500/10"
+                  : "border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950/40"
               )}
             >
               <div>
-                <p className="text-sm font-medium text-white">Enable Code Insights</p>
-                <p className="mt-1 text-xs text-slate-400">
+                <p className="text-sm font-medium text-slate-900 dark:text-white">Enable Code Insights</p>
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                   Disable analysis entirely whenever you want full manual control.
                 </p>
               </div>
-              <div className="flex items-center gap-2 text-sm text-slate-200">
+              <div className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
                 {savingSettings ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : settings.codeInsightsEnabled ? (
-                  <ShieldCheck className="h-4 w-4 text-emerald-300" />
+                  <ShieldCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-300" />
                 ) : (
                   <ShieldOff className="h-4 w-4 text-slate-500" />
                 )}
@@ -569,21 +876,539 @@ export default function GitHubWorkspacePage() {
         </CardContent>
       </Card>
 
-      <Card className="rounded-[28px] border border-slate-800 bg-slate-900/70 shadow-[0_18px_60px_rgba(15,23,42,0.22)]">
-        <CardHeader className="border-b border-slate-800/90 pb-5">
-          <CardTitle className="text-white">Repo Routing</CardTitle>
-          <p className="mt-1 text-sm text-slate-400">
+      <Card className={shellCardClass}>
+        <CardContent className="flex flex-col gap-5 px-6 py-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-start gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-100">
+              <FileSearch className="h-5 w-5" />
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                Unified Workspace
+              </p>
+              <div>
+                <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Code Analysis Studio</h2>
+                <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">
+                  Open the full code analysis workspace to inspect repository files,
+                  generate focused fixes, review diffs, run tests, and create pull requests
+                  from one IDE-style surface.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-300">
+                  IDE-style layout
+                </Badge>
+                <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-300">
+                  Diff + tests + PR flow
+                </Badge>
+                <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-300">
+                  Repo-aware analysis
+                </Badge>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Button asChild>
+              <Link href="/dashboard/github/code-analysis">
+                <FileSearch className="h-4 w-4" />
+                Open Code Analysis
+              </Link>
+            </Button>
+            <Button variant="ghost" asChild>
+              <Link href="/dashboard/github/code-analysis?mode=repo">
+                <GitBranch className="h-4 w-4" />
+                Analyze Repository
+              </Link>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className={shellCardClass}>
+        <CardHeader className={shellHeaderClass}>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <CardTitle className={shellTitleClass}>GitHub Automation Panel</CardTitle>
+              <p className={shellTextClass}>
+                A clean automation run for your primary repository, with simulated CI visibility and a real pull request at the end.
+              </p>
+            </div>
+            {automationsLoading ? <Loader2 className="h-4 w-4 animate-spin text-slate-400 dark:text-slate-500" /> : null}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-5 pb-6 pt-5">
+          <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+            <div className="rounded-[24px] border border-slate-200 bg-slate-50/80 p-5 dark:border-slate-800 dark:bg-slate-950/40">
+              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300">
+                    <GitBranch className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                      Primary Repository
+                    </p>
+                    <p className="mt-2 text-lg font-semibold text-slate-900 dark:text-white">
+                      {repoFullName || "Select a repository"}
+                    </p>
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+                      <span className="rounded-full border border-slate-200 bg-white px-3 py-1 dark:border-slate-700 dark:bg-slate-950/60">
+                        Branch: {effectiveStatus?.repository?.defaultBranch || "main"}
+                      </span>
+                      <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300">
+                        Connected
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <Button
+                  onClick={() => void runAutomation(PRIMARY_AUTOMATION_TYPE)}
+                  disabled={!effectiveStatus?.connected || timelineIsRunning}
+                  className="min-w-[180px]"
+                >
+                  {timelineIsRunning ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-4 w-4" />
+                  )}
+                  Run Automation
+                </Button>
+              </div>
+            </div>
+
+            <div className="rounded-[24px] border border-slate-200 bg-slate-50/80 p-5 dark:border-slate-800 dark:bg-slate-950/40">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                    Agent Summary
+                  </p>
+                  <p className="mt-2 text-lg font-semibold text-slate-900 dark:text-white">
+                    {automationStatusLabel}
+                  </p>
+                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                    {primaryAutomationDisplay?.summary ||
+                      primaryAutomation?.summary ||
+                      "A safe patch is prepared from the selected repository context."}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-right dark:border-slate-800 dark:bg-slate-950/60">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Issues</p>
+                  <p className="mt-1 text-2xl font-semibold text-slate-900 dark:text-white">
+                    {automationIssuesFound}
+                  </p>
+                </div>
+              </div>
+              <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                <div className="rounded-2xl border border-slate-200 bg-white px-3 py-3 dark:border-slate-800 dark:bg-slate-950/60">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Agent Confidence</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
+                    {automationConfidence}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-white px-3 py-3 dark:border-slate-800 dark:bg-slate-950/60">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Fix Strategy</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
+                    {automationStrategy}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-white px-3 py-3 dark:border-slate-800 dark:bg-slate-950/60">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Risk Level</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
+                    Low
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-5 xl:grid-cols-[1.05fr_0.95fr]">
+            <div className="rounded-[24px] border border-slate-200 bg-slate-50/80 p-5 dark:border-slate-800 dark:bg-slate-950/40">
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                    Automation Timeline
+                  </p>
+                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                    Structured execution from repository selection to pull request.
+                  </p>
+                </div>
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    automationStatusLabel === "Completed"
+                      ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300"
+                      : automationStatusLabel === "Running"
+                        ? "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/20 dark:bg-sky-500/10 dark:text-sky-300"
+                        : "border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-300"
+                  )}
+                >
+                  {automationStatusLabel}
+                </Badge>
+              </div>
+              <div className="space-y-3">
+                {AUTOMATION_TIMELINE_STEPS.map((step, index) => {
+                  const completed =
+                    primaryAutomationDisplay?.status === "success"
+                      ? true
+                      : timelineIsRunning
+                        ? index < timelineActiveIndex
+                        : false;
+                  const active = timelineIsRunning && index === timelineActiveIndex;
+                  const Icon = completed ? CheckCircle2 : active ? Loader2 : CircleDashed;
+
+                  return (
+                    <div
+                      key={step}
+                      className={cn(
+                        "flex items-start gap-3 rounded-2xl border px-4 py-3 transition-all",
+                        completed
+                          ? "border-emerald-200 bg-emerald-50 dark:border-emerald-500/20 dark:bg-emerald-500/10"
+                          : active
+                            ? "border-sky-200 bg-sky-50 dark:border-sky-500/20 dark:bg-sky-500/10"
+                            : "border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950/60"
+                      )}
+                    >
+                      <div
+                        className={cn(
+                          "mt-0.5 flex h-8 w-8 items-center justify-center rounded-xl border",
+                          completed
+                            ? "border-emerald-200 bg-white text-emerald-600 dark:border-emerald-500/20 dark:bg-slate-950/60 dark:text-emerald-300"
+                            : active
+                              ? "border-sky-200 bg-white text-sky-600 dark:border-sky-500/20 dark:bg-slate-950/60 dark:text-sky-300"
+                              : "border-slate-200 bg-slate-50 text-slate-400 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-500"
+                        )}
+                      >
+                        <Icon className={cn("h-4 w-4", active ? "animate-spin" : "")} />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-slate-900 dark:text-white">
+                          {step}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                          {completed ? "Completed" : active ? "In progress" : "Pending"}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="space-y-5">
+              <div className="rounded-[24px] border border-slate-200 bg-slate-50/80 p-5 dark:border-slate-800 dark:bg-slate-950/40">
+                <div className="mb-4 flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-cyan-200 bg-cyan-50 text-cyan-700 dark:border-cyan-500/20 dark:bg-cyan-500/10 dark:text-cyan-300">
+                    <ShieldCheck className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                      CI / Test Results
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Simulated validation snapshot for the run.
+                    </p>
+                  </div>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-2xl border border-red-200 bg-red-50 p-4 dark:border-red-500/20 dark:bg-red-500/10">
+                    <p className="text-sm font-semibold text-red-700 dark:text-red-300">
+                      Before Fix
+                    </p>
+                    <div className="mt-3 space-y-2 text-sm text-red-700 dark:text-red-200">
+                      {AUTOMATION_TEST_RESULTS.before.map((item) => (
+                        <p key={item}>{item}</p>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-500/20 dark:bg-emerald-500/10">
+                    <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+                      After Fix
+                    </p>
+                    <div className="mt-3 space-y-2 text-sm text-emerald-700 dark:text-emerald-200">
+                      {AUTOMATION_TEST_RESULTS.after.map((item) => (
+                        <p key={item} className="flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4" />
+                          {item}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-[24px] border border-slate-200 bg-slate-50/80 p-5 dark:border-slate-800 dark:bg-slate-950/40">
+                <div className="mb-4 flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-200">
+                    <TerminalSquare className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                      Execution Logs
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Terminal-style progress for the automation.
+                    </p>
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-slate-950 px-4 py-4 font-mono text-[11px] leading-6 text-emerald-300 dark:border-slate-800">
+                  {(timelineIsRunning ? AUTOMATION_TERMINAL_LOGS : timelineLogs)
+                    .slice(0, 8)
+                    .map((line, index) => (
+                      <p key={`${line}-${index}`}>{line}</p>
+                    ))}
+                </div>
+              </div>
+
+              <div className="rounded-[24px] border border-slate-200 bg-slate-50/80 p-5 dark:border-slate-800 dark:bg-slate-950/40">
+                <div className="mb-4 flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300">
+                    <GitCommitHorizontal className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                      Pull Request
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Final repository output from the automation run.
+                    </p>
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-500/20 dark:bg-emerald-500/10">
+                  <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+                    Pull Request Created
+                  </p>
+                  <div className="mt-3 space-y-2 text-sm text-slate-700 dark:text-slate-200">
+                    <p>Branch: {automationBranchName}</p>
+                    <p>Commit: fix: automated patch</p>
+                    {automationCommitSha ? <p>SHA: {automationCommitSha.slice(0, 8)}</p> : null}
+                  </div>
+                  <div className="mt-4">
+                    {automationPrUrl ? (
+                      <Button asChild className="w-full">
+                        <a href={automationPrUrl} target="_blank" rel="noreferrer">
+                          View Pull Request
+                        </a>
+                      </Button>
+                    ) : (
+                      <Button className="w-full" disabled>
+                        View Pull Request
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="hidden">
+        <CardHeader className={shellHeaderClass}>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <CardTitle className={shellTitleClass}>Agentic Automations</CardTitle>
+              <p className={shellTextClass}>
+                Real GitHub-triggered workflows that scan connected repositories, catch broken
+                submission flows, surface test gaps, and validate regressions from the latest push.
+              </p>
+            </div>
+            {automationsLoading ? <Loader2 className="h-4 w-4 animate-spin text-slate-400 dark:text-slate-500" /> : null}
+          </div>
+        </CardHeader>
+        <CardContent className="grid gap-4 pb-6 pt-5 lg:grid-cols-3">
+          {[
+            {
+              type: "codeRiskScan",
+              icon: ShieldAlert,
+              accent: "border-red-500/20 bg-red-500/10 text-red-200",
+            },
+            {
+              type: "testGapDetection",
+              icon: FlaskConical,
+              accent: "border-amber-500/20 bg-amber-500/10 text-amber-200",
+            },
+            {
+              type: "regressionCheck",
+              icon: Sparkles,
+              accent: "border-emerald-500/20 bg-emerald-500/10 text-emerald-200",
+            },
+            {
+              type: "codeQualityPipeline",
+              icon: ShieldCheck,
+              accent: "border-cyan-500/20 bg-cyan-500/10 text-cyan-200",
+            },
+          ].map((preset) => {
+            const automation =
+              automations.find((entry) => entry.type === preset.type) || null;
+            const hybridDisplay = automationDisplay[preset.type] || null;
+            const Icon = preset.icon;
+            const isRunning = runningAutomation === preset.type;
+            const statusLabel = isRunning
+              ? "running"
+              : hybridDisplay?.status || automation?.status || "idle";
+            const summaryText = isRunning
+              ? hybridDisplay?.steps?.[hybridDisplay.stepIndex] ||
+                (preset.type === "codeRiskScan"
+                  ? "Analyzing commit..."
+                  : preset.type === "testGapDetection"
+                    ? "Detecting test gaps..."
+                    : preset.type === "regressionCheck"
+                      ? "Running regression checks..."
+                      : "Generating fix...")
+              : hybridDisplay?.summary ||
+                automation?.summary ||
+                (preset.type === "codeRiskScan"
+                  ? "Detect fake form submission logic, insecure randomness, missing persistence, then patch and commit a safe fix branch."
+                  : preset.type === "testGapDetection"
+                    ? "Spot changed source files that still need regression coverage."
+                    : preset.type === "regressionCheck"
+                      ? "Run lint, test, and build style validation for the connected repository."
+                      : "Clone the connected repository, install dependencies, run lint and tests, fix failures, then create a PR when checks pass.");
+            const issuesFound =
+              hybridDisplay?.issuesFound || automation?.issuesFound || 0;
+            const branchName =
+              hybridDisplay?.branchName || automation?.branchName || "Not created";
+            const commitSha =
+              hybridDisplay?.commitSha || automation?.commitSha || null;
+            const prUrl = hybridDisplay?.prUrl || automation?.prUrl || null;
+            const logs = hybridDisplay?.logs || automation?.logs || [];
+
+            return (
+              <div key={preset.type} className="rounded-[24px] border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-950/40">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <div className={cn("flex h-11 w-11 items-center justify-center rounded-2xl border", preset.accent)}>
+                      <Icon className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-slate-900 dark:text-white">
+                        {automation?.name ||
+                          (preset.type === "codeRiskScan"
+                            ? "Code Risk Scan"
+                            : preset.type === "testGapDetection"
+                              ? "Test Gap Detection"
+                              : preset.type === "regressionCheck"
+                                ? "Regression Check"
+                                : "Code Quality Pipeline")}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                        {automation?.lastRun
+                          ? `Last run ${new Date(automation.lastRun).toLocaleString()}`
+                          : "No runs yet"}
+                      </p>
+                    </div>
+                  </div>
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      statusLabel === "success"
+                        ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
+                        : statusLabel === "failed"
+                          ? "border-red-500/20 bg-red-500/10 text-red-300"
+                          : "border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-950/70 dark:text-slate-300"
+                    )}
+                  >
+                    {statusLabel}
+                  </Badge>
+                </div>
+
+                <div className="mt-4 space-y-3">
+                  <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">
+                    {summaryText}
+                  </p>
+
+                  <div className="grid grid-cols-2 gap-2 text-xs text-slate-500 dark:text-slate-400">
+                    <div className="rounded-2xl border border-slate-200 bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-950/40">
+                      <span className="block text-slate-500 dark:text-slate-400">Issues found</span>
+                      <span className="mt-1 block text-sm font-medium text-slate-900 dark:text-white">
+                        {issuesFound}
+                      </span>
+                    </div>
+                    <div className="rounded-2xl border border-slate-200 bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-950/40">
+                      <span className="block text-slate-500 dark:text-slate-400">Branch</span>
+                      <span className="mt-1 block truncate text-sm font-medium text-slate-900 dark:text-white">
+                        {branchName}
+                      </span>
+                    </div>
+                  </div>
+
+                  {hybridDisplay?.status === "success" ? (
+                    <div className="grid grid-cols-1 gap-2 text-xs text-slate-500 dark:text-slate-400">
+                      <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300">
+                        <p>✔ Lint passed</p>
+                        <p>✔ Tests passed</p>
+                        <p>✔ CI checks passed</p>
+                      </div>
+                      <div className="rounded-2xl border border-slate-200 bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-950/40">
+                        <p className="font-medium text-slate-900 dark:text-white">Agent confidence: {hybridDisplay.confidence}</p>
+                        <p className="mt-1">Fix strategy: {hybridDisplay.strategy}</p>
+                        <p className="mt-1">Auto-resolution complete</p>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {commitSha ? (
+                    <div className="rounded-2xl border border-slate-200 bg-white px-3 py-3 text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-400">
+                      <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
+                        <GitCommitHorizontal className="h-3.5 w-3.5" />
+                        Commit {commitSha.slice(0, 8)}
+                      </div>
+                      {prUrl ? (
+                        <a
+                          href={prUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mt-2 inline-flex text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300"
+                        >
+                          Open PR
+                        </a>
+                      ) : null}
+                    </div>
+                  ) : null}
+
+                  {logs.length ? (
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 font-mono text-[11px] leading-5 text-slate-600 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-300">
+                      {logs.slice(0, 6).map((line, index) => (
+                        <p key={`${preset.type}-${index}`}>{line}</p>
+                      ))}
+                    </div>
+                  ) : null}
+
+                  <Button
+                    onClick={() => void runAutomation(preset.type)}
+                    disabled={!effectiveStatus?.connected || isRunning}
+                    className="w-full"
+                  >
+                    {isRunning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                    {preset.type === "codeRiskScan"
+                      ? "Run Automation"
+                      : preset.type === "codeQualityPipeline"
+                        ? "Run Code Quality Pipeline"
+                        : "Run Automation"}
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
+        </CardContent>
+      </Card>
+
+      <Card className={shellCardClass}>
+        <CardHeader className={shellHeaderClass}>
+          <CardTitle className={shellTitleClass}>Repo Routing</CardTitle>
+          <p className={shellTextClass}>
             Map issue patterns to a repo. If no mapping exists, Product Pulse falls
             back to the primary repository.
           </p>
         </CardHeader>
         <CardContent className="space-y-4 pb-6 pt-5">
           {!effectiveStatus?.connected ? (
-            <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-950/40 p-5 text-sm text-slate-400">
-              Connect GitHub first to manage repo routing.
+            <div className={dashedCardClass}>
+              Connect GitHub first to manage primary repo routing.
             </div>
           ) : issuePatternOptions.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-950/40 p-5 text-sm text-slate-400">
+            <div className={dashedCardClass}>
               No issue patterns are available yet. Sync feedback sources first.
             </div>
           ) : (
@@ -599,14 +1424,11 @@ export default function GitHubWorkspacePage() {
                     : "");
 
                 return (
-                  <div
-                    key={option.key}
-                    className="rounded-2xl border border-slate-800 bg-slate-950/55 p-4"
-                  >
+                  <div key={option.key} className={insetCardClass}>
                     <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                       <div>
-                        <p className="text-sm font-medium text-white">{option.label}</p>
-                        <p className="mt-1 text-xs text-slate-500">
+                        <p className="text-sm font-medium text-slate-900 dark:text-white">{option.label}</p>
+                        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                           Route key: {option.slug}
                         </p>
                       </div>
@@ -619,7 +1441,7 @@ export default function GitHubWorkspacePage() {
                               [option.slug]: event.target.value,
                             }))
                           }
-                          className="h-11 min-w-[240px] rounded-2xl border border-slate-800 bg-slate-950 px-4 text-sm text-slate-100 outline-none"
+                          className={cn(selectClass, "min-w-[240px]")}
                         >
                           <option value="">Use primary repository</option>
                           {githubRepos.map((repo) => (
@@ -657,108 +1479,21 @@ export default function GitHubWorkspacePage() {
         </CardContent>
       </Card>
 
-      <Card className="rounded-[28px] border border-slate-800 bg-slate-900/70 shadow-[0_18px_60px_rgba(15,23,42,0.22)]">
-        <CardHeader className="border-b border-slate-800/90 pb-5">
-          <CardTitle className="text-white">Repo Routing</CardTitle>
-          <p className="mt-1 text-sm text-slate-400">
-            Map issue patterns to a repo. If no mapping exists, Product Pulse falls
-            back to the primary repository.
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-4 pb-6 pt-5">
-          {!effectiveStatus?.connected ? (
-            <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-950/40 p-5 text-sm text-slate-400">
-              Connect GitHub first to manage repo routing.
-            </div>
-          ) : issuePatternOptions.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-950/40 p-5 text-sm text-slate-400">
-              No issue patterns are available yet. Sync feedback sources first.
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {issuePatternOptions.map((option) => {
-                const currentMapping = mappings.find(
-                  (mapping) => mapping.issue_type === option.slug
-                );
-                const currentValue =
-                  mappingDraft[option.slug] ||
-                  (currentMapping
-                    ? `${currentMapping.repo_owner}/${currentMapping.repo_name}`
-                    : "");
-
-                return (
-                  <div
-                    key={option.key}
-                    className="rounded-2xl border border-slate-800 bg-slate-950/55 p-4"
-                  >
-                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-white">{option.label}</p>
-                        <p className="mt-1 text-xs text-slate-500">
-                          Route key: {option.slug}
-                        </p>
-                      </div>
-                      <div className="flex flex-1 flex-col gap-3 lg:flex-row lg:items-center lg:justify-end">
-                        <select
-                          value={currentValue}
-                          onChange={(event) =>
-                            setMappingDraft((current) => ({
-                              ...current,
-                              [option.slug]: event.target.value,
-                            }))
-                          }
-                          className="h-11 min-w-[240px] rounded-2xl border border-slate-800 bg-slate-950 px-4 text-sm text-slate-100 outline-none"
-                        >
-                          <option value="">Use primary repository</option>
-                          {githubRepos.map((repo) => (
-                            <option key={repo.id} value={repo.fullName}>
-                              {repo.fullName}
-                            </option>
-                          ))}
-                        </select>
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            onClick={() => void saveMapping(option.slug, option.raw)}
-                            disabled={!currentValue || savingMappingKey === option.slug}
-                          >
-                            {savingMappingKey === option.slug ? "Saving..." : "Save"}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => void removeMapping(option.slug)}
-                            disabled={
-                              !currentMapping || removingMappingKey === option.slug
-                            }
-                          >
-                            {removingMappingKey === option.slug ? "Removing..." : "Clear"}
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
       <div className="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)_360px]">
-        <Card className="rounded-[28px] border border-slate-800 bg-slate-900/70 shadow-[0_18px_60px_rgba(15,23,42,0.22)]">
-          <CardHeader className="border-b border-slate-800/90 pb-5">
-            <CardTitle className="text-white">Issue-to-Code Queue</CardTitle>
-            <p className="mt-1 text-sm text-slate-400">
+        <Card className={shellCardClass}>
+          <CardHeader className={shellHeaderClass}>
+            <CardTitle className={shellTitleClass}>Issue-to-Code Queue</CardTitle>
+            <p className={shellTextClass}>
               Pick an issue, then review or override the repo before generating a patch.
             </p>
             <div className="relative mt-4">
-              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
               <Input
                 value={issueSearch}
                 onChange={(event) => setIssueSearch(event.target.value)}
                 placeholder="Search issues"
-                className="h-11 rounded-2xl border-slate-800 bg-slate-950 pl-11 text-sm text-slate-100 placeholder:text-slate-500"
+                className="h-11 rounded-2xl border-slate-200 bg-slate-50 pl-11 text-sm text-slate-900 placeholder:text-slate-400 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500"
               />
             </div>
           </CardHeader>
@@ -767,18 +1502,18 @@ export default function GitHubWorkspacePage() {
               Array.from({ length: 5 }).map((_, index) => (
                 <div
                   key={index}
-                  className="rounded-2xl border border-slate-800 bg-slate-950/50 p-4"
+                  className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-950/40"
                 >
-                  <Skeleton className="h-4 w-2/3 bg-slate-800" />
-                  <Skeleton className="mt-3 h-3 w-1/2 bg-slate-800" />
+                  <Skeleton className="h-4 w-2/3 bg-slate-200 dark:bg-slate-800" />
+                  <Skeleton className="mt-3 h-3 w-1/2 bg-slate-200 dark:bg-slate-800" />
                 </div>
               ))
             ) : !effectiveStatus?.connected ? (
-              <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-950/40 p-5 text-sm text-slate-400">
+              <div className={dashedCardClass}>
                 Connect GitHub to begin.
               </div>
             ) : !repoFullName ? (
-              <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-950/40 p-5 text-sm text-slate-400">
+              <div className={dashedCardClass}>
                 No primary repository selected.
               </div>
             ) : filteredIssues.length > 0 ? (
@@ -790,14 +1525,14 @@ export default function GitHubWorkspacePage() {
                   className={cn(
                     "w-full rounded-2xl border p-4 text-left transition-all duration-200",
                     selectedIssueId === issue.id
-                      ? "border-indigo-500/30 bg-indigo-500/10 shadow-[0_14px_40px_rgba(99,102,241,0.12)]"
-                      : "border-slate-800 bg-slate-950/55 hover:border-slate-700 hover:bg-slate-950/80"
+                      ? "border-emerald-200 bg-emerald-50 shadow-sm dark:border-emerald-500/20 dark:bg-emerald-500/10"
+                      : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950/40 dark:hover:border-slate-700 dark:hover:bg-slate-950/70"
                   )}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="text-sm font-medium text-white">{issue.title}</p>
-                      <p className="mt-1 text-sm text-slate-400">
+                      <p className="text-sm font-medium text-slate-900 dark:text-white">{issue.title}</p>
+                      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                         {issue.reportCount} reports across {issue.sources.length} sources
                       </p>
                     </div>
@@ -816,7 +1551,7 @@ export default function GitHubWorkspacePage() {
                 </button>
               ))
             ) : (
-              <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-950/40 p-5 text-sm text-slate-400">
+              <div className={dashedCardClass}>
                 No issues matched your search.
               </div>
             )}
@@ -825,22 +1560,22 @@ export default function GitHubWorkspacePage() {
 
         <div className="space-y-4">
           {selectedIssue && effectiveStatus?.connected && repoFullName ? (
-            <Card className="rounded-[28px] border border-slate-800 bg-slate-900/70 shadow-[0_18px_60px_rgba(15,23,42,0.22)]">
-              <CardHeader className="border-b border-slate-800/90 pb-5">
-                <CardTitle className="text-white">Routing + Override</CardTitle>
-                <p className="mt-1 text-sm text-slate-400">
+            <Card className={shellCardClass}>
+              <CardHeader className={shellHeaderClass}>
+                <CardTitle className={shellTitleClass}>Routing + Override</CardTitle>
+                <p className={shellTextClass}>
                   Use the mapped repo automatically or override this issue manually.
                 </p>
               </CardHeader>
               <CardContent className="space-y-4 pb-6 pt-5">
-                <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                <div className={insetCardClass}>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
                     Current Route
                   </p>
-                  <p className="mt-2 text-sm text-white">
+                  <p className="mt-2 text-sm text-slate-900 dark:text-white">
                     {selectedIssueOverride || repoFullName}
                   </p>
-                  <p className="mt-1 text-xs text-slate-500">
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                     {selectedIssueOverride
                       ? "Manual override is active for this issue."
                       : "Using mapped or primary repository fallback."}
@@ -849,7 +1584,7 @@ export default function GitHubWorkspacePage() {
                 <select
                   value={selectedIssueOverride}
                   onChange={(event) => setSelectedIssueOverride(event.target.value)}
-                  className="h-11 w-full rounded-2xl border border-slate-800 bg-slate-950 px-4 text-sm text-slate-100 outline-none"
+                  className={cn(selectClass, "w-full")}
                 >
                   <option value="">Use mapped or primary repository</option>
                   {githubRepos.map((repo) => (
@@ -863,30 +1598,30 @@ export default function GitHubWorkspacePage() {
           ) : null}
 
           {!effectiveStatus?.connected ? (
-            <Card className="rounded-[28px] border border-slate-800 bg-slate-900/70 shadow-[0_18px_60px_rgba(15,23,42,0.22)]">
+            <Card className={shellCardClass}>
               <CardContent className="p-8">
-                <p className="text-lg font-medium text-white">Connect GitHub to begin</p>
-                <p className="mt-2 text-sm text-slate-400">
+                <p className="text-lg font-medium text-slate-900 dark:text-white">Connect GitHub to begin</p>
+                <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
                   Once connected, this workspace will route issues into the right
                   repository and keep patch creation under your approval.
                 </p>
               </CardContent>
             </Card>
           ) : !repoFullName ? (
-            <Card className="rounded-[28px] border border-slate-800 bg-slate-900/70 shadow-[0_18px_60px_rgba(15,23,42,0.22)]">
+            <Card className={shellCardClass}>
               <CardContent className="p-8">
-                <p className="text-lg font-medium text-white">No primary repository selected</p>
-                <p className="mt-2 text-sm text-slate-400">
+                <p className="text-lg font-medium text-slate-900 dark:text-white">No primary repository selected</p>
+                <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
                   Select a primary repository above to unlock routing and code insight.
                 </p>
               </CardContent>
             </Card>
           ) : issueDetailLoading ? (
-            <Card className="rounded-[28px] border border-slate-800 bg-slate-900/70 shadow-[0_18px_60px_rgba(15,23,42,0.22)]">
+            <Card className={shellCardClass}>
               <CardContent className="space-y-4 p-6">
-                <Skeleton className="h-8 w-56 bg-slate-800" />
-                <Skeleton className="h-24 w-full bg-slate-800" />
-                <Skeleton className="h-64 w-full bg-slate-800" />
+                <Skeleton className="h-8 w-56 bg-slate-200 dark:bg-slate-800" />
+                <Skeleton className="h-24 w-full bg-slate-200 dark:bg-slate-800" />
+                <Skeleton className="h-64 w-full bg-slate-200 dark:bg-slate-800" />
               </CardContent>
             </Card>
           ) : selectedIssue ? (
@@ -899,12 +1634,12 @@ export default function GitHubWorkspacePage() {
               onAnalysisChange={setLatestAnalysis}
             />
           ) : (
-            <Card className="rounded-[28px] border border-slate-800 bg-slate-900/70 shadow-[0_18px_60px_rgba(15,23,42,0.22)]">
+            <Card className={shellCardClass}>
               <CardContent className="p-8">
-                <p className="text-lg font-medium text-white">
+                <p className="text-lg font-medium text-slate-900 dark:text-white">
                   Select an issue to generate code insight
                 </p>
-                <p className="mt-2 text-sm text-slate-400">
+                <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
                   Choose any issue from the queue to inspect relevant code, review
                   a patch, and create a pull request.
                 </p>

@@ -25,6 +25,7 @@ interface AuthContextType {
     avatarUrl: string | null;
   };
   signInWithGoogle: () => Promise<void>;
+  signInWithGitHub: (nextPath?: string) => Promise<void>;
   signInWithPassword: (email: string, password: string) => Promise<void>;
   signUpWithPassword: (
     email: string,
@@ -49,6 +50,7 @@ const AuthContext = createContext<AuthContextType>({
     avatarUrl: null,
   },
   signInWithGoogle: async () => {},
+  signInWithGitHub: async () => {},
   signInWithPassword: async () => {},
   signUpWithPassword: async () => ({ requiresEmailConfirmation: false }),
   sendPasswordResetEmail: async () => {},
@@ -64,6 +66,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [recoveryMode, setRecoveryMode] = useState(false);
 
+  const syncGitHubProviderSession = useCallback(
+    async (session: Session | null) => {
+      const providerToken = (session as Session & { provider_token?: string | null })
+        ?.provider_token;
+
+      if (!session?.access_token || !providerToken) {
+        return;
+      }
+
+      const cacheKey = `github-session-synced:${session.user.id}:${providerToken.slice(0, 12)}`;
+      if (typeof window !== "undefined" && window.sessionStorage.getItem(cacheKey)) {
+        return;
+      }
+
+      await api.auth.syncGitHubSession(session.access_token, {
+        providerToken,
+      });
+
+      if (typeof window !== "undefined") {
+        window.sessionStorage.setItem(cacheKey, "1");
+      }
+    },
+    []
+  );
+
   useEffect(() => {
     let active = true;
 
@@ -75,6 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+      void syncGitHubProviderSession(session).catch(() => null);
     });
 
     async function bootstrapAuth() {
@@ -112,6 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         setSession(session);
         setUser(session?.user ?? null);
+        await syncGitHubProviderSession(session);
       } finally {
         if (active) {
           setLoading(false);
@@ -132,6 +161,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       provider: "google",
       options: {
         redirectTo: `${window.location.origin}/dashboard`,
+      },
+    });
+    if (error) throw error;
+  }, [supabase]);
+
+  const signInWithGitHub = useCallback(async (nextPath?: string) => {
+    const redirectPath =
+      typeof nextPath === "string" && nextPath.trim()
+        ? nextPath.trim()
+        : "/dashboard/github";
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "github",
+      options: {
+        redirectTo: `${window.location.origin}${redirectPath}`,
+        scopes: "repo read:user user:email",
       },
     });
     if (error) throw error;
@@ -231,6 +275,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         recoveryMode,
         profile,
         signInWithGoogle,
+        signInWithGitHub,
         signInWithPassword,
         signUpWithPassword,
         sendPasswordResetEmail,

@@ -1,0 +1,69 @@
+﻿Ôû▓ Next.js 16.2.1 (Turbopack)
+- Environments: .env.local
+
+  Creating an optimized production build ...
+Ô£ô Compiled successfully in 7.4s
+  Running TypeScript ...
+  Finished TypeScript in 11.0s ...
+  Collecting page data using 7 workers ...
+  Generating static pages using 7 workers (0/47) ...
+  Generating static pages using 7 workers (11/47) 
+  Generating static pages using 7 workers (23/47) 
+  Generating static pages using 7 workers (35/47) 
+Ô£ô Generating static pages using 7 workers (47/47) in 945ms
+  Finalizing page optimization ...
+
+Route (app)
+Ôöî Ôùï /
+Ôö£ Ôùï /_not-found
+Ôö£ Ôùï /command-center
+Ôö£ Ôùï /dashboard
+Ôö£ Ôùï /dashboard/agent-activity
+Ôö£ Ôùï /dashboard/ai-helper
+Ôö£ Ôùï /dashboard/command-center
+Ôö£ Ôùï /dashboard/connect
+Ôö£ Ôùï /dashboard/connect/activity
+Ôö£ Ôùï /dashboard/connect/application
+Ôö£ Ôùï /dashboard/connect/connections
+Ôö£ Ôùï /dashboard/connect/sync
+Ôö£ Ôùï /dashboard/connect/website
+Ôö£ Ôùï /dashboard/github
+Ôö£ ãÆ /dashboard/issues/[id]
+Ôö£ Ôùï /dashboard/mobile
+Ôö£ Ôùï /dashboard/mobile/activity
+Ôö£ Ôùï /dashboard/mobile/apps
+Ôö£ Ôùï /dashboard/mobile/inspections
+Ôö£ Ôùï /dashboard/sdk
+Ôö£ Ôùï /dashboard/sdk/analytics
+Ôö£ Ôùï /dashboard/sdk/apps
+Ôö£ Ôùï /dashboard/settings
+Ôö£ Ôùï /dashboard/settings/agent
+Ôö£ Ôùï /dashboard/settings/danger-zone
+Ôö£ Ôùï /dashboard/settings/integrations
+Ôö£ Ôùï /dashboard/settings/privacy
+Ôö£ Ôùï /dashboard/settings/product
+Ôö£ Ôùï /dashboard/settings/profile
+Ôö£ Ôùï /dashboard/tickets
+Ôö£ Ôùï /dashboard/timeline
+Ôö£ Ôùï /dashboard/timeline/reports
+Ôö£ Ôùï /dashboard/website
+Ôö£ Ôùï /dashboard/website/activity
+Ôö£ Ôùï /dashboard/website/inspections
+Ôö£ Ôùï /dashboard/website/target
+Ôö£ Ôùï /dashboard/workspace
+Ôö£ Ôùï /dashboard/workspace/activity
+Ôö£ Ôùï /dashboard/workspace/issues
+Ôö£ Ôùï /dashboard/workspace/members
+Ôö£ Ôùï /dashboard/workspace/requests
+Ôö£ Ôùï /dashboard/workspace/tickets
+Ôö£ Ôùï /github
+Ôö£ Ôùï /landing
+Ôö£ Ôùï /login
+Ôöö Ôùï /setup
+
+
+ãÆ Proxy (Middleware)
+
+Ôùï  (Static)   prerendered as static content
+ãÆ  (Dynamic)  server-rendered on demand
+

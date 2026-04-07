@@ -213,8 +213,8 @@ async function fetchGoogleProfile(accessToken) {
 
 async function listRecentMessages(accessToken) {
   const params = new URLSearchParams({
-    maxResults: '50',
-    q: 'newer_than:30d -in:spam -in:trash',
+    maxResults: '100',
+    q: '-in:spam -in:trash',
   });
 
   const response = await fetch(`${GMAIL_MESSAGES_URL}?${params.toString()}`, {
@@ -237,6 +237,20 @@ function decodeBase64Url(input) {
 
 function extractHeader(headers, name) {
   return headers?.find((header) => header.name?.toLowerCase() === name.toLowerCase())?.value;
+}
+
+function toSafeIsoDate(primaryValue, fallbackValue) {
+  const primary = primaryValue ? new Date(primaryValue) : null;
+  if (primary && !Number.isNaN(primary.getTime())) {
+    return primary.toISOString();
+  }
+
+  const fallback = fallbackValue != null ? new Date(Number(fallbackValue)) : new Date();
+  if (!Number.isNaN(fallback.getTime())) {
+    return fallback.toISOString();
+  }
+
+  return new Date().toISOString();
 }
 
 function parseSender(value) {
@@ -312,9 +326,7 @@ async function getMessageDetail(accessToken, messageId) {
     senderEmail: sender.senderEmail,
     senderName: sender.senderName,
     messageIdHeader: extractHeader(headers, 'message-id') || null,
-    occurredAt: extractHeader(headers, 'date')
-      ? new Date(extractHeader(headers, 'date')).toISOString()
-      : new Date(Number(data.internalDate || Date.now())).toISOString(),
+    occurredAt: toSafeIsoDate(extractHeader(headers, 'date'), data.internalDate || Date.now()),
     url: `https://mail.google.com/mail/u/0/#inbox/${data.threadId || data.id}`,
   };
 }
@@ -344,9 +356,7 @@ async function getMessagePreview(accessToken, messageId) {
     senderEmail: sender.senderEmail,
     senderName: sender.senderName,
     snippet: data.snippet || '',
-    occurredAt: extractHeader(headers, 'date')
-      ? new Date(extractHeader(headers, 'date')).toISOString()
-      : new Date(Number(data.internalDate || Date.now())).toISOString(),
+    occurredAt: toSafeIsoDate(extractHeader(headers, 'date'), data.internalDate || Date.now()),
   };
 }
 

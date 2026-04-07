@@ -8,6 +8,15 @@ const JOB_TYPES = {
   SYNC_SOURCES: 'sync_sources',
   AGENT_LOOP: 'agent_loop',
   INSIGHTS_UPDATE: 'insights_update',
+  INSPECT_ISSUE: 'inspect_issue',
+  INSPECT_HEALTH: 'inspect_health',
+  PLAYWRIGHT_INSPECTION: 'playwright_inspection',
+  FEEDBACK_RECEIVED: 'feedback_received',
+  FEEDBACK_CLUSTERED: 'feedback_clustered',
+  INSPECTION_TRIGGERED: 'inspection_triggered',
+  GITHUB_ANALYSIS: 'github_analysis',
+  ISSUE_CREATED: 'issue_created',
+  AGENT_ACTION: 'agent_action',
 };
 
 const QUEUE_NAMES = {
@@ -16,6 +25,7 @@ const QUEUE_NAMES = {
   GITHUB: 'github',
   SYNC: 'sync',
   MAINTENANCE: 'maintenance',
+  INSPECT: 'inspect',
 };
 
 function normalizePriority(value) {
@@ -48,6 +58,17 @@ function mapJobName(jobType, payload = {}) {
       return payload.mode === 'anomaly_detection' ? 'detect_anomalies' : 'process_feedback';
     case JOB_TYPES.INSIGHTS_UPDATE:
       return 'update_insights';
+    case JOB_TYPES.INSPECT_ISSUE:
+    case JOB_TYPES.INSPECT_HEALTH:
+    case JOB_TYPES.PLAYWRIGHT_INSPECTION:
+      return 'playwright_inspection';
+    case JOB_TYPES.FEEDBACK_RECEIVED:
+    case JOB_TYPES.FEEDBACK_CLUSTERED:
+    case JOB_TYPES.INSPECTION_TRIGGERED:
+    case JOB_TYPES.GITHUB_ANALYSIS:
+    case JOB_TYPES.ISSUE_CREATED:
+    case JOB_TYPES.AGENT_ACTION:
+      return String(jobType);
     default:
       return String(jobType);
   }

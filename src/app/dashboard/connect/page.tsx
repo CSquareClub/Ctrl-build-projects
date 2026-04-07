@@ -11,6 +11,7 @@ import {
 } from "@/lib/api";
 import { isDemoUser } from "@/lib/demo-mode";
 import { getImapConfig } from "@/lib/imapConfig";
+import { DASHBOARD_DEMO_MODE } from "@/lib/dashboard-demo";
 
 type ProviderKey =
   | "gmail"
@@ -538,6 +539,16 @@ export default function ConnectPage() {
     (connection) => Boolean(connection.last_synced_at)
   );
   const hasConnectedSources = syncableConnections.length > 0;
+  const normalizedMessage = String(message || "").toLowerCase();
+  const messageTone = normalizedMessage.includes("couldn't") ||
+    normalizedMessage.includes("failed") ||
+    normalizedMessage.includes("required") ||
+    normalizedMessage.includes("try again")
+      ? "error"
+      : normalizedMessage.includes("paused") ||
+          normalizedMessage.includes("skipped")
+        ? "warning"
+        : "success";
 
   useEffect(() => {
     const firstConfigured = syncableConnections[0];
@@ -787,6 +798,19 @@ export default function ConnectPage() {
       setMessage(null);
 
       try {
+        if (DASHBOARD_DEMO_MODE) {
+          await new Promise((resolve) => window.setTimeout(resolve, 1000));
+          if (!options?.silent) {
+            setMessage(
+              provider === "gmail"
+                ? "Gmail synced successfully. Imported 25 feedback items and flagged the audit submission spike."
+                : `${formatProviderLabel(provider)} synced successfully.`
+            );
+          }
+          window.localStorage.setItem("dashboard-demo-synced", "1");
+          return;
+        }
+
         const syncPayload =
           provider === "app-reviews"
             ? { appId: appleAppId.trim() }
@@ -977,60 +1001,66 @@ export default function ConnectPage() {
     <div className="mx-auto max-w-5xl pb-16">
       <div>
         <div className="mb-3 flex flex-wrap items-center gap-3 pt-4">
-          <h1 className="text-3xl font-bold text-white">Data Sources</h1>
-          {demoModeActive && (
-            <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-amber-200">
-              Demo Mode
-            </span>
-          )}
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Data Sources</h1>
+          {demoModeActive ? null : null}
         </div>
-        <p className="max-w-2xl text-lg text-slate-400">
+        <p className="max-w-2xl text-lg text-slate-500 dark:text-slate-400">
           Connect real customer channels, sync feedback into the database, and let
           Product Pulse turn it into actionable issue intelligence.
         </p>
       </div>
 
       {hasFirstLiveSignal ? (
-        <div className="mt-6 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-5 py-4 text-sm text-emerald-100 shadow-[0_16px_40px_rgba(5,150,105,0.12)]">
-          <p className="font-semibold">Product Pulse is live.</p>
-          <p className="mt-1 text-emerald-100/80">
+        <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50/90 px-5 py-4 text-sm text-emerald-800 shadow-[0_16px_40px_rgba(16,185,129,0.08)] dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-100 dark:shadow-[0_16px_40px_rgba(5,150,105,0.12)]">
+          <p className="font-semibold text-emerald-900 dark:text-emerald-100">Product Pulse is live.</p>
+          <p className="mt-1 text-emerald-700 dark:text-emerald-100/80">
             Your first real signal has already landed. Keep syncing your sources to deepen the issue map and weekly reports.
           </p>
         </div>
       ) : !hasConnectedSources ? (
-        <div className="mt-6 rounded-2xl border border-slate-800 bg-slate-900/55 px-5 py-4 text-sm text-slate-300">
-          <p className="font-semibold text-white">Start with one real source.</p>
-          <p className="mt-1 text-slate-400">
+        <div className="mt-6 rounded-2xl border border-slate-200 bg-white px-5 py-4 text-sm text-slate-600 shadow-sm dark:border-slate-800 dark:bg-slate-900/55 dark:text-slate-300">
+          <p className="font-semibold text-slate-900 dark:text-white">Start with one real source.</p>
+          <p className="mt-1 text-slate-500 dark:text-slate-400">
             Connect Gmail, Outlook, IMAP, or app reviews first. Once the first sync completes, Product Pulse will begin filling your dashboard, timeline, and weekly report automatically.
           </p>
         </div>
       ) : null}
 
       {message && (
-        <div className="mb-6 mt-6 rounded-xl border border-indigo-500/20 bg-indigo-500/10 px-4 py-3 text-sm text-indigo-400">
+        <div
+          className={`mb-6 mt-6 rounded-2xl border px-4 py-3 text-sm shadow-sm ${
+            messageTone === "success"
+              ? "border-indigo-200 bg-indigo-50 text-indigo-700 dark:border-indigo-500/20 dark:bg-indigo-500/10 dark:text-indigo-300"
+              : messageTone === "warning"
+                ? "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300"
+                : "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300"
+          }`}
+        >
           {message}
         </div>
       )}
 
-      <div className="mb-6 flex flex-col gap-4 rounded-2xl border border-slate-800 bg-slate-900/60 p-5 shadow-[0_12px_40px_rgba(15,23,42,0.2)] lg:flex-row lg:items-center lg:justify-between">
+      {demoModeActive ? null : null}
+
+      <div className="mb-6 flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-[0_12px_40px_rgba(15,23,42,0.2)] lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h2 className="text-base font-semibold text-white">Auto-sync</h2>
-          <p className="mt-1 max-w-2xl text-sm text-slate-400">
+          <h2 className="text-base font-semibold text-slate-900 dark:text-white">Auto-sync</h2>
+          <p className="mt-1 max-w-2xl text-sm text-slate-500 dark:text-slate-400">
             Keep connected sources fresh while this page is open. Product Pulse only syncs sources whose last sync is older than your chosen interval.
           </p>
           {autoSyncStatus && (
-            <p className="mt-2 text-sm text-emerald-400">{autoSyncStatus}</p>
+            <p className="mt-2 text-sm text-emerald-700 dark:text-emerald-400">{autoSyncStatus}</p>
           )}
         </div>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="flex items-center rounded-xl border border-slate-800 bg-slate-950/80 p-1">
+          <div className="flex items-center rounded-xl border border-slate-200 bg-slate-100 p-1 dark:border-slate-800 dark:bg-slate-950/80">
             <button
               type="button"
               className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
                 autoSyncEnabled
-                  ? "bg-emerald-500 text-slate-950"
-                  : "text-slate-300 hover:text-white"
+                  ? "bg-slate-900 text-white shadow-sm dark:bg-emerald-500 dark:text-slate-950"
+                  : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
               }`}
               onClick={() => void saveAutoSyncSettings(true, autoSyncIntervalMinutes)}
               disabled={savingAutoSync || syncableConnections.length === 0}
@@ -1041,8 +1071,8 @@ export default function ConnectPage() {
               type="button"
               className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
                 !autoSyncEnabled
-                  ? "bg-slate-800 text-white"
-                  : "text-slate-300 hover:text-white"
+                  ? "bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-white"
+                  : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
               }`}
               onClick={() => void saveAutoSyncSettings(false, autoSyncIntervalMinutes)}
               disabled={savingAutoSync || syncableConnections.length === 0}
@@ -1051,7 +1081,7 @@ export default function ConnectPage() {
             </button>
           </div>
 
-          <label className="flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-sm text-slate-300">
+          <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-950/80 dark:text-slate-300">
             Interval
             <select
               value={String(autoSyncIntervalMinutes)}
@@ -1061,7 +1091,7 @@ export default function ConnectPage() {
                 void saveAutoSyncSettings(autoSyncEnabled, nextInterval);
               }}
               disabled={savingAutoSync || syncableConnections.length === 0}
-              className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-white outline-none"
+              className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 outline-none transition focus:border-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
             >
               <option value="15">15 min</option>
               <option value="30">30 min</option>

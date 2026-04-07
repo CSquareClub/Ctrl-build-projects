@@ -1,11 +1,25 @@
+const crypto = require('crypto');
 const supabase = require('../lib/supabaseClient');
 const { insertFeedbackEventsDeduped } = require('../lib/feedbackDedup');
 const { ensureUserRecords } = require('../lib/ensureUserRecords');
-const { rebuildIssuesFromFeedback, detectSentiment } = require('../lib/issueAggregator');
+const { detectSentiment } = require('../lib/issueAggregator');
 const { classifyFeedbackEvents } = require('../lib/groqFeedbackClassifier');
 const { extractLocation } = require('../services/locationService');
 const { searchSocialMentions } = require('../services/googleSearchService');
-const { runAgent } = require('../services/agentService');
+const { enqueueSystemEvent, EVENT_TYPES } = require('../services/eventPipelineService');
+const { processClaimedFeedback } = require('../services/feedbackProcessingService');
+
+const DEMO_DIRECT_PROCESSING = process.env.DEMO_DIRECT_PROCESSING !== 'false';
+
+function buildSocialDedupeKey(userId, rows) {
+  const hash = crypto
+    .createHash('sha1')
+    .update((rows || []).map((row) => row.unique_key || row.id || '').join('|'))
+    .digest('hex')
+    .slice(0, 12);
+
+  return `feedback:social:${userId}:${hash}`;
+}
 
 async function fetchSocialMentions(req, res) {
   try {
@@ -77,6 +91,13 @@ async function fetchSocialMentions(req, res) {
             ...mention.metadata,
             query,
             classificationReason: classification?.reason || null,
+            issueType: classification?.issueType || 'global',
+            issueGroupSlug: classification?.issueGroupSlug || null,
+            issueGroupTitle: classification?.issueGroupTitle || null,
+            classificationConfidence:
+              classification?.classificationConfidence == null
+                ? null
+                : Number(classification.classificationConfidence),
             isProductFeedback: true,
           },
         };
@@ -86,9 +107,27 @@ async function fetchSocialMentions(req, res) {
       logLabel: 'social_search',
     });
 
-    if (insertResult.inserted > 0) {
-      await rebuildIssuesFromFeedback(req.user.id);
-      await runAgent(req.user);
+    if (insertResult.inserted > 0 && DEMO_DIRECT_PROCESSING) {
+      await processClaimedFeedback(req.user, insertResult.rows, {
+        background: false,
+        mode: 'sync:social:inline',
+        skipAutoInspection: true,
+      }).catch(() => null);
+    }
+
+    if (insertResult.inserted > 0 && !DEMO_DIRECT_PROCESSING) {
+      await enqueueSystemEvent({
+        type: EVENT_TYPES.FEEDBACK_RECEIVED,
+        userId: req.user.id,
+        source: 'social_search',
+        dedupeKey: buildSocialDedupeKey(req.user.id, insertResult.rows),
+        payload: {
+          uniqueKeys: insertResult.rows.map((row) => row.unique_key).filter(Boolean),
+          background: true,
+          mode: 'sync:social',
+        },
+        priority: 1,
+      }).catch(() => null);
     }
 
     return res.json({

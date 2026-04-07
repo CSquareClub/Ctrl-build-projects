@@ -1,5 +1,6 @@
 const supabase = require('../lib/supabaseClient');
 const { publishSystemEvent } = require('./liveEventsService');
+const DEFAULT_NOTIFICATION_COOLDOWN_MINUTES = 30;
 
 function normalizeNotification(row) {
   return {
@@ -10,6 +11,7 @@ function normalizeNotification(row) {
     type: row.type,
     read: row.read,
     metadata: row.metadata || {},
+    lastNotifiedAt: row.last_notified_at || row.created_at,
     createdAt: row.created_at,
   };
 }
@@ -23,15 +25,78 @@ function isMissingRelationError(error) {
   );
 }
 
+function buildNotificationScope(input = {}) {
+  const metadata = input.metadata || {};
+  return (
+    metadata.notificationScope ||
+    metadata.issueId ||
+    metadata.linkedIssueId ||
+    metadata.feedbackUniqueKey ||
+    metadata.feedbackId ||
+    [input.type || 'info', input.title || '', input.message || ''].join('::')
+  );
+}
+
+function getNotificationTimestamp(row) {
+  return row.last_notified_at || row.created_at;
+}
+
+async function findRecentNotification(userId, payload, cooldownMinutes) {
+  const since = new Date(Date.now() - cooldownMinutes * 60 * 1000).toISOString();
+  const scope = buildNotificationScope(payload);
+  const { data, error } = await supabase
+    .from('notifications')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('type', payload.type)
+    .gte('last_notified_at', since)
+    .order('last_notified_at', { ascending: false })
+    .limit(20);
+
+  if (error) {
+    if (isMissingRelationError(error)) {
+      return null;
+    }
+    throw error;
+  }
+
+  return (data || []).find((row) => {
+    const existingScope = buildNotificationScope({
+      type: row.type,
+      title: row.title,
+      message: row.message,
+      metadata: row.metadata || {},
+    });
+    return existingScope === scope && getNotificationTimestamp(row) >= since;
+  }) || null;
+}
+
 async function createNotification(userId, input) {
+  const cooldownMinutes = Math.max(
+    1,
+    Number(input.cooldownMinutes || DEFAULT_NOTIFICATION_COOLDOWN_MINUTES)
+  );
   const payload = {
     user_id: userId,
     title: String(input.title || 'Agent update'),
     message: String(input.message || ''),
     type: String(input.type || 'info'),
     read: false,
-    metadata: input.metadata || {},
+    metadata: {
+      ...(input.metadata || {}),
+      notificationScope: buildNotificationScope(input),
+    },
+    last_notified_at: new Date().toISOString(),
   };
+
+  const existingNotification = await findRecentNotification(
+    userId,
+    payload,
+    cooldownMinutes
+  );
+  if (existingNotification) {
+    return normalizeNotification(existingNotification);
+  }
 
   const { data, error } = await supabase
     .from('notifications')
@@ -49,7 +114,7 @@ async function createNotification(userId, input) {
         type: payload.type,
         read: false,
         metadata: payload.metadata,
-        createdAt: new Date().toISOString(),
+        createdAt: payload.last_notified_at,
       };
     }
     throw error;
@@ -85,18 +150,6 @@ async function listNotifications(userId, limit = 20) {
   }
 
   const notifications = (data || []).map(normalizeNotification);
-  for (const notification of notifications) {
-    await publishSystemEvent({
-      userId,
-      type: 'notification_read',
-      queueName: 'realtime',
-      priority: 'low',
-      payload: {
-        notificationId: notification.id,
-      },
-    }).catch(() => null);
-  }
-
   return notifications;
 }
 

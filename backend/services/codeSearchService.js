@@ -1,6 +1,6 @@
 const { githubRequest } = require('./githubService');
 
-const MAX_FILES = 5;
+const MAX_FILES = 3;
 const MAX_TOTAL_LINES = 500;
 const MAX_LINES_PER_FILE = 180;
 const KEYWORD_LIMIT = 6;
@@ -95,7 +95,26 @@ function extractKeywords(issueTitle, issueDescription) {
   return unique(expanded).slice(0, KEYWORD_LIMIT + 4);
 }
 
-function scorePath(path, keywords) {
+function extractContextKeywords(issueIntelligence) {
+  const probableContext = issueIntelligence?.probable_context || {};
+  const page = String(probableContext.page || '').trim().toLowerCase();
+  const api = String(probableContext.api || '').trim().toLowerCase();
+  const componentHint = String(probableContext.component_hint || '').trim();
+
+  const segments = [
+    ...page.split(/[^a-z0-9]+/).filter((token) => token.length >= 3),
+    ...api.split(/[^a-z0-9]+/).filter((token) => token.length >= 3),
+    ...componentHint
+      .replace(/([a-z])([A-Z])/g, '$1 $2')
+      .toLowerCase()
+      .split(/[^a-z0-9]+/)
+      .filter((token) => token.length >= 3),
+  ];
+
+  return unique(segments).slice(0, 8);
+}
+
+function scorePath(path, keywords, issueIntelligence = null) {
   const normalizedPath = normalizeText(path);
   const segments = normalizedPath.split('/');
   const fileName = segments[segments.length - 1] || normalizedPath;
@@ -107,6 +126,35 @@ function scorePath(path, keywords) {
       score += 5;
     }
     if (normalizedPath.includes(keyword)) score += 3;
+  }
+
+  const probableContext = issueIntelligence?.probable_context || {};
+  const componentHint = String(probableContext.component_hint || '').toLowerCase();
+  if (componentHint) {
+    const componentParts = componentHint
+      .replace(/([a-z])([A-Z])/g, '$1 $2')
+      .toLowerCase()
+      .split(/[^a-z0-9]+/)
+      .filter(Boolean);
+    if (componentParts.some((part) => normalizedPath.includes(part))) {
+      score += 10;
+    }
+  }
+
+  const page = String(probableContext.page || '').toLowerCase();
+  if (page) {
+    const pageTokens = page.split(/[^a-z0-9]+/).filter((token) => token.length >= 3);
+    if (pageTokens.some((token) => normalizedPath.includes(token))) {
+      score += 7;
+    }
+  }
+
+  const api = String(probableContext.api || '').toLowerCase();
+  if (api) {
+    const apiTokens = api.split(/[^a-z0-9]+/).filter((token) => token.length >= 3);
+    if (apiTokens.some((token) => normalizedPath.includes(token))) {
+      score += 9;
+    }
   }
 
   if (normalizedPath.includes('test') || normalizedPath.includes('__tests__')) score -= 2;
@@ -257,9 +305,16 @@ async function searchRelevantCode(connection, issue, options = {}) {
   const repo = options.repo || connection.name;
   const ref = options.ref || connection.defaultBranch;
   const accessToken = connection.connection.accessToken;
-  const keywords = extractKeywords(issue.title, issue.description || issue.summary || '');
+  const intelligenceKeywords = extractContextKeywords(options.issueIntelligence);
+  const keywords = unique([
+    ...extractKeywords(issue.title, issue.description || issue.summary || ''),
+    ...intelligenceKeywords,
+  ]);
   const repoStructure = options.repoStructure || null;
 
+  const maxFiles = Math.max(1, Math.min(Number(options.maxFiles || MAX_FILES), 5));
+  const maxTotalLines = Math.max(120, Math.min(Number(options.maxTotalLines || MAX_TOTAL_LINES), 900));
+  const maxLinesPerFile = Math.max(60, Math.min(Number(options.maxLinesPerFile || MAX_LINES_PER_FILE), 260));
   const searchResults = await Promise.all(
     keywords.slice(0, KEYWORD_LIMIT).map((keyword) =>
       searchCode(accessToken, owner, repo, keyword)
@@ -271,7 +326,7 @@ async function searchRelevantCode(connection, issue, options = {}) {
   const merged = new Map();
   for (const resultSet of searchResults.flat()) {
     const existing = merged.get(resultSet.path);
-    const nextScore = scorePath(resultSet.path, keywords);
+    const nextScore = scorePath(resultSet.path, keywords, options.issueIntelligence || null);
     if (!existing || existing.score < nextScore) {
       merged.set(resultSet.path, {
         path: resultSet.path,
@@ -283,7 +338,7 @@ async function searchRelevantCode(connection, issue, options = {}) {
 
   for (const path of Array.isArray(repoStructure?.keyFiles) ? repoStructure.keyFiles : []) {
     const existing = merged.get(path);
-    const nextScore = scorePath(path, keywords) + 4;
+    const nextScore = scorePath(path, keywords, options.issueIntelligence || null) + 4;
     if (!existing || existing.score < nextScore) {
       merged.set(path, {
         path,
@@ -295,9 +350,9 @@ async function searchRelevantCode(connection, issue, options = {}) {
 
   const candidates = Array.from(merged.values())
     .sort((a, b) => b.score - a.score)
-    .slice(0, MAX_FILES);
+    .slice(0, maxFiles);
 
-  let remainingBudget = MAX_TOTAL_LINES;
+  let remainingBudget = maxTotalLines;
   const files = [];
 
   for (const candidate of candidates) {
@@ -307,7 +362,7 @@ async function searchRelevantCode(connection, issue, options = {}) {
 
     try {
       const file = await fetchRepositoryFile(accessToken, owner, repo, candidate.path, ref);
-      const maxLines = Math.min(MAX_LINES_PER_FILE, remainingBudget);
+      const maxLines = Math.min(maxLinesPerFile, remainingBudget);
       const snippet = buildSnippet(file.content, keywords, maxLines);
       remainingBudget -= snippet.lineCount;
       files.push({

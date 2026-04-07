@@ -11,6 +11,7 @@ import {
   type ReactNode,
 } from "react";
 import { api, type Notification } from "@/lib/api";
+import { DASHBOARD_DEMO_MODE, dashboardDemoNotifications } from "@/lib/dashboard-demo";
 import { toUserFacingError } from "@/lib/user-facing-errors";
 import { useAuth } from "./AuthProvider";
 import {
@@ -32,6 +33,7 @@ interface NotificationsContextValue {
 }
 
 const NotificationsContext = createContext<NotificationsContextValue | null>(null);
+const REFRESH_INTERVAL_MS = 10000;
 
 export function NotificationsProvider({ children }: { children: ReactNode }) {
   const { session } = useAuth();
@@ -45,6 +47,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   );
   const hasLoadedOnce = useRef(false);
   const seenIds = useRef<Set<string>>(new Set());
+  const refreshInFlight = useRef(false);
 
   const buildNotificationUrl = useCallback((notification: Notification) => {
     const issueId = typeof notification.metadata?.issueId === "string" ? notification.metadata.issueId : null;
@@ -58,10 +61,20 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       return "/dashboard/tickets";
     }
 
-    return "/dashboard/agent-activity";
+    return "/dashboard/command-center";
   }, []);
 
-  const refreshNotifications = useCallback(async () => {
+  const refreshNotifications = useCallback(async (options?: { silent?: boolean }) => {
+    if (DASHBOARD_DEMO_MODE) {
+      setNotifications(dashboardDemoNotifications);
+      setUnreadCount(
+        dashboardDemoNotifications.filter((notification) => !notification.read).length
+      );
+      setError(null);
+      setLoading(false);
+      return;
+    }
+
     if (!session?.access_token) {
       setNotifications([]);
       setUnreadCount(0);
@@ -70,8 +83,16 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    setLoading(true);
-    setError(null);
+    if (refreshInFlight.current) {
+      return;
+    }
+
+    refreshInFlight.current = true;
+
+    if (!options?.silent) {
+      setLoading(true);
+      setError(null);
+    }
 
     try {
       const result = await api.notifications.list(session.access_token);
@@ -103,10 +124,13 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
         }
       }
     } catch (err) {
-      setNotifications([]);
-      setUnreadCount(0);
-      setError(toUserFacingError(err, "agent-load"));
+      if (!options?.silent) {
+        setNotifications([]);
+        setUnreadCount(0);
+        setError(toUserFacingError(err, "agent-load"));
+      }
     } finally {
+      refreshInFlight.current = false;
       setLoading(false);
     }
   }, [buildNotificationUrl, permission, session?.access_token]);
@@ -120,11 +144,27 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    const refreshIfVisible = () => {
+      if (document.visibilityState === "visible") {
+        void refreshNotifications({ silent: true });
+      }
+    };
+
+    const timer = window.setInterval(refreshIfVisible, REFRESH_INTERVAL_MS);
+
+    return () => window.clearInterval(timer);
+  }, [refreshNotifications, session?.access_token]);
+
+  useEffect(() => {
+    if (!session?.access_token) {
+      return;
+    }
+
     return subscribeToEvents((event) => {
       if (event.type === "notification_created") {
         const notification = event.payload?.notification as Notification | undefined;
         if (!notification) {
-          void refreshNotifications();
+          void refreshNotifications({ silent: true });
           return;
         }
 
@@ -176,12 +216,34 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
 
   const markAsRead = useCallback(
     async (ids: string[]) => {
+      if (DASHBOARD_DEMO_MODE) {
+        setNotifications((current) =>
+          current.map((entry) =>
+            ids.includes(entry.id) ? { ...entry, read: true } : entry
+          )
+        );
+        setUnreadCount((current) => Math.max(0, current - ids.length));
+        return;
+      }
+
       if (!session?.access_token || ids.length === 0) {
         return;
       }
 
-      await api.notifications.markRead(session.access_token, ids);
-      await refreshNotifications();
+      setNotifications((current) =>
+        current.map((entry) =>
+          ids.includes(entry.id) ? { ...entry, read: true } : entry
+        )
+      );
+      setUnreadCount((current) => Math.max(0, current - ids.length));
+
+      try {
+        await api.notifications.markRead(session.access_token, ids);
+        await refreshNotifications({ silent: true });
+      } catch (error) {
+        await refreshNotifications({ silent: true });
+        throw error;
+      }
     },
     [refreshNotifications, session?.access_token]
   );

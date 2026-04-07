@@ -3,6 +3,21 @@ const { summarizeLocations } = require('../services/locationService');
 
 const KEYWORD_GROUPS = [
   {
+    slug: 'audit-form-submission-glitch',
+    title: 'Audit form submission glitch',
+    matchers: [
+      'audit form',
+      'audit page',
+      'submit button does nothing',
+      'submit does nothing',
+      'form is not submitting',
+      'lead form is stuck',
+      'request not reaching backend',
+      'click submit',
+    ],
+    category: 'Bug',
+  },
+  {
     slug: 'login-auth-friction',
     title: 'Login and authentication friction',
     matchers: ['login', 'sign in', 'signin', 'auth', 'password', 'otp'],

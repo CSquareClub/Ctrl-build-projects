@@ -1,5 +1,5 @@
-const crypto = require('crypto');
 const supabase = require('../lib/supabaseClient');
+const { insertFeedbackEventsDeduped } = require('../lib/feedbackDedup');
 const {
   detectSentiment,
   findGroup,
@@ -8,6 +8,7 @@ const {
 const { extractLocation } = require('../services/locationService');
 const { parseAgentDescription } = require('../services/agentService');
 const { getAccessibleUserIds } = require('../services/collaborationService');
+const { publishSystemEvent } = require('../services/liveEventsService');
 
 const VALID_STATUSES = new Set(['open', 'in_progress', 'resolved']);
 const VALID_PRIORITIES = new Set(['low', 'medium', 'high']);
@@ -88,11 +89,12 @@ async function createTicket(req, res) {
     let linkedIssueId = null;
 
     if (requestedLinkedIssueId) {
+      const access = await getAccessibleUserIds(req.user);
       const { data: ownedIssue, error: ownedIssueError } = await supabase
         .from('issues')
         .select('id')
         .eq('id', requestedLinkedIssueId)
-        .eq('user_id', req.user.id)
+        .in('user_id', access.userIds)
         .maybeSingle();
 
       if (ownedIssueError) throw ownedIssueError;
@@ -119,67 +121,81 @@ async function createTicket(req, res) {
 
     if (insertTicketError) throw insertTicketError;
 
-    const externalId = `ticket-${insertedTicket.id}-${crypto.randomUUID()}`;
-    const { error: feedbackError } = await supabase.from('feedback_events').insert({
-      user_id: req.user.id,
-      source: 'support_ticket',
-      external_id: externalId,
-      title,
-      body: description,
-      author: req.user.email || 'Ticket reporter',
-      url: null,
-      occurred_at: now,
-      sentiment: detectSentiment(`${title} ${description}`),
-      location: extractLocation({
-        source: 'support_ticket',
-        title,
-        body: description,
-        author: req.user.email || 'Ticket reporter',
-        location: providedLocation,
-      }),
-      metadata: {
-        isProductFeedback: true,
-        ticketId: insertedTicket.id,
-        priority,
-      },
-    });
-
-    if (feedbackError) throw feedbackError;
-
-    await rebuildIssuesFromFeedback(req.user.id);
-
-    if (linkedIssueId) {
-      const { data: refreshedIssue, error: refreshedIssueError } = await supabase
-        .from('issues')
-        .select('id')
-        .eq('id', linkedIssueId)
-        .eq('user_id', req.user.id)
-        .maybeSingle();
-
-      if (refreshedIssueError) throw refreshedIssueError;
-      linkedIssueId = refreshedIssue?.id ?? null;
-    }
-
-    if (!linkedIssueId) {
-      linkedIssueId = await findLinkedIssueId(req.user.id, title, description);
-    }
-
     let finalTicket = insertedTicket;
+    let sideEffectWarning = null;
 
-    if (linkedIssueId) {
-      const { data: updatedTicket, error: updateError } = await supabase
-        .from('tickets')
-        .update({
-          linked_issue_id: linkedIssueId,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', insertedTicket.id)
-        .eq('user_id', req.user.id)
-        .select('*')
-        .single();
+    try {
+      await insertFeedbackEventsDeduped(
+        req.user.id,
+        [
+          {
+            user_id: req.user.id,
+            source: 'support_ticket',
+            external_id: `ticket-${insertedTicket.id}`,
+            title,
+            body: description,
+            author: req.user.email || 'Ticket reporter',
+            url: null,
+            occurred_at: now,
+            sentiment: detectSentiment(`${title} ${description}`),
+            location: extractLocation({
+              source: 'support_ticket',
+              title,
+              body: description,
+              author: req.user.email || 'Ticket reporter',
+              location: providedLocation,
+            }),
+            metadata: {
+              isProductFeedback: true,
+              ticketId: insertedTicket.id,
+              priority,
+            },
+          },
+        ],
+        {
+          logLabel: 'ticket_create',
+        }
+      );
 
-      if (updateError) throw updateError;
-      finalTicket = updatedTicket;
+      await rebuildIssuesFromFeedback(req.user.id);
+
+      if (linkedIssueId) {
+        const { data: refreshedIssue, error: refreshedIssueError } = await supabase
+          .from('issues')
+          .select('id')
+          .eq('id', linkedIssueId)
+          .eq('user_id', req.user.id)
+          .maybeSingle();
+
+        if (refreshedIssueError) throw refreshedIssueError;
+        linkedIssueId = refreshedIssue?.id ?? null;
+      }
+
+      if (!linkedIssueId) {
+        linkedIssueId = await findLinkedIssueId(req.user.id, title, description);
+      }
+
+      if (linkedIssueId) {
+        const { data: updatedTicket, error: updateError } = await supabase
+          .from('tickets')
+          .update({
+            linked_issue_id: linkedIssueId,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', insertedTicket.id)
+          .eq('user_id', req.user.id)
+          .select('*')
+          .single();
+
+        if (updateError) throw updateError;
+        finalTicket = updatedTicket;
+      }
+    } catch (sideEffectError) {
+      sideEffectWarning =
+        sideEffectError instanceof Error
+          ? sideEffectError.message
+          : 'Ticket created, but background linking did not finish.';
+      console.error('[tickets.create] post-create side effect failed', sideEffectError);
     }
 
     const { data: ticketWithIssue, error: fetchError } = await supabase
@@ -189,9 +205,17 @@ async function createTicket(req, res) {
       .eq('user_id', req.user.id)
       .single();
 
-    if (fetchError) throw fetchError;
+    if (fetchError) {
+      return res.status(201).json({
+        ...normalizeTicket(finalTicket),
+        warning: sideEffectWarning,
+      });
+    }
 
-    res.status(201).json(normalizeTicket(ticketWithIssue));
+    res.status(201).json({
+      ...normalizeTicket(ticketWithIssue),
+      warning: sideEffectWarning,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -230,6 +254,19 @@ async function updateTicket(req, res) {
       .single();
 
     if (error) throw error;
+
+    const linkedIssueId = data.linked_issue_id || data.issues?.id || null;
+
+    await publishSystemEvent({
+      userId: req.user.id,
+      type: 'ticket_updated',
+      payload: {
+        ticketId: data.id,
+        status: data.status,
+        linkedIssueId,
+        healed: false,
+      },
+    });
 
     res.json(normalizeTicket(data));
   } catch (err) {

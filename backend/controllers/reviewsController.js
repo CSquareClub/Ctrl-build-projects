@@ -1,10 +1,13 @@
+const crypto = require('crypto');
 const supabase = require('../lib/supabaseClient');
 const { insertFeedbackEventsDeduped } = require('../lib/feedbackDedup');
 const { ensureUserRecords } = require('../lib/ensureUserRecords');
-const { rebuildIssuesFromFeedback } = require('../lib/issueAggregator');
 const { fetchPlayReviews, MAX_REVIEW_COUNT } = require('../services/reviewService');
 const { extractLocation } = require('../services/locationService');
-const { runAgent } = require('../services/agentService');
+const { enqueueSystemEvent, EVENT_TYPES } = require('../services/eventPipelineService');
+const { processClaimedFeedback } = require('../services/feedbackProcessingService');
+
+const DEMO_DIRECT_PROCESSING = process.env.DEMO_DIRECT_PROCESSING !== 'false';
 
 function detectReviewSentiment(rating) {
   if (rating >= 4) {
@@ -16,6 +19,16 @@ function detectReviewSentiment(rating) {
   }
 
   return 'neutral';
+}
+
+function buildReviewsDedupeKey(userId, rows) {
+  const hash = crypto
+    .createHash('sha1')
+    .update((rows || []).map((row) => row.unique_key || row.id || '').join('|'))
+    .digest('hex')
+    .slice(0, 12);
+
+  return `feedback:reviews:${userId}:${hash}`;
 }
 
 async function fetchReviews(req, res) {
@@ -69,9 +82,27 @@ async function fetchReviews(req, res) {
       logLabel: 'app_review_fetch',
     });
 
-    if (insertResult.inserted > 0) {
-      await rebuildIssuesFromFeedback(req.user.id);
-      await runAgent(req.user);
+    if (insertResult.inserted > 0 && DEMO_DIRECT_PROCESSING) {
+      await processClaimedFeedback(req.user, insertResult.rows, {
+        background: false,
+        mode: 'sync:google-play:inline',
+        skipAutoInspection: true,
+      }).catch(() => null);
+    }
+
+    if (insertResult.inserted > 0 && !DEMO_DIRECT_PROCESSING) {
+      await enqueueSystemEvent({
+        type: EVENT_TYPES.FEEDBACK_RECEIVED,
+        userId: req.user.id,
+        source: 'app-reviews',
+        dedupeKey: buildReviewsDedupeKey(req.user.id, insertResult.rows),
+        payload: {
+          uniqueKeys: insertResult.rows.map((row) => row.unique_key).filter(Boolean),
+          background: true,
+          mode: 'sync:google-play',
+        },
+        priority: 1,
+      }).catch(() => null);
     }
 
     res.json({

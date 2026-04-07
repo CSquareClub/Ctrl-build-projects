@@ -54,10 +54,10 @@ export default function ReminderCard({
     <div
       className={`rounded-2xl border p-4 ${
         overdue
-          ? "border-rose-500/30 bg-rose-500/8"
+          ? "border-rose-200 bg-rose-50 dark:border-rose-500/30 dark:bg-rose-500/8"
           : reminder.status === "done"
-            ? "border-emerald-500/20 bg-emerald-500/5"
-            : "border-slate-800 bg-slate-900/60"
+            ? "border-emerald-200 bg-emerald-50 dark:border-emerald-500/20 dark:bg-emerald-500/5"
+            : "border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900/60"
       }`}
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -66,10 +66,10 @@ export default function ReminderCard({
             <span
               className={`rounded-full px-2.5 py-1 text-xs font-medium ${
                 reminder.status === "done"
-                  ? "bg-emerald-500/10 text-emerald-300"
+                  ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"
                   : overdue
-                    ? "bg-rose-500/10 text-rose-300"
-                    : "bg-amber-500/10 text-amber-300"
+                    ? "bg-rose-100 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300"
+                    : "bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300"
               }`}
             >
               {reminder.status === "done"
@@ -78,20 +78,20 @@ export default function ReminderCard({
                   ? "Overdue"
                   : "Pending"}
             </span>
-            <span className="inline-flex items-center gap-1 text-xs text-slate-400">
+            <span className="inline-flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
               <Clock3 className="h-3.5 w-3.5" />
               {formatRelativeTime(reminder.remindAt)}
             </span>
             {reminder.createdByAgent && (
-              <span className="rounded-full border border-cyan-500/20 bg-cyan-500/10 px-2.5 py-1 text-xs font-medium text-cyan-200">
+              <span className="rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-xs font-medium text-cyan-700 dark:border-cyan-500/20 dark:bg-cyan-500/10 dark:text-cyan-200">
                 Created by Agent
               </span>
             )}
           </div>
 
-          <h4 className="mt-3 text-sm font-semibold text-white">{reminder.title}</h4>
+          <h4 className="mt-3 text-sm font-semibold text-slate-900 dark:text-white">{reminder.title}</h4>
           {!compact && reminder.description && (
-            <p className="mt-1 text-sm leading-relaxed text-slate-400">
+            <p className="mt-1 text-sm leading-relaxed text-slate-600 dark:text-slate-400">
               {reminder.description}
             </p>
           )}
@@ -100,14 +100,14 @@ export default function ReminderCard({
             {reminder.linkedIssue && (
               <Link
                 href={`/dashboard/issues/${reminder.linkedIssue.id}`}
-                className="inline-flex items-center gap-1 rounded-lg border border-indigo-500/20 bg-indigo-500/10 px-2.5 py-1 text-indigo-300"
+                className="inline-flex items-center gap-1 rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-indigo-700 dark:border-indigo-500/20 dark:bg-indigo-500/10 dark:text-indigo-300"
               >
                 <Link2 className="h-3 w-3" />
                 Issue: {reminder.linkedIssue.title}
               </Link>
             )}
             {reminder.linkedTicket && (
-              <span className="inline-flex items-center gap-1 rounded-lg border border-slate-700 bg-slate-950/70 px-2.5 py-1 text-slate-300">
+              <span className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-slate-700 dark:border-slate-700 dark:bg-slate-950/70 dark:text-slate-300">
                 <Link2 className="h-3 w-3" />
                 Ticket: {reminder.linkedTicket.title}
               </span>

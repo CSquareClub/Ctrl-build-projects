@@ -125,6 +125,7 @@ function calculateConfidenceFromMetrics({
   sourceCount,
   similarityScore,
   learningStats,
+  issue,
 }) {
   const frequencyScore = clamp(frequencyCount / 20, 0, 1);
   const normalizedSourceScore = clamp(sourceCount / 5, 0, 1);
@@ -138,14 +139,39 @@ function calculateConfidenceFromMetrics({
           1
         )
       : 0.5;
+  const issueConfidenceScore = clamp(
+    Number(issue?.confidence_score ?? issue?.confidenceScore ?? 0),
+    0,
+    1
+  );
+  const severitySignal = clamp(
+    Number(issue?.severity_score ?? issue?.severityScore ?? 0),
+    0,
+    1
+  );
+  const trendSignal = clamp(
+    (Number(issue?.trend_score ?? issue?.trendScore ?? 1) - 0.55) / 1.85,
+    0,
+    1
+  );
+  const issueCategory = String(issue?.category || '').toLowerCase();
+  const categoryGuardrail =
+    issueCategory === 'praise'
+      ? 0.78
+      : issueCategory === 'feature request'
+        ? 0.88
+        : 1;
 
   const rawScore =
-    frequencyScore * 0.3 +
-    normalizedSourceScore * 0.2 +
-    normalizedSimilarityScore * 0.2 +
-    historyScore * 0.3;
+    frequencyScore * 0.2 +
+    normalizedSourceScore * 0.12 +
+    normalizedSimilarityScore * 0.16 +
+    historyScore * 0.16 +
+    issueConfidenceScore * 0.16 +
+    severitySignal * 0.1 +
+    trendSignal * 0.1;
 
-  const confidenceScore = Math.round(clamp(rawScore, 0, 1) * 100);
+  const confidenceScore = Math.round(clamp(rawScore * categoryGuardrail, 0, 1) * 100);
   const confidenceLevel =
     confidenceScore < 40 ? 'low' : confidenceScore <= 70 ? 'medium' : 'high';
 
@@ -158,6 +184,9 @@ function calculateConfidenceFromMetrics({
       sourceScore: normalizedSourceScore,
       similarityScore: normalizedSimilarityScore,
       historyScore,
+      issueConfidenceScore,
+      severitySignal,
+      trendSignal,
     },
   };
 }
@@ -192,6 +221,7 @@ async function calculateConfidence(userId, issue, options = {}) {
     sourceCount,
     similarityScore,
     learningStats,
+    issue,
   });
   const selfHealing = await getOutcomeGuidance(userId, {
     issueType: issueType.slug,

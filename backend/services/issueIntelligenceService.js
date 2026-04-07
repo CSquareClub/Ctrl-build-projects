@@ -1,68 +1,150 @@
 const supabase = require('../lib/supabaseClient');
-const { findGroup } = require('../lib/issueAggregator');
 
-const CACHE_TTL_MS = 1000 * 60 * 2;
-const signalCache = new Map();
+function safeNumber(value, fallback = 0) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : fallback;
+}
 
 function isMissingRelationError(error) {
   return (
     error?.code === '42P01' ||
-    String(error?.message || '')
-      .toLowerCase()
-      .includes('does not exist')
+    error?.code === '42703' ||
+    String(error?.message || '').toLowerCase().includes('does not exist')
   );
 }
 
-function toHourKey(value) {
-  const date = new Date(value);
-  date.setMinutes(0, 0, 0);
-  return date.toISOString();
-}
-
-function toDayKey(value) {
-  const date = new Date(value);
-  date.setHours(0, 0, 0, 0);
-  return date.toISOString().slice(0, 10);
-}
-
-function getPastDayKeys(days) {
-  return Array.from({ length: days }, (_, index) => {
-    const date = new Date();
-    date.setHours(0, 0, 0, 0);
-    date.setDate(date.getDate() - (index + 1));
-    return date.toISOString().slice(0, 10);
-  }).reverse();
-}
-
-function getTypeForText(title, body) {
-  const group = findGroup(`${title || ''} ${body || ''}`);
-  return {
-    slug: group.slug,
-    title: group.title,
-    category: group.category,
-  };
-}
-
-function emptySignalRow(type) {
-  return {
-    issueType: type.slug,
-    issueTypeLabel: type.title,
-    category: type.category,
-    events: [],
-    issues: [],
-    sources: new Set(),
-    hourlyCounts: new Map(),
-    dailyCounts: new Map(),
-    resolutionTimes: [],
-  };
-}
-
-function ensureSignalRow(map, type) {
-  if (!map.has(type.slug)) {
-    map.set(type.slug, emptySignalRow(type));
+function pickTopBreakdownKey(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return null;
   }
 
-  return map.get(type.slug);
+  const entries = Object.entries(value)
+    .map(([key, count]) => [key, safeNumber(count, 0)])
+    .sort((left, right) => right[1] - left[1]);
+
+  return entries[0]?.[0] || null;
+}
+
+function normalizeIssueRow(row) {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    title: row.title || 'Untitled issue',
+    summary: row.summary || '',
+    priority: String(row.priority || 'LOW').toUpperCase(),
+    reportCount: safeNumber(row.report_count, 0),
+    trend: String(row.trend || 'stable'),
+    trendPercent: safeNumber(row.trend_percent, 0),
+    sources: Array.isArray(row.sources) ? row.sources : [],
+    sourceBreakdown: row.source_breakdown || {},
+    locationBreakdown: row.location_breakdown || {},
+    intelligenceScore: safeNumber(row.intelligence_score, 0),
+    severityScore: safeNumber(row.severity_score, 0),
+    trendScore: safeNumber(row.trend_score, 0),
+    confidenceScore: safeNumber(row.confidence_score, 0),
+  };
+}
+
+function normalizeTimeline(rows) {
+  return (rows || [])
+    .map((row) => ({
+      date: row.date,
+      count: safeNumber(row.count, 0),
+    }))
+    .sort((left, right) => new Date(left.date).getTime() - new Date(right.date).getTime());
+}
+
+function extractApiHint(rawData) {
+  const failures = Array.isArray(rawData?.networkFailures) ? rawData.networkFailures : [];
+  for (const failure of failures) {
+    const rawUrl = String(failure?.url || '').trim();
+    if (!rawUrl) continue;
+    try {
+      const parsed = new URL(rawUrl);
+      if (parsed.pathname && parsed.pathname !== '/') {
+        return parsed.pathname;
+      }
+    } catch {
+      if (rawUrl.startsWith('/')) {
+        return rawUrl;
+      }
+    }
+  }
+  return null;
+}
+
+function extractPageHint(rawData) {
+  const direct = String(rawData?.page || '').trim();
+  if (direct) {
+    return direct;
+  }
+
+  const uiContext = String(rawData?.uiContext || '').trim();
+  if (uiContext) {
+    return uiContext;
+  }
+
+  return null;
+}
+
+function toPascalCase(value) {
+  return String(value || '')
+    .split(/[^a-zA-Z0-9]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join('');
+}
+
+function inferComponentHint(issue, pageHint) {
+  const title = `${issue.title} ${issue.summary}`.toLowerCase();
+
+  if (title.includes('login') || title.includes('sign in') || title.includes('auth')) {
+    return 'LoginForm';
+  }
+  if (title.includes('signup') || title.includes('sign up') || title.includes('register')) {
+    return 'SignupForm';
+  }
+  if (title.includes('billing') || title.includes('payment')) {
+    return 'BillingForm';
+  }
+
+  if (pageHint) {
+    const cleanPath = String(pageHint).replace(/^\/+|\/+$/g, '');
+    const lastSegment = cleanPath.split('/').filter(Boolean).pop();
+    if (lastSegment) {
+      return `${toPascalCase(lastSegment)}Page`;
+    }
+  }
+
+  return null;
+}
+
+function summarizeTimelinePattern(timeline, trendPercent) {
+  if (!timeline.length) {
+    return trendPercent > 0 ? 'issue is trending upward' : 'not enough timeline data yet';
+  }
+
+  const recent = timeline.slice(-3);
+  const counts = recent.map((point) => point.count);
+  const increasing = counts.every((value, index) => index === 0 || value >= counts[index - 1]);
+
+  if (increasing && counts[counts.length - 1] > counts[0]) {
+    return 'recent reports are climbing';
+  }
+
+  if (trendPercent >= 20) {
+    return 'sharp increase in recent reports';
+  }
+
+  if (trendPercent <= -10) {
+    return 'volume is easing';
+  }
+
+  return 'report volume is relatively stable';
+}
+
+function sumCounts(rows) {
+  return (rows || []).reduce((total, row) => total + safeNumber(row?.count, 0), 0);
 }
 
 function average(values) {
@@ -70,219 +152,294 @@ function average(values) {
     return 0;
   }
 
-  return values.reduce((sum, value) => sum + value, 0) / values.length;
+  return values.reduce((total, value) => total + safeNumber(value, 0), 0) / values.length;
 }
 
-function percentageChange(current, previous) {
-  if (previous <= 0) {
-    return current > 0 ? 100 : 0;
-  }
-
-  return Number((((current - previous) / previous) * 100).toFixed(1));
-}
-
-function buildSignalSummary(row) {
-  const now = Date.now();
-  const oneHourAgo = now - 1000 * 60 * 60;
-  const threeHoursAgo = now - 1000 * 60 * 60 * 3;
-  const sixHoursAgo = now - 1000 * 60 * 60 * 6;
-  const sevenDaysAgo = now - 1000 * 60 * 60 * 24 * 7;
-  const previousSevenDaysAgo = now - 1000 * 60 * 60 * 24 * 14;
-
-  let lastHourCount = 0;
-  let lastThreeHoursCount = 0;
-  let previousThreeHoursCount = 0;
-  let lastSixHoursCount = 0;
-  let lastSevenDaysCount = 0;
-  let previousSevenDaysCount = 0;
-
-  for (const event of row.events) {
-    const eventTime = new Date(event.occurred_at).getTime();
-
-    if (eventTime >= oneHourAgo) lastHourCount += 1;
-    if (eventTime >= threeHoursAgo) lastThreeHoursCount += 1;
-    if (eventTime >= sixHoursAgo) lastSixHoursCount += 1;
-    if (eventTime >= sevenDaysAgo) lastSevenDaysCount += 1;
-    if (eventTime < threeHoursAgo && eventTime >= sixHoursAgo) previousThreeHoursCount += 1;
-    if (eventTime < sevenDaysAgo && eventTime >= previousSevenDaysAgo) {
-      previousSevenDaysCount += 1;
-    }
-  }
-
-  const baselineDays = getPastDayKeys(7);
-  const baselineDailyCounts = baselineDays.map((key) => row.dailyCounts.get(key) || 0);
-  const baselineDailyAverage = average(baselineDailyCounts);
-  const baselineHourlyRate = baselineDailyAverage / 24;
-  const currentHourlyRate = Math.max(lastHourCount, lastSixHoursCount / 6);
-  const weeklyGrowthPercent = percentageChange(lastSevenDaysCount, previousSevenDaysCount);
-  const latestIssue = [...row.issues].sort((a, b) => {
-    const reportDelta = Number(b.report_count || 0) - Number(a.report_count || 0);
-    if (reportDelta !== 0) {
-      return reportDelta;
-    }
-
-    return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
-  })[0] || null;
-
+function normalizeSummaryIssue(input) {
   return {
-    issueType: row.issueType,
-    issueTypeLabel: row.issueTypeLabel,
-    category: row.category,
-    latestIssue,
-    sourceCount: row.sources.size,
-    frequencyCount: latestIssue
-      ? Number(latestIssue.report_count || 0)
-      : Math.max(lastSevenDaysCount, row.events.length),
-    lastHourCount,
-    lastThreeHoursCount,
-    previousThreeHoursCount,
-    lastSixHoursCount,
-    lastSevenDaysCount,
-    previousSevenDaysCount,
-    baselineDailyAverage: Number(baselineDailyAverage.toFixed(2)),
-    baselineHourlyRate: Number(baselineHourlyRate.toFixed(3)),
-    currentHourlyRate: Number(currentHourlyRate.toFixed(3)),
-    weeklyGrowthPercent,
-    avgResolutionTimeHours: Number(average(row.resolutionTimes).toFixed(1)),
-    events: row.events,
+    id: input?.id,
+    title: String(input?.title || 'Untitled issue'),
+    summary: String(input?.summary || ''),
+    priority: String(input?.priority || 'LOW').toUpperCase(),
+    reportCount: safeNumber(input?.reportCount ?? input?.report_count, 0),
+    trendPercent: safeNumber(input?.trendPercent ?? input?.trend_percent, 0),
+    createdAt: input?.createdAt || input?.created_at || null,
   };
 }
 
-async function loadIssueSignals(userId) {
-  const cached = signalCache.get(userId);
-  if (cached && cached.expiresAt > Date.now()) {
-    return cached.value;
+function buildSignalSummary(issue, timelineRows, metricRow) {
+  const timeline = normalizeTimeline(timelineRows);
+  const now = Date.now();
+  const hourMs = 1000 * 60 * 60;
+
+  const lastHourRows = timeline.filter(
+    (row) => now - new Date(row.date).getTime() <= hourMs
+  );
+  const lastThreeHourRows = timeline.filter(
+    (row) => now - new Date(row.date).getTime() <= hourMs * 3
+  );
+  const previousThreeHourRows = timeline.filter((row) => {
+    const age = now - new Date(row.date).getTime();
+    return age > hourMs * 3 && age <= hourMs * 6;
+  });
+  const lastSixHourRows = timeline.filter(
+    (row) => now - new Date(row.date).getTime() <= hourMs * 6
+  );
+
+  const timelineCounts = timeline.map((row) => safeNumber(row.count, 0));
+  const baselineCandidates = timeline.slice(0, Math.max(0, timeline.length - 1));
+  const baselineHourlyRate = average(
+    baselineCandidates.length > 0 ? baselineCandidates.map((row) => row.count) : timelineCounts
+  );
+  const currentHourlyRate =
+    timeline.length > 0
+      ? safeNumber(timeline[timeline.length - 1].count, 0)
+      : safeNumber(issue.reportCount, 0);
+
+  return {
+    issueId: issue.id,
+    issueType: issue.id || issue.title,
+    issueTypeLabel: issue.title,
+    frequencyCount: safeNumber(metricRow?.frequency_count, issue.reportCount),
+    avgResolutionTimeHours: safeNumber(metricRow?.avg_resolution_time_hours, 0),
+    weeklyGrowthPercent: safeNumber(
+      metricRow?.trend_growth_percent,
+      issue.trendPercent
+    ),
+    lastHourCount: sumCounts(lastHourRows),
+    lastThreeHoursCount: sumCounts(lastThreeHourRows),
+    previousThreeHoursCount: sumCounts(previousThreeHourRows),
+    lastSixHoursCount: sumCounts(lastSixHourRows),
+    baselineHourlyRate: Number(baselineHourlyRate.toFixed(2)),
+    currentHourlyRate: Number(currentHourlyRate.toFixed(2)),
+  };
+}
+
+async function getIssueSignalSummary(userId, issueInput) {
+  const issue =
+    issueInput && typeof issueInput === 'object' && issueInput.id
+      ? normalizeSummaryIssue(issueInput)
+      : null;
+
+  let resolvedIssue = issue;
+
+  if (!resolvedIssue) {
+    const issueId = String(issueInput || '').trim();
+    const { data: issueRow, error: issueError } = await supabase
+      .from('issues')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('id', issueId)
+      .maybeSingle();
+
+    if (issueError) {
+      if (isMissingRelationError(issueError)) {
+        return buildSignalSummary(
+          {
+            id: issueId,
+            title: 'Issue',
+            reportCount: 0,
+            trendPercent: 0,
+          },
+          [],
+          null
+        );
+      }
+      throw issueError;
+    }
+
+    if (!issueRow) {
+      return buildSignalSummary(
+        {
+          id: issueId,
+          title: 'Issue',
+          reportCount: 0,
+          trendPercent: 0,
+        },
+        [],
+        null
+      );
+    }
+
+    resolvedIssue = normalizeSummaryIssue(issueRow);
   }
 
-  const feedbackSince = new Date(Date.now() - 1000 * 60 * 60 * 24 * 14).toISOString();
-  const [
-    { data: feedbackEvents, error: feedbackError },
-    { data: issues, error: issuesError },
-    { data: tickets, error: ticketsError },
-  ] = await Promise.all([
-    supabase
-      .from('feedback_events')
-      .select('id, title, body, source, occurred_at')
-      .eq('user_id', userId)
-      .gte('occurred_at', feedbackSince)
-      .order('occurred_at', { ascending: false }),
+  const [{ data: timelineRows, error: timelineError }, { data: metricRow, error: metricError }] =
+    await Promise.all([
+      supabase
+        .from('issue_timeline')
+        .select('date, count')
+        .eq('issue_id', resolvedIssue.id)
+        .order('date', { ascending: true })
+        .limit(30),
+      supabase
+        .from('issue_metrics')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('issue_id', resolvedIssue.id)
+        .maybeSingle(),
+    ]);
+
+  if (timelineError && !isMissingRelationError(timelineError)) {
+    throw timelineError;
+  }
+
+  if (metricError && !isMissingRelationError(metricError)) {
+    throw metricError;
+  }
+
+  return buildSignalSummary(resolvedIssue, timelineRows || [], metricRow || null);
+}
+
+async function loadIssueSignals(userId) {
+  const { data: issueRows, error: issueError } = await supabase
+    .from('issues')
+    .select('*')
+    .eq('user_id', userId)
+    .order('updated_at', { ascending: false })
+    .limit(20);
+
+  if (issueError) {
+    if (isMissingRelationError(issueError)) {
+      return [];
+    }
+    throw issueError;
+  }
+
+  const issues = (issueRows || []).map(normalizeSummaryIssue);
+  if (issues.length === 0) {
+    return [];
+  }
+
+  return Promise.all(issues.map((issue) => getIssueSignalSummary(userId, issue)));
+}
+
+async function buildIssueIntelligence(userId, issueId) {
+  const [{ data: issueRow, error: issueError }, { data: feedbackRows, error: feedbackError }, { data: metricRow, error: metricError }, { data: timelineRows, error: timelineError }, { data: inspectionRows, error: inspectionError }] = await Promise.all([
     supabase
       .from('issues')
-      .select('id, title, summary, report_count, sources, source_breakdown, trend_percent, created_at')
-      .eq('user_id', userId),
-    supabase
-      .from('tickets')
-      .select('id, linked_issue_id, created_at, updated_at, status')
+      .select('*')
       .eq('user_id', userId)
-      .eq('status', 'resolved'),
+      .eq('id', issueId)
+      .maybeSingle(),
+    supabase
+      .from('issue_feedback')
+      .select('text, source, sentiment, timestamp')
+      .eq('issue_id', issueId)
+      .order('timestamp', { ascending: false })
+      .limit(8),
+    supabase
+      .from('issue_metrics')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('issue_id', issueId)
+      .maybeSingle(),
+    supabase
+      .from('issue_timeline')
+      .select('date, count')
+      .eq('issue_id', issueId)
+      .order('date', { ascending: true })
+      .limit(14),
+    supabase
+      .from('inspection_results')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('issue_id', issueId)
+      .order('created_at', { ascending: false })
+      .limit(3),
   ]);
 
-  if (feedbackError && !isMissingRelationError(feedbackError)) throw feedbackError;
-  if (issuesError && !isMissingRelationError(issuesError)) throw issuesError;
-  if (ticketsError && !isMissingRelationError(ticketsError)) throw ticketsError;
-
-  const signalsByType = new Map();
-  const issuesById = new Map();
-
-  for (const issue of issues || []) {
-    issuesById.set(issue.id, issue);
-    const type = getTypeForText(issue.title, issue.summary);
-    const row = ensureSignalRow(signalsByType, type);
-    row.issues.push(issue);
-
-    const issueSources = Array.isArray(issue.sources)
-      ? issue.sources
-      : Object.keys(issue.source_breakdown || {});
-    for (const source of issueSources) {
-      row.sources.add(source);
-    }
+  if (issueError) throw issueError;
+  if (!issueRow) {
+    throw new Error('Issue not found.');
   }
+  if (feedbackError && feedbackError.code !== '42P01') throw feedbackError;
+  if (metricError && metricError.code !== '42P01') throw metricError;
+  if (timelineError && timelineError.code !== '42P01') throw timelineError;
+  if (inspectionError && inspectionError.code !== '42P01') throw inspectionError;
 
-  for (const event of feedbackEvents || []) {
-    const type = getTypeForText(event.title, event.body);
-    const row = ensureSignalRow(signalsByType, type);
-    row.events.push(event);
-    row.sources.add(event.source);
-    row.hourlyCounts.set(
-      toHourKey(event.occurred_at),
-      (row.hourlyCounts.get(toHourKey(event.occurred_at)) || 0) + 1
-    );
-    row.dailyCounts.set(
-      toDayKey(event.occurred_at),
-      (row.dailyCounts.get(toDayKey(event.occurred_at)) || 0) + 1
-    );
-  }
+  const issue = normalizeIssueRow(issueRow);
+  const timeline = normalizeTimeline(timelineRows);
+  const latestInspection = inspectionRows?.[0] || null;
+  const rawInspection = latestInspection?.raw_data || {};
+  const pageHint = extractPageHint(rawInspection) || pickTopBreakdownKey(issue.locationBreakdown) || null;
+  const apiHint = extractApiHint(rawInspection);
+  const componentHint = inferComponentHint(issue, pageHint);
+  const topSource = pickTopBreakdownKey(issue.sourceBreakdown);
 
-  for (const ticket of tickets || []) {
-    const linkedIssue = issuesById.get(ticket.linked_issue_id);
-    if (!linkedIssue) {
-      continue;
-    }
+  const feedbackSignals = (feedbackRows || [])
+    .map((entry) => String(entry.text || '').trim())
+    .filter(Boolean)
+    .slice(0, 6);
 
-    const type = getTypeForText(linkedIssue.title, linkedIssue.summary);
-    const row = ensureSignalRow(signalsByType, type);
-    const durationHours =
-      (new Date(ticket.updated_at).getTime() - new Date(ticket.created_at).getTime()) /
-      (1000 * 60 * 60);
-    if (!Number.isNaN(durationHours) && durationHours >= 0) {
-      row.resolutionTimes.push(durationHours);
-    }
-  }
+  const issueIntelligence = {
+    issue_id: issue.id,
+    title: issue.title,
+    summary: issue.summary || feedbackSignals[0] || 'No issue summary available yet.',
+    severity: issue.priority,
+    frequency: safeNumber(metricRow?.frequency_count, issue.reportCount),
+    affected_area: topSource || pageHint || componentHint || 'Product experience',
+    feedback_signals: feedbackSignals,
+    inspection_data: {
+      observed_behavior: latestInspection?.observed_behavior || null,
+      logs: Array.isArray(rawInspection?.consoleErrors)
+        ? rawInspection.consoleErrors.map((entry) => entry?.text).filter(Boolean).slice(0, 5)
+        : [],
+      failed_actions: Array.isArray(rawInspection?.networkFailures)
+        ? rawInspection.networkFailures
+            .map((entry) => `${entry?.method || 'REQUEST'} ${entry?.url || ''}`.trim())
+            .filter(Boolean)
+            .slice(0, 5)
+        : [],
+      ui_context: pageHint || null,
+    },
+    analytics: {
+      occurrence_count: issue.reportCount,
+      spike_detected: issue.trendPercent >= 20,
+      trend: issue.trend,
+      affected_users: issue.reportCount,
+      timeline_pattern: summarizeTimelinePattern(timeline, issue.trendPercent),
+    },
+    probable_context: {
+      page: pageHint,
+      api: apiHint,
+      component_hint: componentHint,
+    },
+  };
 
-  const summaries = Array.from(signalsByType.values())
-    .map(buildSignalSummary)
-    .sort((a, b) => b.frequencyCount - a.frequencyCount);
+  const descriptionParts = [
+    issueIntelligence.summary,
+    feedbackSignals.length ? `Feedback:\n- ${feedbackSignals.join('\n- ')}` : null,
+    issueIntelligence.inspection_data.observed_behavior
+      ? `Observed behavior:\n${issueIntelligence.inspection_data.observed_behavior}`
+      : null,
+    issueIntelligence.inspection_data.failed_actions.length
+      ? `Failed actions:\n- ${issueIntelligence.inspection_data.failed_actions.join('\n- ')}`
+      : null,
+    issueIntelligence.analytics.timeline_pattern
+      ? `Analytics:\n${issueIntelligence.analytics.timeline_pattern}`
+      : null,
+  ].filter(Boolean);
 
-  signalCache.set(userId, {
-    value: summaries,
-    expiresAt: Date.now() + CACHE_TTL_MS,
-  });
-
-  return summaries;
-}
-
-async function getIssueSignalSummary(userId, issue) {
-  const issueType = getTypeForText(issue?.title, issue?.summary);
-  const signals = await loadIssueSignals(userId);
-  const match = signals.find((entry) => entry.issueType === issueType.slug);
-
-  return (
-    match || {
-      issueType: issueType.slug,
-      issueTypeLabel: issueType.title,
-      category: issueType.category,
-      latestIssue: issue || null,
-      sourceCount: Array.isArray(issue?.sources)
-        ? issue.sources.length
-        : Object.keys(issue?.source_breakdown || {}).length,
-      frequencyCount: Number(issue?.report_count || 0),
-      lastHourCount: 0,
-      lastThreeHoursCount: 0,
-      previousThreeHoursCount: 0,
-      lastSixHoursCount: 0,
-      lastSevenDaysCount: Number(issue?.report_count || 0),
-      previousSevenDaysCount: 0,
-      baselineDailyAverage: 0,
-      baselineHourlyRate: 0,
-      currentHourlyRate: 0,
-      weeklyGrowthPercent: Number(issue?.trend_percent || 0),
-      avgResolutionTimeHours: 0,
-      events: [],
-    }
-  );
-}
-
-function clearSignalCache(userId) {
-  if (!userId) {
-    signalCache.clear();
-    return;
-  }
-
-  signalCache.delete(userId);
+  return {
+    issue: {
+      id: issue.id,
+      title: issue.title,
+      summary: issue.summary || '',
+      description: descriptionParts.join('\n\n'),
+      priority: issue.priority,
+      reportCount: issue.reportCount,
+      sources: issue.sources,
+      confidenceScore: issue.confidenceScore,
+      severityScore: issue.severityScore,
+      trendScore: issue.trendScore,
+    },
+    issueIntelligence,
+  };
 }
 
 module.exports = {
-  clearSignalCache,
+  buildIssueIntelligence,
   getIssueSignalSummary,
   loadIssueSignals,
 };

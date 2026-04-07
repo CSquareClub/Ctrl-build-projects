@@ -14,16 +14,21 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@babel/parser": "^7.29.2",
     "@supabase/supabase-js": "^2.100.1",
     "bullmq": "^5.72.1",
     "cheerio": "^1.2.0",
     "cors": "^2.8.6",
+    "diff": "^8.0.4",
     "dotenv": "^17.3.1",
+    "esprima": "^4.0.1",
     "express": "^5.2.1",
     "google-play-scraper": "^10.1.2",
     "imapflow": "^1.2.18",
     "ioredis": "^5.10.1",
     "mailparser": "^3.9.6",
-    "morgan": "^1.10.1"
+    "morgan": "^1.10.1",
+    "multer": "^2.1.1",
+    "simple-git": "^3.28.0"
   }
 }

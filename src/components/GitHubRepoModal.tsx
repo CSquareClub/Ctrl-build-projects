@@ -72,10 +72,10 @@ export default function GitHubRepoModal({
           <div>
             <div className="mb-2 flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.22em] text-slate-500">
               <GitBranch className="h-4 w-4" />
-              Select Repository
+              Primary Repository
             </div>
             <h2 className="text-xl font-semibold text-white">
-              Choose the codebase Product Pulse should inspect
+              Choose the primary codebase Product Pulse should inspect
             </h2>
             <p className="mt-1 text-sm text-slate-400">
               We only search a few relevant files per issue and always open a pull
@@ -186,7 +186,7 @@ export default function GitHubRepoModal({
               }}
               disabled={!activeSelection || saving}
             >
-              {saving ? "Saving..." : "Save Repository"}
+              {saving ? "Saving..." : "Set as Primary Repo"}
             </Button>
           </div>
         </div>

@@ -21,11 +21,20 @@ function setCacheValue(key, value) {
   });
 }
 
-function createCacheKey(issue, files) {
+function createCacheKey(issue, files, issueIntelligence = null) {
   return JSON.stringify({
     issueId: issue.id || issue.title,
     title: issue.title,
     files: files.map((file) => `${file.path}:${file.sha || ''}:${file.startLine}-${file.endLine}`),
+    intelligence: issueIntelligence
+      ? {
+          severity: issueIntelligence.severity,
+          frequency: issueIntelligence.frequency,
+          page: issueIntelligence.probable_context?.page || null,
+          api: issueIntelligence.probable_context?.api || null,
+          component: issueIntelligence.probable_context?.component_hint || null,
+        }
+      : null,
   });
 }
 
@@ -186,9 +195,19 @@ function normalizePrDescription(value, issue, analysis, patchStats) {
   };
 }
 
-async function identifyRootCause(issue, files, repository = null, repoStructure = null) {
+async function identifyRootCause(issue, files, repository = null, repoStructure = null, issueIntelligence = null) {
   if (!Array.isArray(files) || files.length === 0) {
-    throw new Error('No relevant code files were found for root cause analysis.');
+    return {
+      possibleCauses: [
+        'No high-confidence repository match was found for the current issue.',
+      ],
+      rootCause:
+        'AgenticPulse could not isolate a reliable code location for this issue from the connected repository.',
+      confidence: 0.18,
+      targetFiles: [],
+      reasoningSummary:
+        'Repository context was too weak to draft a safe patch, so the analysis stayed in reasoning-only mode.',
+    };
   }
 
   const context = buildGroqCodeContext({
@@ -213,6 +232,10 @@ async function identifyRootCause(issue, files, repository = null, repoStructure 
           `Issue title:\n${context.issueTitle}`,
           '',
           `Issue description:\n${context.issueDescription}`,
+          '',
+          issueIntelligence
+            ? `Unified issue intelligence:\n${JSON.stringify(issueIntelligence, null, 2)}`
+            : '',
           '',
           `Relevant Code:\n${context.codeSummary}`,
           '',
@@ -323,8 +346,61 @@ function parseStructuredPatchResponse(content) {
   }
 }
 
+function buildFallbackPatchResult(issue, analysis, files, reason, parsed = {}) {
+  const targetFiles =
+    Array.isArray(analysis?.targetFiles) && analysis.targetFiles.length
+      ? analysis.targetFiles
+      : files.slice(0, 3).map((file) => file.path);
+  const safeReason =
+    String(reason || '').trim() ||
+    'Patch generation could not complete safely for this issue.';
+
+  return {
+    rootCause: analysis?.rootCause || 'Root cause not confirmed.',
+    possibleCauses: normalizePossibleCauses(
+      analysis?.possibleCauses,
+      analysis?.rootCause || 'Unable to confirm a precise code location.'
+    ),
+    selectedRootCause: analysis?.rootCause || 'Root cause not confirmed.',
+    rootCauseConfidence: Number(((analysis?.confidence || 0.18) * 100).toFixed(1)),
+    patchConfidence: 0,
+    patch: '',
+    reasoningSummary:
+      String(parsed?.explanation || '').trim() ||
+      analysis?.reasoningSummary ||
+      safeReason,
+    alternativeFixes: normalizeAlternativeFixes(
+      parsed?.alternativeFixes,
+      '',
+      targetFiles
+    ),
+    prDescription: normalizePrDescription(
+      parsed?.prDescription,
+      issue,
+      {
+        rootCause: analysis?.rootCause || 'Root cause not confirmed.',
+        reasoningSummary:
+          String(parsed?.explanation || '').trim() ||
+          analysis?.reasoningSummary ||
+          safeReason,
+        confidence: analysis?.confidence || 0.18,
+      },
+      {
+        fileCount: Math.max(targetFiles.length, files.length, 1),
+        changedLineCount: 0,
+      }
+    ),
+    targetFiles,
+    changedFileCount: 0,
+    changedLineCount: 0,
+    model: `${DEFAULT_MODEL}-fallback`,
+    fallbackReason: safeReason,
+  };
+}
+
 async function generatePatch(issue, files, options = {}) {
-  const cacheKey = createCacheKey(issue, files);
+  const issueIntelligence = options.issueIntelligence || null;
+  const cacheKey = createCacheKey(issue, files, issueIntelligence);
   const cached = getCacheValue(cacheKey);
   if (cached) {
     return cached;
@@ -332,7 +408,17 @@ async function generatePatch(issue, files, options = {}) {
 
   const repository = options.repository || null;
   const repoStructure = options.repoStructure || null;
-  const analysis = await identifyRootCause(issue, files, repository, repoStructure);
+  const analysis = await identifyRootCause(issue, files, repository, repoStructure, issueIntelligence);
+  if (!Array.isArray(files) || files.length === 0) {
+    const result = buildFallbackPatchResult(
+      issue,
+      analysis,
+      [],
+      'No relevant code files were found for this issue, so a safe patch could not be drafted.'
+    );
+    setCacheValue(cacheKey, result);
+    return result;
+  }
   const focusedFiles = files.filter((file) => analysis.targetFiles.includes(file.path));
   const contextFiles = (focusedFiles.length ? focusedFiles : files).slice(0, 5);
   const context = buildGroqCodeContext({
@@ -368,6 +454,10 @@ async function generatePatch(issue, files, options = {}) {
           '',
           `Issue description:\n${context.issueDescription}`,
           '',
+          issueIntelligence
+            ? `Unified issue intelligence:\n${JSON.stringify(issueIntelligence, null, 2)}`
+            : '',
+          '',
           `Relevant Code:\n${context.codeSummary}`,
           '',
           'Task:',
@@ -390,52 +480,74 @@ async function generatePatch(issue, files, options = {}) {
           '- include 2-3 alternative fixes and rank them',
           '- recommend the safest minimal option',
           '- keep PR description concise and reviewer-friendly',
+          '- use the unified issue intelligence to focus on the most likely failing path',
         ].join('\n'),
       },
     ],
     {
       temperature: 0.1,
     }
+  ).catch((error) =>
+    JSON.stringify({
+      explanation:
+        error instanceof Error
+          ? error.message
+          : 'Groq patch generation failed.',
+      patch: '',
+      alternativeFixes: [],
+      prDescription: null,
+    })
   );
 
   const parsed = parseStructuredPatchResponse(content);
-  const validated = validatePatch(parsed.patch, analysis);
-  const patchConfidence = Math.max(
-    0,
-    Math.min(
-      100,
-      Number(
-        (
-          analysis.confidence * 100 -
-          Math.max(0, validated.changedLineCount - 20) * 0.5
-        ).toFixed(1)
+  let result;
+  try {
+    const validated = validatePatch(parsed.patch, analysis);
+    const patchConfidence = Math.max(
+      0,
+      Math.min(
+        100,
+        Number(
+          (
+            analysis.confidence * 100 -
+            Math.max(0, validated.changedLineCount - 20) * 0.5
+          ).toFixed(1)
+        )
       )
-    )
-  );
-  const result = {
-    rootCause: parsed.rootCause || analysis.rootCause,
-    possibleCauses: analysis.possibleCauses,
-    selectedRootCause: parsed.rootCause || analysis.rootCause,
-    rootCauseConfidence: Number((analysis.confidence * 100).toFixed(1)),
-    patchConfidence,
-    patch: validated.patch,
-    reasoningSummary: parsed.explanation || analysis.reasoningSummary,
-    alternativeFixes: normalizeAlternativeFixes(
-      parsed.alternativeFixes,
-      validated.patch,
-      analysis.targetFiles
-    ),
-    prDescription: normalizePrDescription(
-      parsed.prDescription,
+    );
+    result = {
+      rootCause: parsed.rootCause || analysis.rootCause,
+      possibleCauses: analysis.possibleCauses,
+      selectedRootCause: parsed.rootCause || analysis.rootCause,
+      rootCauseConfidence: Number((analysis.confidence * 100).toFixed(1)),
+      patchConfidence,
+      patch: validated.patch,
+      reasoningSummary: parsed.explanation || analysis.reasoningSummary,
+      alternativeFixes: normalizeAlternativeFixes(
+        parsed.alternativeFixes,
+        validated.patch,
+        analysis.targetFiles
+      ),
+      prDescription: normalizePrDescription(
+        parsed.prDescription,
+        issue,
+        analysis,
+        validated
+      ),
+      targetFiles: analysis.targetFiles,
+      changedFileCount: validated.fileCount,
+      changedLineCount: validated.changedLineCount,
+      model: DEFAULT_MODEL,
+    };
+  } catch (error) {
+    result = buildFallbackPatchResult(
       issue,
       analysis,
-      validated
-    ),
-    targetFiles: analysis.targetFiles,
-    changedFileCount: validated.fileCount,
-    changedLineCount: validated.changedLineCount,
-    model: DEFAULT_MODEL,
-  };
+      files,
+      error instanceof Error ? error.message : 'Patch validation failed.',
+      parsed
+    );
+  }
 
   setCacheValue(cacheKey, result);
   return result;
