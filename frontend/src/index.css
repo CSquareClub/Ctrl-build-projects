@@ -1,0 +1,152 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  --bg: #f8f8f8;
+  --text: #000000;
+  --card: #ffffff;
+  --bg-elev: #f1f1f1;
+  --border: #e0e0e0;
+  --primary: #111111;
+
+  --muted: #555555;
+  --on-primary: #ffffff;
+  --accent: #000000;
+  --accent-soft: rgba(0, 0, 0, 0.06);
+  --success: #222222;
+  --success-soft: rgba(0, 0, 0, 0.08);
+
+  --card-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+  --hero-glow: 0 0 0 rgba(0, 0, 0, 0);
+  --card-glow: 0 0 0 rgba(0, 0, 0, 0);
+  --nav-bg: rgba(255, 255, 255, 0.88);
+
+  --mesh-left: rgba(0, 0, 0, 0.04);
+  --mesh-right: rgba(0, 0, 0, 0.03);
+  --mesh-base: #ffffff;
+  --mesh-mid: #f8f8f8;
+  --mesh-end: #f1f1f1;
+}
+
+.dark {
+  color-scheme: dark;
+  --bg: #0a0a0a;
+  --text: #ffffff;
+  --card: #111111;
+  --bg-elev: #1a1a1a;
+  --border: #2a2a2a;
+  --primary: #ffffff;
+
+  --muted: #b3b3b3;
+  --on-primary: #000000;
+  --accent: #ffffff;
+  --accent-soft: rgba(255, 255, 255, 0.08);
+  --success: #ffffff;
+  --success-soft: rgba(255, 255, 255, 0.08);
+
+  --card-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+  --hero-glow: 0 0 0 rgba(0, 0, 0, 0);
+  --card-glow: 0 0 0 rgba(0, 0, 0, 0);
+  --nav-bg: rgba(10, 10, 10, 0.84);
+
+  --mesh-left: rgba(255, 255, 255, 0.03);
+  --mesh-right: rgba(255, 255, 255, 0.02);
+  --mesh-base: #0a0a0a;
+  --mesh-mid: #0f0f0f;
+  --mesh-end: #111111;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  letter-spacing: 0.01em;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition:
+    background-color 300ms ease,
+    color 300ms ease;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.app-shell {
+  background: var(--bg);
+  color: var(--text);
+}
+
+.mesh-bg {
+  background:
+    radial-gradient(circle at 14% 24%, var(--mesh-left), transparent 34%),
+    radial-gradient(circle at 80% 20%, var(--mesh-right), transparent 38%),
+    linear-gradient(165deg, var(--mesh-base) 0%, var(--mesh-mid) 45%, var(--mesh-end) 100%);
+  filter: saturate(1.05);
+  transition: background 300ms ease;
+}
+
+.primary-gradient-bg {
+  background: var(--primary);
+}
+
+.primary-gradient-text {
+  color: var(--text);
+}
+
+.surface-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: var(--card-shadow);
+}
+
+.soft-pill {
+  background: var(--bg-elev);
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+
+.success-pill {
+  background: var(--bg-elev);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.theme-toggle-btn {
+  background: color-mix(in srgb, var(--card) 74%, transparent);
+  border: 1px solid var(--border);
+  color: var(--text);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--card-shadow);
+}
+
+.icon-soft {
+  color: var(--muted);
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+}
+
+.font-display {
+  font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  letter-spacing: 0.01em;
+}
