@@ -3,24 +3,18 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
     <title>OpenIssue - Redirecting...</title>
     <script>
-      // Check if user is authenticated via session parameter
+      // Pick up session from URL if redirected from OAuth
       const params = new URLSearchParams(window.location.search);
       const sessionId = params.get("session");
-
-      // Get session from localStorage if available
-      const storedSession = localStorage.getItem("session_id");
-      const targetSession = sessionId || storedSession;
-
-      if (targetSession) {
-        // Store session and redirect to dashboard
-        localStorage.setItem("session_id", targetSession);
-        window.location.href = "pages/dashboard.html?session=" + targetSession;
-      } else {
-        // No session, redirect to login
-        window.location.href = "pages/login.html";
+      if (sessionId) {
+        localStorage.setItem("session_id", sessionId);
       }
+      // Always go to dashboard — it handles login state itself
+      window.location.href = "pages/dashboard.html" + (sessionId ? "?session=" + sessionId : "");
     </script>
   </head>
   <body>
