@@ -1,0 +1,13 @@
+fastapi
+uvicorn[standard]
+httpx
+aiosqlite
+asyncpg
+sqlalchemy[asyncio]
+alembic
+PyGitHub
+python-jose[cryptography]
+passlib[bcrypt]
+qdrant-client
+python-dotenv
+python-multipart
