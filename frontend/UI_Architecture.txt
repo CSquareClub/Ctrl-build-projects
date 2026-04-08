@@ -1,0 +1,46 @@
+=========================================================
+NexusAI - UI & CSS Architecture Overview
+=========================================================
+
+1. CORE FRAMEWORK & METHODOLOGY
+---------------------------------------------------------
+- Engine: React + Vite
+- Styling: Pure Vanilla CSS (No Tailwind overhead)
+- Architecture Focus: High-performance enterprise SaaS design (similar to Stripe/Vercel) utilizing hardware-accelerated CSS animations and isolated DOM nodes.
+
+2. GLOBAL STYLING SYSTEM (index.css)
+---------------------------------------------------------
+- Color Palette: Deep space black (#030305) with neon accents (Teal: #06b6d4, Blue: #3b82f6, Purple: #8b5cf6).
+- Typography: 'Inter' font family with tight tracking (letter-spacing: -0.03em) and refined weights (600/700) for premium text rendering.
+- Glassmorphism (.glass-panel): 
+    * `backdrop-filter: blur(16px)`
+    * `box-shadow` depth pairing: `0 8px 32px rgba(0, 0, 0, 0.2)`
+    * Premium inner-bezel lighting: `inset 0 1px 0 rgba(255, 255, 255, 0.05)`
+- Staggered Entrance Animations: 
+    * Modular cubic-bezier keyframes (`.fade-in-up`) coupled with isolated animation-delay classes (`.stagger-1` to `.stagger-5`).
+
+3. KEY UI COMPONENTS 
+---------------------------------------------------------
+
+A. Holographic Parallax Hero (Hero.jsx / Hero.css)
+- 3D CSS Interaction Matrix: 
+    * The container leverages `transform-style: preserve-3d` to maintain true spatial depth. 
+    * Elements are pushed back/forward using `transform: translateZ(60px)` and `-60px`.
+    * Mouse tracking calculates X/Y inputs natively in React and outputs smoothed `rotateX` and `rotateY` limits across a `transition: 0.2s ease-out` linear interpolation boundary.
+- Typewriter Tagline: Native React `useEffect` interval loop.
+
+B. Deep-Floating Stat Cards (Hero.css)
+- Magnetic Levitation: Continuous CSS `@keyframes` oscillating `translateY` offset seamlessly.
+- CountUp Processing: A completely native, dependency-free React hook executing an `easeOutExpo` math curve over 2.5 seconds recursively via `requestAnimationFrame`.
+- Energy Beam Shimmer: A skewed linear-gradient `::after` pseudo-element passing through the card every 3.5 seconds (`left: -150%` to `left: 200%`).
+
+C. Neural Upload Dropzone (UploadSection.jsx / UploadSection.css)
+- Idle State: A pill-shaped area resting with an infinite `breathingZone` continuous box shadow expansion/compression pulse. 
+- Active Scanning State: When a file drops, the UI injects a `<div className="scan-line">` using absolute positioning to sweep a `box-shadow: 0 0 20px 5px rgba(79, 172, 254, 0.6)` laser down the panel infinitely.
+
+D. Dynamic Multi-Tier Leaderboard (Leaderboard.jsx / Leaderboard.css)
+- Medal Tiering: Rows are mapped natively and dynamically appended unique target classes: 
+    * `.rank-gold` (with #ffd700 borders/gradients)
+    * `.rank-silver` (with #e0e0e0 bounds)
+    * `.rank-bronze` (with #cd7f32 bounds)
+- Micro-interactions: Rows rely on `.hover-lift` to softly elevate `translateY(-4px)` casting large soft drop-shadows on mouse hover.

@@ -1,0 +1,196 @@
+.upload-section {
+  padding: 6rem 2rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.upload-container {
+  max-width: 800px;
+  width: 100%;
+  text-align: center;
+}
+
+.section-title {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.section-subtitle {
+  color: var(--text-secondary);
+  margin-bottom: 3rem;
+  font-size: 1.1rem;
+}
+
+.drop-zone.premium-glass {
+  border-radius: 32px;
+  padding: 5rem 2rem;
+  cursor: pointer;
+  background: linear-gradient(145deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08); /* Light source from top left */
+  border-right-color: rgba(255, 255, 255, 0.02);
+  border-bottom-color: rgba(255, 255, 255, 0.02);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2), inset 0 1px 1px rgba(255, 255, 255, 0.1);
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  /* Don't hide overflow so outer glow renders outside */
+}
+
+/* Layered Color Plate */
+.color-plate-glow {
+  position: absolute;
+  top: -2px; left: -2px; right: -2px; bottom: -2px;
+  background: linear-gradient(135deg, #06b6d4, #3b82f6, #6366f1); /* Cyan -> Blue -> Indigo */
+  z-index: -1;
+  border-radius: 34px;
+  filter: blur(20px);
+  opacity: 0.4;
+  pointer-events: none;
+  animation: breathe-plate 4s ease-in-out infinite;
+  transition: opacity 0.4s ease, filter 0.4s ease, background 0.4s ease;
+}
+
+.drop-zone:hover, .drop-zone.drag-active {
+  transform: translateY(-4px) scale(1.02);
+  border-color: rgba(6, 182, 212, 0.4); /* Cyan edge highlight */
+}
+
+.drop-zone:active {
+  transform: translateY(2px) scale(0.99);
+  box-shadow: inset 0 4px 15px rgba(0,0,0,0.3);
+}
+
+.drop-zone:hover .color-plate-glow, .drop-zone.drag-active .color-plate-glow {
+  opacity: 0.8;
+  filter: blur(30px);
+  background: linear-gradient(135deg, #6366f1, #3b82f6, #06b6d4); /* Reversed */
+  animation: pulse-plate 1.5s infinite alternate;
+}
+
+@keyframes breathe-plate {
+  0% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.02); }
+  100% { opacity: 0.3; transform: scale(1); }
+}
+
+@keyframes pulse-plate {
+  0% { opacity: 0.6; filter: blur(25px); }
+  100% { opacity: 1; filter: blur(40px); }
+}
+
+/* Floating Grid/Particles inside zone */
+.neural-particles {
+  position: absolute;
+  inset: 0;
+  border-radius: 30px;
+  background-image: radial-gradient(circle, rgba(255,255,255,0.08) 1px, transparent 1px);
+  background-size: 24px 24px;
+  opacity: 0.4;
+  pointer-events: none;
+  animation: drift-bg 20s linear infinite;
+}
+
+@keyframes drift-bg {
+  0% { background-position: 0 0; }
+  100% { background-position: 48px 48px; }
+}
+
+.drop-content-wrapper {
+  position: relative;
+  z-index: 2; /* Renders perfectly over particles and plates */
+  width: 100%;
+}
+
+.drop-zone::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(135deg, transparent, rgba(177, 0, 255, 0.05), transparent);
+  transform: translateY(100%);
+  transition: transform 0.5s;
+}
+
+.drop-zone:hover::before {
+  transform: translateY(0);
+}
+
+.hidden {
+  display: none;
+}
+
+.upload-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.rem;
+}
+
+.upload-state.uploading {
+  position: relative;
+  overflow: hidden;
+  padding: 3rem 0;
+  width: 100%;
+}
+
+.scan-line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: var(--accent-main);
+  box-shadow: 0 0 20px 5px rgba(79, 172, 254, 0.6);
+  animation: scan-vertical 2.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  z-index: 10;
+  pointer-events: none;
+}
+
+@keyframes scan-vertical {
+  0% { top: -10%; opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { top: 110%; opacity: 0; }
+}
+
+.upload-icon-wrapper {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 1.5rem;
+  border-radius: 50%;
+  margin-bottom: 1rem;
+  transition: transform 0.3s ease;
+}
+
+.drop-zone:hover .upload-icon-wrapper {
+  transform: scale(1.1);
+  background: rgba(79, 172, 254, 0.1);
+}
+
+.upload-icon {
+  color: var(--text-primary);
+}
+
+.drop-zone:hover .upload-icon {
+  color: var(--accent-secondary);
+}
+
+.upload-state h3 {
+  font-size: 1.5rem;
+}
+
+.upload-state p {
+  color: var(--text-secondary);
+}
+
+/* Spinner Animation */
+.spinner-icon {
+  color: var(--accent-main);
+  animation: spin 1.5s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

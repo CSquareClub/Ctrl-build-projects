@@ -1,0 +1,191 @@
+.leaderboard-section {
+  padding: 4rem 2rem 8rem;
+}
+
+.leaderboard-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.leaderboard-header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.02) 0%, transparent 100%);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05);
+}
+
+.ranking-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.ranking-table th {
+  padding: 1.75rem 2rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+  border-bottom: 1px solid var(--card-border);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.ranking-table td {
+  padding: 1.5rem 2rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  vertical-align: middle;
+}
+
+.table-row {
+  transition: all 0.3s ease;
+}
+
+.table-row:hover {
+  background: rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+}
+
+/* Custom highlight tiers for top candidates */
+.table-row.rank-gold {
+  border: 1px solid rgba(255, 215, 0, 0.4);
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.1);
+  background: rgba(255, 215, 0, 0.05);
+}
+.table-row.rank-gold:hover { box-shadow: 0 0 25px rgba(255, 215, 0, 0.3); }
+
+.table-row.rank-silver {
+  border: 1px solid rgba(192, 192, 192, 0.4);
+  box-shadow: 0 0 15px rgba(192, 192, 192, 0.1);
+  background: rgba(192, 192, 192, 0.05);
+}
+.table-row.rank-silver:hover { box-shadow: 0 0 25px rgba(192, 192, 192, 0.3); }
+
+.table-row.rank-bronze {
+  border: 1px solid rgba(205, 127, 50, 0.4);
+  box-shadow: 0 0 15px rgba(205, 127, 50, 0.1);
+  background: rgba(205, 127, 50, 0.05);
+}
+.table-row.rank-bronze:hover { box-shadow: 0 0 25px rgba(205, 127, 50, 0.3); }
+
+.top-candidate td {
+  border-bottom-color: rgba(79, 172, 254, 0.2);
+}
+
+/* Rank Styling */
+.rank-badge.gold {
+  background: linear-gradient(135deg, #ffd700, #ff8c00);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #000;
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
+}
+
+.rank-badge.silver {
+  background: linear-gradient(135deg, #e0e0e0, #a0a0a0);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #000;
+  box-shadow: 0 0 15px rgba(192, 192, 192, 0.3);
+}
+
+.rank-badge.bronze {
+  background: linear-gradient(135deg, #cd7f32, #8b4513);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  box-shadow: 0 0 15px rgba(205, 127, 50, 0.3);
+}
+
+.rank-num {
+  font-weight: 700;
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+}
+
+/* Candidate Info */
+.candidate-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--card-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+}
+
+.candidate-info h4 {
+  font-size: 1rem;
+  margin-bottom: 0.1rem;
+}
+
+.role {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+/* Score Badges */
+.score-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.score-badge.blue { background: rgba(79, 172, 254, 0.1); color: var(--accent-main); }
+.score-badge.green { background: rgba(0, 230, 118, 0.1); color: var(--green-accent); }
+.score-badge.red { background: rgba(255, 75, 75, 0.1); color: var(--red-accent); }
+
+.final-score {
+  font-size: 1.25rem;
+}
+
+.top-candidate .final-score {
+  background: linear-gradient(90deg, var(--accent-main), var(--accent-purple));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Action Button */
+.icon-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+}
+
+.table-row:hover .icon-btn {
+  color: var(--accent-main);
+  background: rgba(79, 172, 254, 0.1);
+}
