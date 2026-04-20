@@ -1,0 +1,416 @@
+/* ============================================================
+   FocusRoom Enforcer — popup.css
+   Aesthetic: refined monochrome, single sapphire accent.
+   Braun product meets Japanese UI restraint.
+   ============================================================ */
+
+/* ── Reset ── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ── Tokens ── */
+:root {
+  /* Palette */
+  --ink-deep:    #111214;   /* body background              */
+  --ink-base:    #17191c;   /* cards / sections             */
+  --ink-raised:  #1f2124;   /* hover surfaces               */
+  --ink-border:  #2a2d31;   /* hairline dividers            */
+
+  --cream:       #f0eee9;   /* primary text                 */
+  --cream-dim:   #7a7975;   /* secondary / labels           */
+  --cream-ghost: #3a3d40;   /* disabled / placeholder       */
+
+  --sapphire:    #3b82f6;   /* the ONE accent: active state */
+  --sapphire-lo: rgba(59,130,246,0.12);
+  --sapphire-md: rgba(59,130,246,0.22);
+
+  --ok:          #34d399;   /* toast success                */
+  --ok-lo:       rgba(52,211,153,0.1);
+  --err:         #f87171;   /* toast error / danger         */
+  --err-lo:      rgba(248,113,113,0.1);
+
+  /* Typography */
+  --font-ui:     'DM Sans',  system-ui, sans-serif;
+  --font-mono:   'DM Mono',  'Courier New', monospace;
+
+  /* Geometry */
+  --r-sm:  6px;
+  --r-md:  10px;
+  --r-lg:  14px;
+  --r-pill: 999px;
+}
+
+/* ── Base ── */
+html, body {
+  width: 320px;
+  background: var(--ink-deep);
+  color: var(--cream);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  line-height: 1;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+/* ── Shell ── */
+.shell {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 4px;
+}
+
+/* ─────────────────────────────────────
+   Header
+───────────────────────────────────── */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px 16px;
+  border-bottom: 1px solid var(--ink-border);
+}
+
+.wordmark {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  color: var(--cream-dim);
+}
+
+/* Status badge */
+.badge {
+  padding: 3px 10px;
+  border-radius: var(--r-pill);
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+  transition: background 0.3s, color 0.3s, border-color 0.3s;
+}
+.badge.idle {
+  background: transparent;
+  border-color: var(--ink-border);
+  color: var(--cream-ghost);
+}
+.badge.active,
+.badge.blocking {
+  background: var(--sapphire-lo);
+  border-color: var(--sapphire-md);
+  color: var(--sapphire);
+}
+
+/* ─────────────────────────────────────
+   Timer — the hero
+───────────────────────────────────── */
+.timer-section {
+  padding: 28px 20px 20px;
+  text-align: center;
+  border-bottom: 1px solid var(--ink-border);
+}
+
+.timer-big {
+  font-family: var(--font-mono);
+  font-size: 54px;
+  font-weight: 300;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: var(--cream);
+  transition: color 0.4s;
+  /* subtle text shadow for depth */
+  text-shadow: 0 0 40px rgba(240,238,233,0.06);
+}
+.timer-big.idle-t {
+  color: var(--cream-ghost);
+  text-shadow: none;
+}
+.timer-big.urgent {
+  color: var(--err);
+  text-shadow: 0 0 32px rgba(248,113,113,0.2);
+}
+
+.timer-sub {
+  font-size: 10.5px;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  color: var(--cream-dim);
+  margin-top: 8px;
+  text-transform: uppercase;
+}
+
+/* Thin progress bar beneath timer */
+.progress-track {
+  height: 1.5px;
+  background: var(--ink-border);
+  border-radius: var(--r-pill);
+  margin-top: 20px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--sapphire);
+  border-radius: var(--r-pill);
+  transition: width 1s linear;
+  /* glow on the bar */
+  box-shadow: 0 0 8px rgba(59,130,246,0.5);
+}
+
+/* ─────────────────────────────────────
+   Stats
+───────────────────────────────────── */
+.stats {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--ink-border);
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  flex: 1;
+}
+
+.stat-divider {
+  width: 1px;
+  height: 28px;
+  background: var(--ink-border);
+  flex-shrink: 0;
+}
+
+.stat-val {
+  font-family: var(--font-mono);
+  font-size: 20px;
+  font-weight: 400;
+  color: var(--cream);
+  letter-spacing: -0.02em;
+}
+
+.stat-label {
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--cream-dim);
+}
+
+/* ─────────────────────────────────────
+   Duration picker
+───────────────────────────────────── */
+.duration-section {
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--ink-border);
+}
+
+.section-label {
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--cream-dim);
+  margin-bottom: 12px;
+}
+
+.dur-pills {
+  display: flex;
+  gap: 6px;
+}
+
+.dur-pill {
+  flex: 1;
+  padding: 7px 4px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--ink-border);
+  background: transparent;
+  color: var(--cream-dim);
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  user-select: none;
+}
+.dur-pill:hover:not(.selected) {
+  background: var(--ink-raised);
+  border-color: var(--cream-ghost);
+  color: var(--cream);
+}
+.dur-pill.selected {
+  background: var(--sapphire-lo);
+  border-color: var(--sapphire);
+  color: var(--sapphire);
+}
+
+/* ─────────────────────────────────────
+   Actions
+───────────────────────────────────── */
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 18px 20px 4px;
+}
+
+/* Base button */
+.btn {
+  width: 100%;
+  padding: 12px;
+  border-radius: var(--r-md);
+  border: none;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  transition: transform 0.1s, opacity 0.15s, background 0.2s, box-shadow 0.2s;
+  outline: none;
+}
+.btn:active:not(:disabled) {
+  transform: scale(0.985);
+}
+
+/* Primary — Start */
+.btn-start {
+  background: var(--sapphire);
+  color: #fff;
+  /* subtle gradient lift */
+  background-image: linear-gradient(
+    160deg,
+    rgba(255,255,255,0.1) 0%,
+    transparent 60%
+  );
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.08) inset,
+    0 4px 16px rgba(59,130,246,0.25);
+}
+.btn-start:hover:not(:disabled) {
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.08) inset,
+    0 6px 24px rgba(59,130,246,0.4);
+  background-color: #4f8ff8;
+}
+.btn-start:disabled {
+  background: var(--ink-raised);
+  background-image: none;
+  color: var(--cream-ghost);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+/* Secondary — Stop */
+.btn-stop {
+  background: transparent;
+  border: 1px solid var(--ink-border);
+  color: var(--cream-dim);
+}
+.btn-stop:hover:not(:disabled) {
+  background: var(--ink-raised);
+  border-color: var(--err);
+  color: var(--err);
+}
+.btn-stop:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* Tertiary — Dashboard */
+.btn-newtab {
+  background: transparent;
+  color: var(--cream-dim);
+  font-size: 10.5px;
+  padding: 9px;
+  letter-spacing: 0.06em;
+}
+.btn-newtab:hover {
+  color: var(--cream);
+  background: var(--ink-raised);
+}
+
+/* ─────────────────────────────────────
+   Toast
+───────────────────────────────────── */
+.toast {
+  margin: 10px 20px 0;
+  padding: 9px 12px;
+  border-radius: var(--r-md);
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.4;
+  display: none;
+  letter-spacing: 0.01em;
+}
+.toast.show { display: block; }
+.toast.ok {
+  background: var(--ok-lo);
+  color: var(--ok);
+  border: 1px solid rgba(52,211,153,0.18);
+}
+.toast.err {
+  background: var(--err-lo);
+  color: var(--err);
+  border: 1px solid rgba(248,113,113,0.18);
+}
+
+/* ─────────────────────────────────────
+   Socket footer
+───────────────────────────────────── */
+.socket-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px 14px;
+  font-size: 10px;
+  color: var(--cream-dim);
+  letter-spacing: 0.03em;
+}
+
+.s-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: background 0.3s;
+}
+.s-dot.on {
+  background: var(--ok);
+  box-shadow: 0 0 6px rgba(52,211,153,0.5);
+  animation: breathe 2.4s ease-in-out infinite;
+}
+.s-dot.off {
+  background: var(--cream-ghost);
+}
+
+/* ─────────────────────────────────────
+   Animations
+───────────────────────────────────── */
+@keyframes breathe {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+/* Staggered page-load fade */
+@keyframes rise {
+  from { opacity: 0; transform: translateY(5px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.header        { animation: rise 0.25s ease both 0.00s; }
+.timer-section { animation: rise 0.25s ease both 0.05s; }
+.stats         { animation: rise 0.25s ease both 0.10s; }
+.duration-section { animation: rise 0.25s ease both 0.14s; }
+.actions       { animation: rise 0.25s ease both 0.18s; }
+.socket-row    { animation: rise 0.25s ease both 0.22s; }
