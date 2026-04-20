@@ -1,0 +1,267 @@
+<!doctype html>
+<html class="dark" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>Conflict Analyzer | OpenIssue</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Inter:wght@400;500;600&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "on-surface": "#f4f6fe", "secondary-container": "#49339d", surface: "#0a0e13",
+            background: "#0a0e13", "surface-container-lowest": "#000000",
+            "primary-container": "#9396ff", "surface-container": "#151a20",
+            "error-container": "#a70138", "surface-variant": "#21262e",
+            "secondary-dim": "#a28efc", "primary-fixed": "#9396ff", "outline-variant": "#44484e",
+            error: "#ff6e84", tertiary: "#ffa5d9", secondary: "#a28efc", "primary-dim": "#6063ee",
+            "tertiary-dim": "#ef81c4", outline: "#72767c", primary: "#a3a6ff",
+            "on-error": "#490013", "error-dim": "#d73357", "tertiary-fixed": "#ff8ed2",
+            "surface-dim": "#0a0e13", "on-primary-container": "#0a0081", "on-primary": "#0f00a4",
+            "surface-bright": "#262d35", "on-primary-fixed": "#000000", "tertiary-container": "#ff8ed2",
+            "on-surface-variant": "#a8abb2", "inverse-primary": "#494bd7", "on-background": "#f4f6fe",
+            "surface-container-high": "#1b2027", "on-error-container": "#ffb2b9",
+            "surface-container-low": "#0f1419", "surface-container-highest": "#21262e",
+          },
+          borderRadius: { DEFAULT: "1rem", lg: "2rem", xl: "3rem", full: "9999px" },
+          fontFamily: { headline: ["Manrope"], body: ["Inter"], label: ["Space Grotesk"] },
+        },
+      },
+    };
+  </script>
+  <style>
+    body { background-color: #0a0e13; color: #f4f6fe; font-family: 'Inter', sans-serif; }
+    .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+    .code-font { font-family: 'Space Grotesk', monospace; }
+    textarea { resize: vertical; }
+  </style>
+</head>
+<body class="bg-background text-on-surface min-h-screen">
+
+  <!-- Nav -->
+  <nav class="fixed top-0 w-full z-50 bg-[#0a0e13]/60 backdrop-blur-xl border-b border-white/5 shadow-[0_8px_32px_0_rgba(0,0,0,0.3)]">
+    <div class="flex justify-between items-center h-16 px-8 w-full max-w-screen-2xl mx-auto">
+      <div class="flex items-center gap-8">
+        <span class="text-2xl font-bold tracking-tighter text-white font-['Manrope']">OpenIssue</span>
+        <div class="hidden md:flex items-center gap-6">
+          <a class="text-slate-400 hover:text-white transition-colors font-['Manrope'] font-semibold" href="dashboard.html">Dashboard</a>
+          <a class="text-slate-400 hover:text-white transition-colors font-['Manrope'] font-semibold" href="home.html">Intelligence</a>
+          <a class="text-indigo-400 border-b-2 border-indigo-500 pb-1 font-['Manrope'] font-semibold" href="conflicts.html">Conflicts</a>
+          <a class="text-slate-400 hover:text-white transition-colors font-['Manrope'] font-semibold" href="settings.html">Settings</a>
+        </div>
+      </div>
+      <div class="flex items-center gap-4">
+        <button class="p-2 text-on-surface-variant hover:bg-white/5 rounded-full transition-all">
+          <span class="material-symbols-outlined">notifications</span>
+        </button>
+        <div class="h-8 w-8 rounded-full overflow-hidden border border-white/10">
+          <img class="h-full w-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAtZVkppEnARBhGmK8AnSZ6nCVbPTsgm6P9plWKqA-cB4QB1vD5stpaZamvKFaJvJPGwpyiimO25I4wsjQT067tAzhcuyNXE2L7p4JgPMAgVWFfI4KRgOTkf_xwIRWhYM22iMZRkwMhXDswjY-f4xhZ7Ka9jZAasXRFVd8JPtSiU80st9neQaM1jb8cHUzsDISO51caoX-Z4XWW4QQhYLxPxrPUW1lJdOXhNxvAo2VWCYevkj42qiZGia0I5C9XQG8xYBdcQVf4lIfc" alt="User avatar" />
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="pt-24 pb-12 px-6 max-w-screen-2xl mx-auto">
+
+    <!-- Header -->
+    <header class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
+      <div class="space-y-2">
+        <h1 class="text-4xl md:text-5xl font-extrabold font-headline tracking-tighter text-on-surface">Conflict Analyzer</h1>
+        <p class="text-on-surface-variant max-w-2xl font-body">Paste two code snippets to detect differences and get an AI-powered conflict summary.</p>
+      </div>
+      <button id="analyze-btn"
+        class="px-8 py-3 rounded-full bg-gradient-to-br from-primary to-primary-dim text-on-primary-fixed font-bold text-sm shadow-[0_0_20px_rgba(163,166,255,0.3)] hover:shadow-[0_0_30px_rgba(163,166,255,0.5)] transition-all active:scale-95 flex items-center gap-2">
+        <span class="material-symbols-outlined text-sm">compare_arrows</span>
+        Analyze Conflicts
+      </button>
+    </header>
+
+    <!-- Code Input Area -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+      <!-- Code A -->
+      <div class="bg-surface-container rounded-lg border border-white/5 overflow-hidden">
+        <div class="flex items-center justify-between p-4 bg-surface-container-high border-b border-white/5">
+          <div class="flex items-center gap-3">
+            <span class="material-symbols-outlined text-secondary">fork_right</span>
+            <span class="font-label text-sm uppercase tracking-wider text-on-surface-variant">Code A <span class="text-secondary-dim">(Incoming)</span></span>
+          </div>
+          <button onclick="document.getElementById('code-a').value=''" class="text-xs text-outline hover:text-white transition-colors">Clear</button>
+        </div>
+        <textarea id="code-a" rows="16"
+          class="w-full bg-surface-container-low border-none p-4 text-sm code-font text-on-surface focus:ring-1 focus:ring-primary/30 transition-all"
+          placeholder="Paste your incoming code here..."></textarea>
+      </div>
+
+      <!-- Code B -->
+      <div class="bg-surface-container rounded-lg border border-white/5 overflow-hidden">
+        <div class="flex items-center justify-between p-4 bg-surface-container-high border-b border-white/5">
+          <div class="flex items-center gap-3">
+            <span class="material-symbols-outlined text-primary">merge</span>
+            <span class="font-label text-sm uppercase tracking-wider text-on-surface-variant">Code B <span class="text-primary-dim">(Current)</span></span>
+          </div>
+          <button onclick="document.getElementById('code-b').value=''" class="text-xs text-outline hover:text-white transition-colors">Clear</button>
+        </div>
+        <textarea id="code-b" rows="16"
+          class="w-full bg-surface-container-low border-none p-4 text-sm code-font text-on-surface focus:ring-1 focus:ring-primary/30 transition-all"
+          placeholder="Paste your current code here..."></textarea>
+      </div>
+    </div>
+
+    <!-- Results (hidden until analyzed) -->
+    <div id="results-section" class="hidden">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+        <!-- Summary + Diff -->
+        <div class="lg:col-span-2 p-8 bg-surface-container rounded-lg border border-white/5 relative overflow-hidden">
+          <div class="absolute top-0 right-0 p-4">
+            <span class="material-symbols-outlined text-tertiary/20 text-6xl">auto_awesome</span>
+          </div>
+          <div class="relative z-10">
+            <h3 class="text-xl font-bold font-headline mb-4 flex items-center gap-2">
+              <span class="material-symbols-outlined text-tertiary">psychology</span>
+              Conflict Summary
+            </h3>
+            <p id="result-summary" class="text-on-surface-variant leading-relaxed mb-6"></p>
+
+            <!-- Diff list -->
+            <div id="result-diff" class="space-y-2 max-h-64 overflow-y-auto code-font text-sm"></div>
+          </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="p-8 bg-surface-container-low rounded-lg border border-white/5">
+          <h3 class="font-label text-xs uppercase tracking-[0.2em] text-outline mb-6">Conflict Stats</h3>
+          <div class="space-y-6">
+            <div class="flex justify-between items-end">
+              <div>
+                <span id="stat-additions" class="text-3xl font-black font-headline">0</span>
+                <p class="text-[10px] uppercase font-label tracking-widest text-outline">Additions</p>
+              </div>
+              <div class="text-right">
+                <span id="stat-deletions" class="text-3xl font-black font-headline text-error">0</span>
+                <p class="text-[10px] uppercase font-label tracking-widest text-outline">Deletions</p>
+              </div>
+            </div>
+            <div class="h-2 w-full bg-surface-container-lowest rounded-full overflow-hidden flex">
+              <div id="stat-bar-add" class="h-full bg-secondary-dim transition-all" style="width:50%"></div>
+              <div id="stat-bar-del" class="h-full bg-error-dim transition-all" style="width:50%"></div>
+            </div>
+            <div class="space-y-3">
+              <div class="flex items-center justify-between text-xs font-body">
+                <span class="text-on-surface-variant">Similarity</span>
+                <span id="stat-similarity" class="text-primary">—</span>
+              </div>
+              <div class="flex items-center justify-between text-xs font-body">
+                <span class="text-on-surface-variant">Lines (A / B)</span>
+                <span id="stat-lines" class="text-tertiary">—</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Error message -->
+    <div id="error-msg" class="hidden mt-4 p-4 bg-error/10 border border-error/20 rounded-lg text-error text-sm font-body"></div>
+
+  </main>
+
+  <footer class="max-w-screen-2xl mx-auto px-8 pb-12 pt-12 border-t border-white/5">
+    <div class="flex flex-col md:flex-row justify-between items-center gap-6">
+      <div class="flex items-center gap-2">
+        <div class="h-2 w-2 rounded-full bg-secondary animate-pulse"></div>
+        <span class="text-[10px] uppercase font-label tracking-[0.3em] text-outline">System Sync: Live</span>
+      </div>
+      <div class="flex gap-8">
+        <a class="text-[11px] font-label uppercase tracking-widest text-on-surface-variant hover:text-white transition-colors" href="#">Documentation</a>
+        <a class="text-[11px] font-label uppercase tracking-widest text-on-surface-variant hover:text-white transition-colors" href="#">Security</a>
+        <a class="text-[11px] font-label uppercase tracking-widest text-on-surface-variant hover:text-white transition-colors" href="#">Support</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    const API_BASE = 'http://localhost:8001';
+
+    document.getElementById('analyze-btn').addEventListener('click', async () => {
+      const codeA = document.getElementById('code-a').value.trim();
+      const codeB = document.getElementById('code-b').value.trim();
+      const errorMsg = document.getElementById('error-msg');
+      const resultsSection = document.getElementById('results-section');
+
+      errorMsg.classList.add('hidden');
+      resultsSection.classList.add('hidden');
+
+      if (!codeA && !codeB) {
+        errorMsg.textContent = 'Please paste at least one code snippet.';
+        errorMsg.classList.remove('hidden');
+        return;
+      }
+
+      const btn = document.getElementById('analyze-btn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="material-symbols-outlined text-sm animate-spin">hourglass_top</span> Analyzing...';
+
+      try {
+        const res = await fetch(`${API_BASE}/conflicts/detailed`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code_a: codeA || ' ', code_b: codeB || ' ' })
+        });
+
+        if (!res.ok) throw new Error(`Server error: ${res.status}`);
+        const data = await res.json();
+
+        // Summary
+        document.getElementById('result-summary').textContent = data.summary;
+
+        // Stats
+        const adds = data.stats.additions;
+        const dels = data.stats.deletions;
+        const total = adds + dels || 1;
+        document.getElementById('stat-additions').textContent = adds;
+        document.getElementById('stat-deletions').textContent = dels;
+        document.getElementById('stat-bar-add').style.width = `${(adds / total) * 100}%`;
+        document.getElementById('stat-bar-del').style.width = `${(dels / total) * 100}%`;
+        document.getElementById('stat-similarity').textContent = `${(data.stats.similarity * 100).toFixed(1)}%`;
+        document.getElementById('stat-lines').textContent = `${data.stats.lines_a} / ${data.stats.lines_b}`;
+
+        // Diff lines
+        const diffEl = document.getElementById('result-diff');
+        if (data.conflicts.length === 0) {
+          diffEl.innerHTML = '<p class="text-on-surface-variant italic">No differences found — the snippets are identical.</p>';
+        } else {
+          diffEl.innerHTML = data.conflicts.map(line => {
+            const isAdd = line.startsWith('Added:');
+            const color = isAdd ? 'text-secondary border-secondary bg-secondary/5' : 'text-error border-error bg-error/5';
+            const icon = isAdd ? '+' : '−';
+            return `<div class="flex items-start gap-2 px-3 py-1.5 rounded border-l-2 ${color}">
+              <span class="font-bold shrink-0">${icon}</span>
+              <span class="break-all">${line.replace(/^(Added|Removed): /, '')}</span>
+            </div>`;
+          }).join('');
+        }
+
+        resultsSection.classList.remove('hidden');
+
+      } catch (err) {
+        errorMsg.textContent = `Failed to analyze: ${err.message}`;
+        errorMsg.classList.remove('hidden');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span class="material-symbols-outlined text-sm">compare_arrows</span> Analyze Conflicts';
+      }
+    });
+  </script>
+
+  <script src="../js/nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <title>OpenIssue - Redirecting...</title>
+    <script>
+      // Pick up session from URL if redirected from OAuth
+      const params = new URLSearchParams(window.location.search);
+      const sessionId = params.get("session");
+      if (sessionId) {
+        localStorage.setItem("session_id", sessionId);
+      }
+      // Always go to dashboard — it handles login state itself
+      window.location.href = "pages/dashboard.html" + (sessionId ? "?session=" + sessionId : "");
+    </script>
+  </head>
+  <body>
+    <p>Redirecting to OpenIssue...</p>
+  </body>
+</html>

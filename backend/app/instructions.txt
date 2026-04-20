@@ -1,0 +1,166 @@
+Build a complete backend for a project called **OpenIssue — AI-powered GitHub Issue Intelligence Platform**.
+
+The backend should be production-like but optimized for a hackathon: simple, clean, and functional.
+
+---
+
+## 🧠 CORE FUNCTIONALITY
+
+The backend must:
+
+1. Accept a GitHub issue (title + description)
+2. Analyze the issue using AI
+3. Return:
+
+   * Classification (bug, feature, docs, question)
+   * Priority (low, medium, high, critical)
+   * Suggested labels
+   * Similar issues (semantic similarity)
+
+---
+
+## ⚙️ TECH STACK
+
+* Python
+* FastAPI
+* OpenAI API (for embeddings + classification)
+* ChromaDB (vector database)
+* GitHub API integration
+* Firebase Authentication (verify user token)
+
+---
+
+## 🧱 PROJECT STRUCTURE
+
+Organize code cleanly:
+
+* main.py (entry point)
+* routes/
+* services/
+* models/
+* utils/
+* config/
+
+---
+
+## 🔌 API ENDPOINTS
+
+### POST /analyze
+
+Input:
+{
+"title": string,
+"description": string
+}
+
+Output:
+{
+"classification": "bug | feature | docs | question",
+"priority": "low | medium | high | critical",
+"labels": [string],
+"similar_issues": [
+{ "title": string, "score": float }
+]
+}
+
+---
+
+### GET /repos
+
+* Fetch user repositories using GitHub API
+* Requires Firebase auth token
+
+---
+
+### GET /issues
+
+* Fetch issues from selected repo
+
+---
+
+### POST /conflicts (basic)
+
+Input:
+{
+"code_a": string,
+"code_b": string
+}
+
+Output:
+{
+"conflicts": string[],
+"summary": string
+}
+
+(Keep this simple: compare text differences)
+
+---
+
+## 🧠 AI IMPLEMENTATION DETAILS
+
+### 1. Classification + Priority
+
+* Use OpenAI chat/completions API
+* Prompt model to return structured JSON
+
+---
+
+### 2. Embeddings + Similarity
+
+* Generate embeddings for issues
+* Store in ChromaDB
+* Query top 3 similar issues
+
+---
+
+### 3. Labels
+
+* Generate from keywords or LLM output
+
+---
+
+## 🔐 AUTH
+
+* Accept Firebase JWT from frontend
+* Verify token before accessing GitHub data
+
+---
+
+## 🧠 GITHUB INTEGRATION
+
+* Use GitHub REST API
+* Fetch:
+
+  * User repos
+  * Repo issues
+
+---
+
+## ⚡ PERFORMANCE (IMPORTANT)
+
+* Keep everything fast
+* Cache embeddings if possible
+* Avoid heavy pipelines
+
+---
+
+## 🧪 BONUS (OPTIONAL)
+
+* Add logging
+* Add basic error handling
+* Add CORS support
+
+---
+
+## 🎯 EXPECTATION
+
+The backend should:
+
+* Be runnable immediately
+* Have clean endpoints
+* Return realistic AI-generated responses
+* Be easy to connect with frontend
+
+---
+
+Generate complete FastAPI code with all routes, services, and integrations.
