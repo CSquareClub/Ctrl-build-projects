@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DevMatch — Participant Portal</title>
+  <link rel="stylesheet" href="style.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════
+     AUTH PAGE
+══════════════════════════════════════ -->
+<div id="page-auth" class="page active">
+  <div class="auth-bg">
+    <div class="auth-orb orb1"></div>
+    <div class="auth-orb orb2"></div>
+    <div class="auth-grid"></div>
+  </div>
+  <div class="auth-card">
+    <div class="auth-logo">
+      <span class="logo-hex">⬡</span>
+      <span class="logo-text">DevMatch</span>
+    </div>
+    <p class="auth-sub">Participant Portal</p>
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="showAuthTab('login')" id="at-login">Sign In</button>
+      <button class="auth-tab" onclick="showAuthTab('register')" id="at-register">Register</button>
+    </div>
+    <!-- LOGIN -->
+    <div id="auth-login" class="auth-panel active">
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="login-email" placeholder="you@devmatch.io" autocomplete="off"/>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="login-password" placeholder="••••••••"/>
+      </div>
+      <button class="btn-primary full-width" onclick="handleLogin()">Sign In →</button>
+      <p class="auth-hint">Demo: any email + password works</p>
+    </div>
+    <!-- REGISTER -->
+    <div id="auth-register" class="auth-panel">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Full Name</label>
+          <input type="text" id="reg-name" placeholder="Aryan Sharma"/>
+        </div>
+        <div class="form-group">
+          <label>Username</label>
+          <input type="text" id="reg-username" placeholder="aryan_dev"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="reg-email" placeholder="you@devmatch.io"/>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="reg-password" placeholder="Create a password"/>
+      </div>
+      <div class="form-group">
+        <label>Primary Role</label>
+        <select id="reg-role">
+          <option value="">Select your role…</option>
+          <option value="Frontend">Frontend Developer</option>
+          <option value="Backend">Backend Developer</option>
+          <option value="ML">ML / AI Engineer</option>
+          <option value="Data Science">Data Scientist</option>
+          <option value="Mobile">Mobile Developer</option>
+          <option value="Design">UI/UX Designer</option>
+          <option value="DevOps">DevOps Engineer</option>
+          <option value="Fullstack">Full Stack Developer</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>College / Organisation</label>
+        <input type="text" id="reg-org" placeholder="e.g. IIT Delhi"/>
+      </div>
+      <button class="btn-primary full-width" onclick="handleRegister()">Create Account →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     PROFILE SETUP PAGE
+══════════════════════════════════════ -->
+<div id="page-profile-setup" class="page">
+  <div class="auth-bg">
+    <div class="auth-orb orb1"></div>
+    <div class="auth-orb orb2"></div>
+    <div class="auth-grid"></div>
+  </div>
+  <div class="setup-card">
+    <div class="setup-header">
+      <div class="auth-logo" style="margin-bottom:.4rem">
+        <span class="logo-hex small">⬡</span>
+        <span class="logo-text">DevMatch</span>
+      </div>
+      <h2>Complete Your Profile</h2>
+      <p>Help us match you with the right teams and hackathons</p>
+    </div>
+    <div class="setup-steps">
+      <div class="setup-step active" id="step-dot-1">1</div>
+      <div class="setup-step-line"></div>
+      <div class="setup-step" id="step-dot-2">2</div>
+      <div class="setup-step-line"></div>
+      <div class="setup-step" id="step-dot-3">3</div>
+    </div>
+
+    <!-- Step 1: Personal Info -->
+    <div id="setup-step-1" class="setup-pane active">
+      <div class="section-label">Personal Info</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Full Name</label>
+          <input type="text" id="setup-name" placeholder="Aryan Sharma"/>
+        </div>
+        <div class="form-group">
+          <label>Phone</label>
+          <input type="tel" id="setup-phone" placeholder="+91 98765 43210"/>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>City</label>
+          <input type="text" id="setup-city" placeholder="Mumbai"/>
+        </div>
+        <div class="form-group">
+          <label>State</label>
+          <input type="text" id="setup-state" placeholder="Maharashtra"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Bio</label>
+        <textarea id="setup-bio" rows="3" placeholder="A short bio — what drives you as a developer?"></textarea>
+      </div>
+      <div class="step-nav">
+        <span></span>
+        <button class="btn-primary" onclick="setupNext(2)">Next →</button>
+      </div>
+    </div>
+
+    <!-- Step 2: Skills & Role -->
+    <div id="setup-step-2" class="setup-pane">
+      <div class="section-label">Skills & Role</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Primary Role</label>
+          <select id="setup-role">
+            <option value="">Select…</option>
+            <option value="Frontend">Frontend Developer</option>
+            <option value="Backend">Backend Developer</option>
+            <option value="ML">ML / AI Engineer</option>
+            <option value="Data Science">Data Scientist</option>
+            <option value="Mobile">Mobile Developer</option>
+            <option value="Design">UI/UX Designer</option>
+            <option value="DevOps">DevOps Engineer</option>
+            <option value="Fullstack">Full Stack Developer</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Experience Level</label>
+          <select id="setup-level">
+            <option value="Beginner">Beginner (0–1 yrs)</option>
+            <option value="Intermediate">Intermediate (1–3 yrs)</option>
+            <option value="Advanced">Advanced (3+ yrs)</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Tech Skills <span class="label-hint">(comma-separated)</span></label>
+        <input type="text" id="setup-skills" placeholder="React, Node.js, Python, TensorFlow…"/>
+      </div>
+      <div class="form-group">
+        <label>College / Organisation</label>
+        <input type="text" id="setup-org" placeholder="IIT Bombay"/>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Year / Designation</label>
+          <input type="text" id="setup-year" placeholder="3rd Year · CSE"/>
+        </div>
+        <div class="form-group">
+          <label>Availability</label>
+          <select id="setup-avail">
+            <option value="Weekends">Weekends only</option>
+            <option value="Weekdays">Weekdays only</option>
+            <option value="Both">Weekdays & weekends</option>
+            <option value="Flexible">Fully flexible</option>
+          </select>
+        </div>
+      </div>
+      <div class="step-nav">
+        <button class="btn-ghost" onclick="setupNext(1)">← Back</button>
+        <button class="btn-primary" onclick="setupNext(3)">Next →</button>
+      </div>
+    </div>
+
+    <!-- Step 3: Social Links + Preferences -->
+    <div id="setup-step-3" class="setup-pane">
+      <div class="section-label">Social Links</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>GitHub</label>
+          <input type="url" id="setup-github" placeholder="https://github.com/handle"/>
+        </div>
+        <div class="form-group">
+          <label>LinkedIn</label>
+          <input type="url" id="setup-linkedin" placeholder="https://linkedin.com/in/you"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Portfolio / Website</label>
+        <input type="url" id="setup-website" placeholder="https://yoursite.com"/>
+      </div>
+      <div class="section-label" style="margin-top:1.4rem">Hackathon Preferences</div>
+      <div class="form-group">
+        <label>Preferred Modes</label>
+        <div class="pill-group" id="setup-mode-pills">
+          <span class="mode-pill active" data-mode="Offline" onclick="toggleModePill(this,'Offline')">Offline</span>
+          <span class="mode-pill" data-mode="Online" onclick="toggleModePill(this,'Online')">Online</span>
+          <span class="mode-pill" data-mode="Hybrid" onclick="toggleModePill(this,'Hybrid')">Hybrid</span>
+        </div>
+      </div>
+      <div class="step-nav">
+        <button class="btn-ghost" onclick="setupNext(2)">← Back</button>
+        <button class="btn-primary" onclick="completeSetup()">Launch Portal →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     MAIN APP
+══════════════════════════════════════ -->
+<div id="page-app" class="page app-layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <span class="logo-hex">⬡</span>
+      <span class="logo-text">DevMatch</span>
+    </div>
+
+    <div class="sidebar-profile">
+      <div class="sp-avatar" id="spm-avatar">?</div>
+      <div class="sp-info">
+        <div class="sp-name" id="spm-name">Your Name</div>
+        <div class="sp-role" id="spm-role">Participant</div>
+      </div>
+      <div class="sp-score" id="spm-score-mini">—</div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <button class="nav-item active" data-tab="dashboard" onclick="switchTab('dashboard')">
+        <span class="nav-icon">◈</span> Dashboard
+      </button>
+      <button class="nav-item" data-tab="search" onclick="switchTab('search')">
+        <span class="nav-icon">◎</span> Hackathons
+      </button>
+      <button class="nav-item" data-tab="myteam" onclick="switchTab('myteam')">
+        <span class="nav-icon">▣</span> My Team
+      </button>
+      <button class="nav-item" data-tab="builder" onclick="switchTab('builder')">
+        <span class="nav-icon">⊕</span> Team Builder
+      </button>
+      <button class="nav-item" data-tab="reliability" onclick="switchTab('reliability')">
+        <span class="nav-icon">◉</span> Reliability
+      </button>
+      <button class="nav-item" data-tab="profile" onclick="switchTab('profile')">
+        <span class="nav-icon">◷</span> My Profile
+      </button>
+    </nav>
+
+    <div class="sidebar-bottom">
+      <button class="btn-logout" onclick="logout()">Sign Out</button>
+    </div>
+  </aside>
+
+  <!-- MOBILE TOPBAR -->
+  <div class="mobile-topbar">
+    <div class="auth-logo" style="gap:.5rem">
+      <span class="logo-hex" style="font-size:1.3rem">⬡</span>
+      <span class="logo-text" style="font-size:1.1rem">DevMatch</span>
+    </div>
+    <button id="hamburger" class="hamburger-btn" onclick="toggleMobileNav()">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+  <nav class="mobile-nav" id="mobile-nav">
+    <button class="nav-item active" data-tab="dashboard" onclick="switchTab('dashboard');closeMobileNav()"><span class="nav-icon">◈</span> Dashboard</button>
+    <button class="nav-item" data-tab="search" onclick="switchTab('search');closeMobileNav()"><span class="nav-icon">◎</span> Hackathons</button>
+    <button class="nav-item" data-tab="myteam" onclick="switchTab('myteam');closeMobileNav()"><span class="nav-icon">▣</span> My Team</button>
+    <button class="nav-item" data-tab="builder" onclick="switchTab('builder');closeMobileNav()"><span class="nav-icon">⊕</span> Team Builder</button>
+    <button class="nav-item" data-tab="reliability" onclick="switchTab('reliability');closeMobileNav()"><span class="nav-icon">◉</span> Reliability</button>
+    <button class="nav-item" data-tab="profile" onclick="switchTab('profile');closeMobileNav()"><span class="nav-icon">◷</span> My Profile</button>
+    <button class="btn-logout" style="margin-top:auto" onclick="logout()">Sign Out</button>
+  </nav>
+
+  <!-- MAIN CONTENT -->
+  <main class="main-content" id="main-content">
+
+    <!-- ══ DASHBOARD ══ -->
+    <section id="tab-dashboard" class="tab active">
+      <div class="page-header">
+        <div>
+          <h2 id="dash-greeting">Good morning!</h2>
+          <p class="meta-text" id="dash-sub">Here's your hackathon overview</p>
+        </div>
+        <span class="role-badge" id="dash-role-badge">Participant</span>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon">◉</div>
+          <div class="stat-num" id="dash-reliability">—</div>
+          <div class="stat-label">Reliability Score</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">▣</div>
+          <div class="stat-num" id="dash-attended">0</div>
+          <div class="stat-label">Hackathons Attended</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">◈</div>
+          <div class="stat-num" id="dash-teams-joined">0</div>
+          <div class="stat-label">Teams Joined</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">◎</div>
+          <div class="stat-num" id="dash-registered-count">0</div>
+          <div class="stat-label">Registered Events</div>
+        </div>
+      </div>
+
+      <div class="dash-grid">
+        <!-- Upcoming Events -->
+        <div class="dash-card">
+          <div class="dash-card-header">
+            <h3>Upcoming Events</h3>
+            <button class="btn-sm" onclick="switchTab('search')">Browse All →</button>
+          </div>
+          <div id="dash-upcoming-list"></div>
+        </div>
+        <!-- Quick Navigation -->
+        <div class="dash-card">
+          <div class="dash-card-header">
+            <h3>Quick Actions</h3>
+          </div>
+          <div class="nav-cards-grid">
+            <div class="nav-card" onclick="switchTab('search')">
+              <div class="nc-icon">◎</div>
+              <div class="nc-title">Find Hackathons</div>
+              <div class="nc-desc">Search & register for upcoming events</div>
+            </div>
+            <div class="nav-card" onclick="switchTab('builder')">
+              <div class="nc-icon">⊕</div>
+              <div class="nc-title">Build a Team</div>
+              <div class="nc-desc">Auto-generate the perfect team</div>
+            </div>
+            <div class="nav-card" onclick="switchTab('reliability')">
+              <div class="nc-icon">◉</div>
+              <div class="nc-title">My Reliability</div>
+              <div class="nc-desc">Track your commitment score</div>
+            </div>
+            <div class="nav-card" onclick="switchTab('profile')">
+              <div class="nc-icon">◷</div>
+              <div class="nc-title">Edit Profile</div>
+              <div class="nc-desc">Update your skills & preferences</div>
+            </div>
+          </div>
+        </div>
+        <!-- Activity Feed -->
+        <div class="dash-card full-span">
+          <div class="dash-card-header">
+            <h3>Recent Activity</h3>
+          </div>
+          <div id="dash-activity-feed"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ HACKATHON SEARCH ══ -->
+    <section id="tab-search" class="tab">
+      <div class="page-header">
+        <div>
+          <h2>Hackathons</h2>
+          <p class="meta-text">Find and register for upcoming events</p>
+        </div>
+        <span class="badge" id="search-count-badge">6 Events</span>
+      </div>
+
+      <div class="search-bar-wrap">
+        <div class="search-input-wrap">
+          <span class="search-icon">◎</span>
+          <input type="text" id="hk-search-input" class="search-input" placeholder="Search by name, city, tag…" oninput="filterHackathons()"/>
+          <button class="search-clear" id="search-clear-btn" onclick="clearSearch()" style="display:none">×</button>
+        </div>
+        <div class="filter-row">
+          <select id="filter-mode" onchange="filterHackathons()">
+            <option value="">All Modes</option>
+            <option value="Offline">Offline</option>
+            <option value="Online">Online</option>
+            <option value="Hybrid">Hybrid</option>
+          </select>
+          <select id="filter-fee" onchange="filterHackathons()">
+            <option value="">All Fees</option>
+            <option value="free">Free</option>
+            <option value="paid">Paid</option>
+          </select>
+          <select id="filter-sort" onchange="filterHackathons()">
+            <option value="date">Sort: Date</option>
+            <option value="name">Sort: Name</option>
+            <option value="participants">Sort: Popular</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="hk-search-results" class="hk-grid"></div>
+      <div id="hk-no-results" class="browse-empty" style="display:none">
+        <div class="be-icon">◉</div>
+        <div class="be-title">No events found</div>
+        <div class="be-sub">Try a different search term or filter</div>
+      </div>
+    </section>
+
+    <!-- ══ MY TEAM ══ -->
+    <section id="tab-myteam" class="tab">
+      <div class="page-header">
+        <div>
+          <h2>My Team</h2>
+          <p class="meta-text">Manage your hackathon team</p>
+        </div>
+        <span class="badge green" id="myteam-status-badge" style="display:none">✓ Registered</span>
+      </div>
+
+      <!-- No team -->
+      <div id="no-team-view">
+        <div class="browse-empty">
+          <div class="be-icon">▣</div>
+          <div class="be-title">You're not in a team yet</div>
+          <div class="be-sub">Create your own team or use the Team Builder to auto-match with others.</div>
+          <div style="display:flex;gap:.8rem;justify-content:center;margin-top:1.4rem;flex-wrap:wrap">
+            <button class="btn-primary" onclick="showCreateTeamForm()">Create Team</button>
+            <button class="btn-ghost" onclick="switchTab('builder')">Team Builder →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Create / Edit form -->
+      <div id="create-team-view" style="display:none">
+        <div class="form-section">
+          <div class="section-label">Team Details</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Team Name</label>
+              <input type="text" id="new-team-name" placeholder="e.g. ByteForce"/>
+            </div>
+            <div class="form-group">
+              <label>Hackathon</label>
+              <select id="new-team-hk">
+                <option value="">Select hackathon…</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Team Members</label>
+            <div id="member-inputs"></div>
+            <button class="btn-ghost" style="margin-top:.6rem;font-size:.82rem" onclick="addMemberRow()">+ Add Member</button>
+          </div>
+          <div class="form-group">
+            <label>Roles Needed</label>
+            <div class="roles-checkboxes" id="team-roles-checks"></div>
+          </div>
+          <div class="form-group">
+            <label>Project Idea <span class="label-hint">(optional)</span></label>
+            <textarea id="new-team-idea" rows="2" placeholder="Briefly describe your project idea…"></textarea>
+          </div>
+          <div style="display:flex;gap:.8rem;flex-wrap:wrap">
+            <button class="btn-primary" onclick="createTeam()">Save Team →</button>
+            <button class="btn-ghost" onclick="cancelCreateTeam()">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Has team view -->
+      <div id="has-team-view" style="display:none">
+        <div class="team-card">
+          <div class="team-card-header">
+            <div>
+              <div class="team-name" id="mtc-name">—</div>
+              <div class="team-meta">Leader: <span id="mtc-leader">—</span></div>
+              <div class="team-meta" id="mtc-hk"></div>
+            </div>
+            <button class="btn-ghost" style="align-self:flex-start" onclick="editTeam()">Edit Team</button>
+          </div>
+          <div class="form-section" style="margin-top:1.2rem">
+            <div class="section-label">Members</div>
+            <div class="member-pills" id="mtc-members"></div>
+          </div>
+          <div class="form-section" style="margin-top:1rem">
+            <div class="section-label">Roles</div>
+            <div id="mtc-roles"></div>
+          </div>
+          <div id="mtc-idea-wrap" style="display:none">
+            <div class="section-label" style="margin-top:1rem">Project Idea</div>
+            <div class="idea-text" id="mtc-idea"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ TEAM BUILDER ══ -->
+    <section id="tab-builder" class="tab">
+      <div class="page-header">
+        <div>
+          <h2>Team Builder</h2>
+          <p class="meta-text">Auto-generate teams based on roles, location & availability</p>
+        </div>
+      </div>
+      <div class="builder-layout">
+        <!-- Criteria panel -->
+        <div class="builder-criteria">
+          <div class="form-section">
+            <div class="section-label">Hackathon</div>
+            <select id="builder-hk">
+              <option value="">Select hackathon…</option>
+            </select>
+          </div>
+          <div class="form-section">
+            <div class="section-label">Team Size</div>
+            <div class="slider-row">
+              <input type="range" id="builder-size" min="2" max="6" value="4" oninput="updateSizeLabel(this.value)"/>
+              <span class="slider-label" id="builder-size-label">4</span>
+            </div>
+          </div>
+          <div class="form-section">
+            <div class="section-label">Min Reliability Score</div>
+            <div class="slider-row">
+              <input type="range" id="builder-min-rel" min="40" max="100" step="5" value="70" oninput="updateRelLabel(this.value)"/>
+              <span class="slider-label" id="builder-rel-label">70</span>
+            </div>
+          </div>
+          <div class="form-section">
+            <div class="section-label">Hackathon Mode</div>
+            <select id="builder-mode">
+              <option value="">Any Mode</option>
+              <option value="Online">Online</option>
+              <option value="Offline">Offline (proximity match)</option>
+              <option value="Hybrid">Hybrid</option>
+            </select>
+          </div>
+          <div class="form-section">
+            <div class="section-label">Required Roles</div>
+            <div class="roles-checkboxes" id="builder-roles-checks"></div>
+          </div>
+          <button class="btn-primary full-width" onclick="runTeamBuilder()">Generate Teams →</button>
+        </div>
+        <!-- Results -->
+        <div class="builder-results">
+          <div id="builder-results-list">
+            <div class="browse-empty">
+              <div class="be-icon">⊕</div>
+              <div class="be-title">Set criteria and generate</div>
+              <div class="be-sub">Configure the filters on the left and click Generate Teams to see AI-suggested squads.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ RELIABILITY ══ -->
+    <section id="tab-reliability" class="tab">
+      <div class="page-header">
+        <div>
+          <h2>Reliability Score</h2>
+          <p class="meta-text">Your commitment record across hackathons</p>
+        </div>
+        <span class="badge" id="rel-score-badge">—</span>
+      </div>
+
+      <!-- Gauge hero -->
+      <div class="rel-hero">
+        <div class="rel-gauge-wrap">
+          <svg class="rel-gauge" viewBox="0 0 200 120">
+            <path d="M20 110 A80 80 0 0 1 180 110" fill="none" stroke="#d4b896" stroke-width="16" stroke-linecap="round"/>
+            <path id="rel-gauge-arc" d="M20 110 A80 80 0 0 1 180 110" fill="none" stroke="url(#gaugeGrad)" stroke-width="16" stroke-linecap="round" stroke-dasharray="251" stroke-dashoffset="251" style="transition:stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1)"/>
+            <defs>
+              <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#8a3f08"/>
+                <stop offset="100%" stop-color="#c8651a"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          <div class="rel-gauge-center">
+            <div class="rel-score-big" id="rel-score-big">—</div>
+            <div class="rel-score-sub">out of 100</div>
+          </div>
+        </div>
+        <div class="rel-meta">
+          <div class="rel-tier" id="rel-tier">—</div>
+          <div class="rel-tier-desc" id="rel-tier-desc">—</div>
+        </div>
+      </div>
+
+      <!-- Breakdown -->
+      <div class="section-label" style="margin:1.6rem 0 1rem">Score Breakdown</div>
+      <div class="rel-breakdown-grid" id="rel-breakdown-grid"></div>
+
+      <!-- History -->
+      <div class="section-label" style="margin:1.8rem 0 1rem">Hackathon History</div>
+      <div class="table-wrap">
+        <table class="rel-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Hackathon</th>
+              <th>Team</th>
+              <th>Date</th>
+              <th>Status</th>
+              <th>Impact</th>
+            </tr>
+          </thead>
+          <tbody id="rel-history-body"></tbody>
+        </table>
+      </div>
+
+      <!-- Tips -->
+      <div class="section-label" style="margin:1.8rem 0 1rem">How to Improve</div>
+      <div class="rel-tips-grid">
+        <div class="rel-tip">
+          <div class="tip-icon">◈</div>
+          <div class="tip-title">Attend Consistently</div>
+          <div class="tip-body">Every hackathon you attend and complete adds +15 to your base score.</div>
+        </div>
+        <div class="rel-tip">
+          <div class="tip-icon">▣</div>
+          <div class="tip-title">Complete Submissions</div>
+          <div class="tip-body">Teams that submit a project get an additional +10 commitment bonus.</div>
+        </div>
+        <div class="rel-tip">
+          <div class="tip-icon">◉</div>
+          <div class="tip-title">Avoid Drop-outs</div>
+          <div class="tip-body">Leaving a registered team within 48 hrs of the event deducts −20 points.</div>
+        </div>
+        <div class="rel-tip">
+          <div class="tip-icon">◷</div>
+          <div class="tip-title">Profile Completeness</div>
+          <div class="tip-body">A fully filled profile with social links gives a one-time +5 bonus.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ MY PROFILE ══ -->
+    <section id="tab-profile" class="tab">
+      <div class="page-header">
+        <div>
+          <h2>My Profile</h2>
+          <p class="meta-text">Manage your participant information</p>
+        </div>
+        <span class="badge green" id="profile-saved-badge" style="display:none">✓ Saved</span>
+      </div>
+
+      <div class="profile-layout">
+        <!-- Avatar card -->
+        <div class="profile-avatar-card">
+          <div class="profile-avatar-circle" id="profile-avatar-display">?</div>
+          <div class="profile-avatar-name" id="profile-display-name">Your Name</div>
+          <div class="profile-avatar-role" id="profile-display-role">Participant · DevMatch</div>
+          <div class="profile-avatar-email" id="profile-display-email">—</div>
+          <div class="profile-rel-mini">
+            <div class="prm-label">Reliability Score</div>
+            <div class="prm-score" id="prm-score">—</div>
+            <div class="prm-bar-wrap"><div class="prm-bar" id="prm-bar" style="width:0%"></div></div>
+          </div>
+          <div class="profile-social-links" id="profile-social-links"></div>
+        </div>
+
+        <!-- Form -->
+        <div class="profile-form-area">
+          <div class="form-section">
+            <div class="section-label">Personal Info</div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Full Name</label>
+                <input type="text" id="prof-name" placeholder="Aryan Sharma"/>
+              </div>
+              <div class="form-group">
+                <label>Username</label>
+                <input type="text" id="prof-username" placeholder="aryan_dev"/>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Email</label>
+                <input type="email" id="prof-email" placeholder="you@devmatch.io"/>
+              </div>
+              <div class="form-group">
+                <label>Phone</label>
+                <input type="tel" id="prof-phone" placeholder="+91 98765 43210"/>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>City</label>
+                <input type="text" id="prof-city" placeholder="Mumbai"/>
+              </div>
+              <div class="form-group">
+                <label>State</label>
+                <input type="text" id="prof-state" placeholder="Maharashtra"/>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Bio</label>
+              <textarea id="prof-bio" rows="3" placeholder="A short bio about yourself…"></textarea>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <div class="section-label">Skills & Role</div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Primary Role</label>
+                <select id="prof-role">
+                  <option value="">Select…</option>
+                  <option value="Frontend">Frontend Developer</option>
+                  <option value="Backend">Backend Developer</option>
+                  <option value="ML">ML / AI Engineer</option>
+                  <option value="Data Science">Data Scientist</option>
+                  <option value="Mobile">Mobile Developer</option>
+                  <option value="Design">UI/UX Designer</option>
+                  <option value="DevOps">DevOps Engineer</option>
+                  <option value="Fullstack">Full Stack Developer</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Experience Level</label>
+                <select id="prof-level">
+                  <option value="Beginner">Beginner</option>
+                  <option value="Intermediate">Intermediate</option>
+                  <option value="Advanced">Advanced</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Tech Skills <span class="label-hint">(comma-separated)</span></label>
+              <input type="text" id="prof-skills" placeholder="React, Node.js, Python…"/>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>College / Organisation</label>
+                <input type="text" id="prof-org" placeholder="IIT Bombay"/>
+              </div>
+              <div class="form-group">
+                <label>Year / Designation</label>
+                <input type="text" id="prof-year" placeholder="3rd Year · CSE"/>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Availability</label>
+              <select id="prof-avail">
+                <option value="Weekends">Weekends only</option>
+                <option value="Weekdays">Weekdays only</option>
+                <option value="Both">Weekdays & weekends</option>
+                <option value="Flexible">Fully flexible</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <div class="section-label">Social Links</div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>GitHub</label>
+                <input type="url" id="prof-github" placeholder="https://github.com/yourhandle"/>
+              </div>
+              <div class="form-group">
+                <label>LinkedIn</label>
+                <input type="url" id="prof-linkedin" placeholder="https://linkedin.com/in/you"/>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Portfolio / Website</label>
+              <input type="url" id="prof-website" placeholder="https://yoursite.com"/>
+            </div>
+          </div>
+
+          <button class="btn-primary full-width" onclick="saveProfile()">Save Profile</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- Hackathon Detail Modal -->
+<div id="hk-modal" class="modal-overlay" onclick="closeHkModal(event)">
+  <div class="modal-card">
+    <button class="modal-close" onclick="closeHkModalDirect()">×</button>
+    <div class="modal-badge" id="modal-mode-badge"></div>
+    <h3 class="modal-title" id="modal-title">—</h3>
+    <p class="modal-meta" id="modal-meta">—</p>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-footer">
+      <button class="btn-primary" id="modal-register-btn" onclick="registerFromModal()">Register Now →</button>
+      <button class="btn-ghost" onclick="closeHkModalDirect()">Close</button>
+    </div>
+  </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
