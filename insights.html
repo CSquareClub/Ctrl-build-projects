@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>OpenIssue | Insights</title>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+    <!-- Material Symbols -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <!-- Scripts & Styles -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#a3a6ff",
+                        "primary-dim": "#6063ee",
+                        "secondary": "#a28efc",
+                        "tertiary": "#ffa5d9",
+                        "error": "#ff6e84",
+                        "surface": "#0a0e19",
+                        "surface-variant": "#202535",
+                        "surface-container-low": "#0f131f",
+                        "surface-container-high": "#1a1f2e",
+                        "surface-container-highest": "#202535",
+                        "on-surface": "#e8eafb",
+                        "on-surface-variant": "#a7aaba",
+                        "on-primary": "#0f00a4",
+                    },
+                    fontFamily: {
+                        "headline": ["Space Grotesk", "sans-serif"],
+                        "body": ["Manrope", "sans-serif"],
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="styles.css" rel="stylesheet" />
+    <script defer src="script.js"></script>
+</head>
+
+<body class="bg-surface text-on-surface font-body overflow-x-hidden selection:bg-primary/30 flex min-h-screen">
+    
+    <!-- SideNavBar -->
+    <aside id="sidebar" class="flex flex-col fixed left-0 top-0 h-screen w-64 border-r border-white/5 bg-[#0a0e19] shadow-[20px_0_40px_rgba(0,0,0,0.4)] z-[60] font-headline tracking-tight transition-transform duration-300 -translate-x-full md:translate-x-0">
+        <div class="p-8">
+            <div class="flex items-center gap-3 mb-10">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-[0_0_15px_rgba(163,166,255,0.4)]">
+                    <span class="material-symbols-outlined text-on-primary-fixed text-xl" style="font-variation-settings: 'FILL' 1;">cloud_done</span>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold tracking-tighter text-indigo-400">OpenIssue</h1>
+                    <p class="text-[10px] uppercase tracking-widest text-on-surface-variant">AI Triage</p>
+                </div>
+            </div>
+            <nav class="space-y-2">
+                <a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-indigo-300 hover:bg-white/5 transition-all duration-300 hover:translate-x-1" href="index.html">
+                    <span class="material-symbols-outlined">dashboard</span>
+                    <span>Dashboard</span>
+                </a>
+                <a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-indigo-300 hover:bg-white/5 transition-all duration-300 hover:translate-x-1" href="auto-labeling.html">
+                    <span class="material-symbols-outlined">label_important</span>
+                    <span>Auto Labeling</span>
+                </a>
+                <a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-indigo-300 hover:bg-white/5 transition-all duration-300 hover:translate-x-1" href="issue-analysis.html">
+                    <span class="material-symbols-outlined">analytics</span>
+                    <span>Issue Analysis</span>
+                </a>
+                <a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-indigo-300 hover:bg-white/5 transition-all duration-300 hover:translate-x-1" href="duplicate-detection.html">
+                    <span class="material-symbols-outlined">difference</span>
+                    <span>Duplicates</span>
+                </a>
+                <a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-indigo-300 hover:bg-white/5 transition-all duration-300 hover:translate-x-1" href="priority-dashboard.html">
+                    <span class="material-symbols-outlined">priority_high</span>
+                    <span>Priority</span>
+                </a>
+                <a class="flex items-center gap-3 px-4 py-3 text-indigo-400 font-bold border-r-2 border-indigo-400 bg-white/5 transition-all duration-300 hover:translate-x-1 shadow-[inset_4px_0_0_rgba(163,166,255,0.4)]" href="insights.html">
+                    <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">insights</span>
+                    <span>Insights</span>
+                </a>
+                <a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-indigo-300 hover:bg-white/5 transition-all duration-300 hover:translate-x-1" href="settings.html">
+                    <span class="material-symbols-outlined">settings</span>
+                    <span>Settings</span>
+                </a>
+            </nav>
+        </div>
+        <div class="mt-auto p-6">
+            <button class="w-full py-4 rounded-full bg-gradient-to-r from-primary to-primary-dim text-on-primary font-bold shadow-[0_0_20px_rgba(99,102,241,0.4)] transition-transform hover:scale-105 active:scale-95 font-headline">
+                Triage Now
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 ml-0 md:ml-64 min-h-screen">
+        <!-- TopAppBar -->
+        <header class="flex items-center justify-between px-4 md:px-8 h-16 bg-white/3 backdrop-blur-lg border-b border-white/5 sticky top-0 z-50">
+            <div class="flex items-center flex-1 gap-4">
+                <button id="sidebar-toggle" class="md:hidden p-2 text-slate-400 hover:bg-white/10 rounded-full transition-all">
+                    <span class="material-symbols-outlined">menu</span>
+                </button>
+                <div class="items-center gap-4 bg-surface-container-low px-4 py-2 rounded-full w-full max-w-md border border-white/5 hidden sm:flex">
+                    <span class="material-symbols-outlined text-on-surface-variant text-sm">search</span>
+                    <input class="bg-transparent border-none focus:ring-0 text-sm text-on-surface placeholder:text-on-surface-variant w-full font-body" placeholder="Search insights or reports..." type="text" />
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-2 md:gap-6">
+                <button class="text-slate-400 hover:bg-white/10 p-2 rounded-full transition-all duration-300 relative">
+                    <span class="material-symbols-outlined">notifications</span>
+                    <span class="absolute top-2 right-2 w-2 h-2 bg-tertiary rounded-full"></span>
+                </button>
+                <button class="hidden sm:block text-slate-400 hover:bg-white/10 p-2 rounded-full transition-all duration-300">
+                    <span class="material-symbols-outlined">help</span>
+                </button>
+                <div class="flex items-center gap-3 pl-2 md:pl-4 border-l border-white/10">
+                    <img alt="User Profile" class="w-8 h-8 rounded-full border border-primary/20 object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDyvUM5v3-wMjhyMVxOMjxKdD387FcAENw3FgaI_JPDrg781i2oP3iFq1u-CY1PWLNS48vzblK7ErolqL3wflkjRtHIh5WX-jVLd9Cue3KQd0-45eE7GCCtqRb1YQ2CwqJyius_rPEDIUEXzf3xduzFVCmPUeB4-1NxC5uDlNa5c_GzCxB4jsOKeTNX5MY73oa96NoUyybr6y_8CNKKGDCqins_EnZnG17Wdxp03yITYMJOFuj3OUCBjGjb4fg9rJDpt-QP8a2eRRMR" />
+                </div>
+            </div>
+        </header>
+
+        <!-- Dashboard Body -->
+        <div class="p-6 md:p-12 max-w-7xl mx-auto space-y-12">
+            <!-- Header Section -->
+            <section class="flex flex-col md:flex-row md:items-end justify-between gap-6 relative">
+                <div class="oracle-pulse -top-20 -left-20"></div>
+                <div class="space-y-2 z-10">
+                    <p class="text-on-surface-variant text-sm font-semibold tracking-[0.2em] uppercase font-body">Global Analytics</p>
+                    <h2 class="text-4xl md:text-5xl font-bold font-headline tracking-tight text-on-surface">Repository <span class="text-primary italic">Health</span></h2>
+                </div>
+                <div class="flex items-center gap-2 md:gap-4 bg-surface-container-high p-1.5 rounded-full border border-white/5 z-10 w-full md:w-auto overflow-x-auto custom-scrollbar">
+                    <button class="px-3 md:px-6 py-2 rounded-full bg-white/5 text-primary font-medium text-xs md:text-sm transition-all hover:bg-white/10 whitespace-nowrap">Past 30 Days</button>
+                    <button class="px-3 md:px-6 py-2 rounded-full text-on-surface-variant text-xs md:text-sm hover:text-on-surface transition-colors whitespace-nowrap">Custom Range</button>
+                    <div class="px-3 py-2 text-on-surface-variant">
+                        <span class="material-symbols-outlined text-lg cursor-pointer hover:text-white transition-colors">calendar_today</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Metrics Bento Grid -->
+            <section class="grid grid-cols-1 md:grid-cols-12 gap-6 md:h-auto lg:h-[600px]">
+                <!-- Time Saved Large Metric -->
+                <div class="md:col-span-8 glass-card rounded-[2rem] p-8 md:p-10 flex flex-col justify-between relative overflow-hidden group">
+                    <div class="absolute -right-20 -top-20 w-80 h-80 bg-primary/10 rounded-full blur-[80px] group-hover:bg-primary/20 transition-all duration-700"></div>
+                    <div class="flex flex-col sm:flex-row items-start justify-between gap-4 z-10">
+                        <div class="space-y-4">
+                            <span class="material-symbols-outlined text-4xl text-primary" style="font-variation-settings: 'FILL' 1;">timer</span>
+                            <h3 class="text-2xl font-headline text-on-surface font-bold">Productivity Lift</h3>
+                        </div>
+                        <div class="px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-bold flex items-center gap-2 shadow-[0_0_15px_rgba(163,166,255,0.15)]">
+                            <span class="material-symbols-outlined text-xs">trending_up</span> +24% YoY
+                        </div>
+                    </div>
+                    <div class="mt-12 lg:mt-auto space-y-2 z-10">
+                        <div class="text-6xl sm:text-[8rem] font-bold font-headline leading-none tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white via-primary to-primary-dim drop-shadow-[0_0_30px_rgba(163,166,255,0.3)]">
+                            4.2k
+                        </div>
+                        <p class="text-xl sm:text-2xl text-on-surface-variant font-light">Hours saved through AI triage and deduplication.</p>
+                    </div>
+                    
+                    <!-- Mini Sparkline Simulation -->
+                    <div class="absolute bottom-10 right-10 flex items-end gap-1 h-24 opacity-50 sm:opacity-100">
+                        <div class="w-2 sm:w-3 bg-primary/20 h-8 rounded-full"></div>
+                        <div class="w-2 sm:w-3 bg-primary/30 h-12 rounded-full"></div>
+                        <div class="w-2 sm:w-3 bg-primary/40 h-16 rounded-full"></div>
+                        <div class="w-2 sm:w-3 bg-primary/50 h-20 rounded-full"></div>
+                        <div class="w-2 sm:w-3 bg-primary/60 h-24 rounded-full"></div>
+                        <div class="w-2 sm:w-3 bg-primary h-22 rounded-full shadow-[0_0_15px_rgba(163,166,255,0.6)]"></div>
+                    </div>
+                </div>
+
+                <!-- Secondary Metric Column -->
+                <div class="md:col-span-4 flex flex-col gap-6">
+                    <!-- Issue Resolution Rate -->
+                    <div class="flex-1 glass-card rounded-[2rem] p-6 lg:p-8 flex flex-col justify-between border-l-[4px] border-tertiary">
+                        <div class="flex justify-between items-start mb-6 lg:mb-0">
+                            <span class="material-symbols-outlined text-3xl text-tertiary" style="font-variation-settings: 'FILL' 1;">verified</span>
+                            <p class="text-sm font-bold text-tertiary">Live Rate</p>
+                        </div>
+                        <div>
+                            <div class="text-4xl lg:text-5xl font-bold font-headline text-on-surface text-transparent bg-clip-text bg-gradient-to-r from-tertiary to-white">92.4%</div>
+                            <p class="text-on-surface-variant mt-2 text-sm font-medium">Deduplication Accuracy</p>
+                        </div>
+                    </div>
+                    <!-- Community Sentiment -->
+                    <div class="flex-1 glass-card rounded-[2rem] p-6 lg:p-8 flex flex-col justify-between overflow-hidden relative">
+                        <div class="absolute -right-10 -top-10 w-40 h-40 bg-secondary/10 rounded-full blur-[40px]"></div>
+                        <div class="flex justify-between items-start mb-6 lg:mb-0 z-10">
+                            <span class="material-symbols-outlined text-3xl text-secondary" style="font-variation-settings: 'FILL' 1;">favorite</span>
+                            <p class="text-sm font-bold text-secondary">Sentiment</p>
+                        </div>
+                        <div class="z-10">
+                            <div class="text-4xl lg:text-5xl font-bold font-headline text-on-surface text-transparent bg-clip-text bg-gradient-to-r from-secondary to-white">High</div>
+                            <p class="text-on-surface-variant mt-2 text-sm font-medium">Maintainer Satisfaction</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Detailed Charts Section -->
+            <section class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Maintainer Workload -->
+                <div class="glass-card rounded-[2rem] p-6 sm:p-8 border border-white/5 space-y-8 hover:shadow-[0_10px_30px_rgba(0,0,0,0.3)] transition-shadow">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-xl font-bold font-headline flex items-center gap-3">
+                            <span class="material-symbols-outlined text-primary">groups</span>
+                            Maintainer Workload
+                        </h3>
+                        <span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-white transition-colors">more_vert</span>
+                    </div>
+                    <div class="space-y-6">
+                        <div class="space-y-2">
+                            <div class="flex justify-between text-sm">
+                                <span class="text-on-surface font-bold">Sarah Connor (Lead)</span>
+                                <span class="text-on-surface-variant font-medium text-xs">124 Issues</span>
+                            </div>
+                            <div class="h-2 w-full bg-surface-container rounded-full overflow-hidden">
+                                <div class="h-full bg-primary rounded-full relative" style="width: 85%">
+                                    <div class="absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-white/20 to-transparent"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="space-y-2">
+                            <div class="flex justify-between text-sm">
+                                <span class="text-on-surface font-bold">James Howlett</span>
+                                <span class="text-on-surface-variant font-medium text-xs">88 Issues</span>
+                            </div>
+                            <div class="h-2 w-full bg-surface-container rounded-full overflow-hidden">
+                                <div class="h-full bg-secondary rounded-full" style="width: 62%"></div>
+                            </div>
+                        </div>
+                        <div class="space-y-2">
+                            <div class="flex justify-between text-sm">
+                                <span class="text-on-surface font-bold">Ororo Munroe</span>
+                                <span class="text-on-surface-variant font-medium text-xs">42 Issues</span>
+                            </div>
+                            <div class="h-2 w-full bg-surface-container rounded-full overflow-hidden">
+                                <div class="h-full bg-tertiary rounded-full" style="width: 30%"></div>
+                            </div>
+                        </div>
+                        <div class="space-y-2">
+                            <div class="flex justify-between text-sm">
+                                <span class="text-on-surface font-bold">Erik Lehnsherr</span>
+                                <span class="text-on-surface-variant font-medium text-xs">156 Issues</span>
+                            </div>
+                            <div class="h-2 w-full bg-surface-container rounded-full overflow-hidden">
+                                <div class="h-full bg-error rounded-full shadow-[0_0_10px_rgba(255,110,132,0.4)]" style="width: 95%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Keyword Trends -->
+                <div class="glass-card rounded-[2rem] p-6 sm:p-8 border border-white/5 flex flex-col hover:shadow-[0_10px_30px_rgba(0,0,0,0.3)] transition-shadow">
+                    <div class="flex items-center justify-between mb-8">
+                        <h3 class="text-xl font-bold font-headline flex items-center gap-3">
+                            <span class="material-symbols-outlined text-tertiary">query_stats</span>
+                            Keyword Hotspots
+                        </h3>
+                        <div class="flex gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-primary shadow-[0_0_8px_rgba(163,166,255,0.6)]"></span>
+                            <span class="w-2.5 h-2.5 rounded-full bg-secondary shadow-[0_0_8px_rgba(162,142,252,0.6)]"></span>
+                        </div>
+                    </div>
+                    <div class="flex-1 flex items-center justify-center relative min-h-[300px]">
+                        <!-- Visual representation of a radar/area trend -->
+                        <div class="absolute inset-0 flex items-center justify-center opacity-20 pointer-events-none">
+                            <div class="w-48 sm:w-64 h-48 sm:h-64 border border-white/10 rounded-full"></div>
+                            <div class="absolute w-32 sm:w-48 h-32 sm:h-48 border border-white/10 rounded-full"></div>
+                            <div class="absolute w-16 sm:w-32 h-16 sm:h-32 border border-white/10 rounded-full"></div>
+                        </div>
+                        <div class="relative z-10 grid grid-cols-2 gap-4 w-full">
+                            <div class="p-4 sm:p-6 rounded-2xl bg-white/5 border border-white/5 flex flex-col items-center hover:bg-white/10 transition-colors cursor-pointer">
+                                <span class="text-[10px] sm:text-xs uppercase tracking-widest text-on-surface-variant mb-1 sm:mb-2 font-bold">Refactoring</span>
+                                <span class="text-xl sm:text-2xl font-bold font-headline text-primary">+42%</span>
+                            </div>
+                            <div class="p-4 sm:p-6 rounded-2xl bg-white/5 border border-white/5 flex flex-col items-center hover:bg-white/10 transition-colors cursor-pointer">
+                                <span class="text-[10px] sm:text-xs uppercase tracking-widest text-on-surface-variant mb-1 sm:mb-2 font-bold">Memory Leak</span>
+                                <span class="text-xl sm:text-2xl font-bold font-headline text-tertiary">+18%</span>
+                            </div>
+                            <div class="p-4 sm:p-6 rounded-2xl bg-white/5 border border-white/5 flex flex-col items-center hover:bg-white/10 transition-colors cursor-pointer">
+                                <span class="text-[10px] sm:text-xs uppercase tracking-widest text-on-surface-variant mb-1 sm:mb-2 font-bold">API V2</span>
+                                <span class="text-xl sm:text-2xl font-bold font-headline text-secondary">+104%</span>
+                            </div>
+                            <div class="p-4 sm:p-6 rounded-2xl bg-white/5 border border-white/5 flex flex-col items-center hover:bg-error/10 border-error/20 transition-colors cursor-pointer">
+                                <span class="text-[10px] sm:text-xs uppercase tracking-widest text-on-surface-variant mb-1 sm:mb-2 font-bold text-error">Auth Failure</span>
+                                <span class="text-xl sm:text-2xl font-bold font-headline text-error-dim">-12%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Bottom Detail Table / Activity -->
+            <section class="glass-card rounded-[2rem] p-6 sm:p-8 border border-white/5">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
+                    <div>
+                        <h3 class="text-xl font-bold font-headline text-on-surface">Recent Intelligence Events</h3>
+                        <p class="text-on-surface-variant text-sm mt-1">Audit trail of automated triage actions.</p>
+                    </div>
+                    <button class="text-primary font-bold text-sm hover:underline px-4 py-2 hover:bg-white/5 rounded-lg transition-colors">Download CSV</button>
+                </div>
+                
+                <div class="overflow-x-auto custom-scrollbar pb-4">
+                    <table class="w-full text-left border-collapse min-w-[700px]">
+                        <thead>
+                            <tr class="text-on-surface-variant text-xs uppercase tracking-widest border-b border-white/5">
+                                <th class="pb-4 font-bold pl-2">Event Type</th>
+                                <th class="pb-4 font-bold">Target Object</th>
+                                <th class="pb-4 font-bold">AI Confidence</th>
+                                <th class="pb-4 font-bold text-center">Outcome</th>
+                                <th class="pb-4 font-bold text-right pr-2">Timestamp</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-sm">
+                            <tr class="group hover:bg-white/5 transition-colors border-b border-white/5 last:border-0 relative">
+                                <td class="py-5 pl-2 flex items-center gap-3 font-medium">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-primary shadow-[0_0_8px_rgba(163,166,255,0.6)]"></span>
+                                    Deduplication
+                                </td>
+                                <td class="py-5 text-on-surface font-bold">Issue #4298</td>
+                                <td class="py-5">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-20 h-1.5 bg-surface-container rounded-full overflow-hidden">
+                                            <div class="h-full bg-primary rounded-full relative" style="width: 98%">
+                                                <div class="absolute right-0 top-0 bottom-0 w-4 bg-white/50 blur-[2px]"></div>
+                                            </div>
+                                        </div>
+                                        <span class="font-bold text-xs">98%</span>
+                                    </div>
+                                </td>
+                                <td class="py-5 text-center">
+                                    <span class="px-3 py-1 rounded-md bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider border border-primary/20">Merged</span>
+                                </td>
+                                <td class="py-5 text-right text-on-surface-variant text-xs font-bold pr-2">2m ago</td>
+                            </tr>
+                            <tr class="group hover:bg-white/5 transition-colors border-b border-white/5 last:border-0">
+                                <td class="py-5 pl-2 flex items-center gap-3 font-medium">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-secondary shadow-[0_0_8px_rgba(162,142,252,0.6)]"></span>
+                                    Priority Escalation
+                                </td>
+                                <td class="py-5 text-on-surface font-bold">Issue #4301</td>
+                                <td class="py-5">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-20 h-1.5 bg-surface-container rounded-full overflow-hidden">
+                                            <div class="h-full bg-secondary rounded-full relative" style="width: 82%"></div>
+                                        </div>
+                                        <span class="font-bold text-xs">82%</span>
+                                    </div>
+                                </td>
+                                <td class="py-5 text-center">
+                                    <span class="px-3 py-1 rounded-md bg-secondary/10 text-secondary text-[10px] font-bold uppercase tracking-wider border border-secondary/20">High Prio</span>
+                                </td>
+                                <td class="py-5 text-right text-on-surface-variant text-xs font-bold pr-2">14m ago</td>
+                            </tr>
+                            <tr class="group hover:bg-white/5 transition-colors border-b border-white/5 last:border-0">
+                                <td class="py-5 pl-2 flex items-center gap-3 font-medium">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-tertiary shadow-[0_0_8px_rgba(255,165,217,0.6)]"></span>
+                                    Label Prediction
+                                </td>
+                                <td class="py-5 text-on-surface font-bold">Issue #4312</td>
+                                <td class="py-5">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-20 h-1.5 bg-surface-container rounded-full overflow-hidden">
+                                            <div class="h-full bg-tertiary rounded-full relative" style="width: 91%"></div>
+                                        </div>
+                                        <span class="font-bold text-xs">91%</span>
+                                    </div>
+                                </td>
+                                <td class="py-5 text-center">
+                                    <span class="px-3 py-1 rounded-md bg-tertiary/10 text-tertiary text-[10px] font-bold uppercase tracking-wider border border-tertiary/20">Bug: Core</span>
+                                </td>
+                                <td class="py-5 text-right text-on-surface-variant text-xs font-bold pr-2">1h ago</td>
+                            </tr>
+                            <tr class="group hover:bg-white/5 transition-colors last:border-0">
+                                <td class="py-5 pl-2 flex items-center gap-3 font-medium">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-error shadow-[0_0_8px_rgba(255,110,132,0.6)]"></span>
+                                    Anomaly Detected
+                                </td>
+                                <td class="py-5 text-on-surface font-bold">Issue #4318</td>
+                                <td class="py-5">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-20 h-1.5 bg-surface-container rounded-full overflow-hidden">
+                                            <div class="h-full bg-error rounded-full relative" style="width: 95%">
+                                                <div class="absolute right-0 top-0 bottom-0 w-4 bg-white/50 blur-[2px]"></div>
+                                            </div>
+                                        </div>
+                                        <span class="font-bold text-xs">95%</span>
+                                    </div>
+                                </td>
+                                <td class="py-5 text-center">
+                                    <span class="px-3 py-1 rounded-md bg-error/10 text-error text-[10px] font-bold uppercase tracking-wider border border-error/20 flex items-center justify-center gap-1"><span class="w-1.5 h-1.5 bg-error rounded-full animate-pulse"></span> Flagged</span>
+                                </td>
+                                <td class="py-5 text-right text-on-surface-variant text-xs font-bold pr-2">3h ago</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+        
+        <!-- Footer Info -->
+        <footer class="p-8 text-center border-t border-white/5 mt-auto">
+            <p class="text-on-surface-variant text-xs font-medium uppercase tracking-widest">Generated by OpenIssue AI Oracle • Last update 3s ago</p>
+        </footer>
+    </main>
+</body>
+</html>

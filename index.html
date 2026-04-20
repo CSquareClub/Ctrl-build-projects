@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>OpenIssue | Dashboard Overview</title>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+    <!-- Material Symbols -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <!-- Scripts & Styles -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#a3a6ff",
+                        "primary-dim": "#6063ee",
+                        "secondary": "#a28efc",
+                        "tertiary": "#ffa5d9",
+                        "error": "#ff6e84",
+                        "surface": "#0a0e19",
+                        "surface-variant": "#202535",
+                        "surface-container-low": "#0f131f",
+                        "surface-container-high": "#1a1f2e",
+                        "surface-container-highest": "#202535",
+                        "on-surface": "#e8eafb",
+                        "on-surface-variant": "#a7aaba",
+                        "on-primary": "#0f00a4",
+                    },
+                    fontFamily: {
+                        "headline": ["Space Grotesk", "sans-serif"],
+                        "body": ["Manrope", "sans-serif"],
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="styles.css" rel="stylesheet" />
+    <script defer src="data_engine.js"></script>
+    <script defer src="script.js"></script>
+</head>
+
+<body class="bg-surface text-on-surface font-body overflow-x-hidden selection:bg-primary/30">
+    
+    <!-- SideNavBar -->
+    <aside id="sidebar" class="flex flex-col fixed left-0 top-0 h-screen w-64 border-r border-white/5 bg-[#0a0e19] shadow-[20px_0_40px_rgba(0,0,0,0.4)] z-[60] font-headline tracking-tight transition-transform duration-300 -translate-x-full md:translate-x-0">
+        <div class="p-8">
+            <div class="flex items-center gap-3 mb-10">
+                <div class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-[0_0_20px_rgba(163,166,255,0.4)]">
+                    <span class="material-symbols-outlined text-on-primary" style="font-variation-settings: 'FILL' 1;">dataset</span>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold tracking-tighter text-indigo-400">OpenIssue</h1>
+                    <p class="text-[10px] uppercase tracking-widest text-on-surface-variant">AI Triage</p>
+                </div>
+            </div>
+            <nav class="space-y-2">
+                <a class="flex items-center gap-3 px-4 py-3 text-indigo-400 font-bold border-r-2 border-indigo-400 bg-white/5 transition-all duration-300 hover:translate-x-1" href="index.html">
+                    <span class="material-symbols-outlined">dashboard</span>
+                    <span>Dashboard</span>
+                </a>
+                <a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-indigo-300 hover:bg-white/5 transition-all duration-300 hover:translate-x-1" href="auto-labeling.html">
+                    <span class="material-symbols-outlined">label_important</span>
+                    <span>Auto Labeling</span>
+                </a>
+                <a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-indigo-300 hover:bg-white/5 transition-all duration-300 hover:translate-x-1" href="issue-analysis.html">
+                    <span class="material-symbols-outlined">analytics</span>
+                    <span>Issue Analysis</span>
+                </a>
+                <a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-indigo-300 hover:bg-white/5 transition-all duration-300 hover:translate-x-1" href="duplicate-detection.html">
+                    <span class="material-symbols-outlined">difference</span>
+                    <span>Duplicates</span>
+                </a>
+                <a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-indigo-300 hover:bg-white/5 transition-all duration-300 hover:translate-x-1" href="priority-dashboard.html">
+                    <span class="material-symbols-outlined">priority_high</span>
+                    <span>Priority</span>
+                </a>
+                <a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-indigo-300 hover:bg-white/5 transition-all duration-300 hover:translate-x-1" href="insights.html">
+                    <span class="material-symbols-outlined">insights</span>
+                    <span>Insights</span>
+                </a>
+                <a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-indigo-300 hover:bg-white/5 transition-all duration-300 hover:translate-x-1" href="settings.html">
+                    <span class="material-symbols-outlined">settings</span>
+                    <span>Settings</span>
+                </a>
+            </nav>
+        </div>
+        <div class="mt-auto p-6">
+            <div class="glass-card p-4 rounded-xl border border-white/5">
+                <p class="text-xs text-on-surface-variant mb-3">Triage efficiency is up 12%</p>
+                <button class="w-full py-2.5 bg-gradient-to-r from-primary to-primary-dim rounded-lg text-on-primary text-sm font-bold shadow-[0_0_20px_rgba(163,166,255,0.3)] hover:shadow-[0_0_25px_rgba(163,166,255,0.5)] transition-all">
+                    Triage Now
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- TopAppBar -->
+    <header class="flex items-center justify-between px-4 md:px-8 ml-0 md:ml-64 h-16 bg-surface/80 backdrop-blur-lg sticky top-0 z-40 transition-all duration-300 font-body font-medium border-b border-white/5">
+        <div class="flex items-center flex-1 gap-4">
+            <button id="sidebar-toggle" class="md:hidden p-2 text-slate-400 hover:bg-white/10 rounded-full transition-all">
+                <span class="material-symbols-outlined">menu</span>
+            </button>
+            <div class="relative w-full max-w-md hidden sm:block group">
+                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm">search</span>
+                <input class="w-full bg-surface-container-low border-none rounded-full pl-10 pr-4 py-2 text-sm focus:ring-1 focus:ring-primary focus:bg-surface-container-high transition-all text-on-surface placeholder:text-on-surface-variant/50" placeholder="Search across issues..." type="text" />
+            </div>
+        </div>
+        <div class="flex items-center gap-2 md:gap-4">
+            <button class="p-2 text-slate-400 hover:bg-white/10 rounded-full transition-all">
+                <span class="material-symbols-outlined">notifications</span>
+            </button>
+            <button class="hidden sm:block p-2 text-slate-400 hover:bg-white/10 rounded-full transition-all">
+                <span class="material-symbols-outlined">help</span>
+            </button>
+            <div class="h-8 w-[1px] bg-white/5 mx-1 md:mx-2"></div>
+            <div class="flex items-center gap-3">
+                <div class="text-right hidden sm:block">
+                    <p class="text-sm font-bold text-on-surface">Alex Rivera</p>
+                    <p class="text-[10px] text-on-surface-variant">Lead Engineer</p>
+                </div>
+                <img alt="User Profile" class="h-10 w-10 rounded-full border border-white/10 object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDIkgr_4veDS0wh_q5mxF8l5KQxEiEc0B_9qBbNicGEhTYry0isxRSK6HW3YmToGwPbvqCNLV6FmGxpjFHSgZ1TwZDPy5_LarNfTce_LgsPx3A6Kyt9nrO9Euer9bk-9elWm9syPod1_xV5WxsxWx0ftoJQV6pH_awXn-uRq0rAUx_treJdlFCCPO5oua794Na3VMEY_uNMhkV1LBoS1crf9j-q4AmG1kMroeRXyyVSW_NWW2HPDljwjkCsfCQvjSJGqSbszzBYoB5V" />
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Canvas -->
+    <main class="ml-0 md:ml-64 p-4 md:p-8 min-h-[calc(100vh-4rem)]">
+        <!-- Hero Section -->
+        <div class="mb-12 max-w-5xl">
+            <p class="text-primary font-headline tracking-[0.2em] text-xs uppercase mb-4 opacity-80">Operational Intelligence</p>
+            <h2 class="text-4xl md:text-5xl lg:text-7xl font-headline font-bold tracking-tighter text-on-surface mb-6 leading-none">
+                System <span class="text-transparent bg-clip-text bg-gradient-to-br from-primary to-tertiary">Autonomy</span> Active.
+            </h2>
+            <div class="flex flex-wrap gap-4 items-center">
+                <div class="flex -space-x-3">
+                    <img class="w-8 h-8 rounded-full border-2 border-surface object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC31bmdRuURWoMTg5_2x3Dfk-I-GVElEcJJTQ6Ft_GkgerY9Ckap6jDiU1qigMr9Uli-UL1J-edgTnb5PYUZ-4e8WW1PaW5JyU3okftgViKSOInaYH_7OEQfsDWhnwE3ULUSZ4Uapg6TSnDTiu6CEBG-A3KIYh3N345MaMOCZTu1B03LuzZ49JBLtONOaDRGbhP0XvUSAxlQI-t0rhNY5lTWInekU9nEcFKzmXNsgGtpGF1ZmtrPNMs-zNq31Zw3pBywoS8ZITQMjxU" />
+                    <img class="w-8 h-8 rounded-full border-2 border-surface object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBUcxyYf2dGKROJq-j_8IFqRYN1JCTBEux37wTnSrtFWFgxZ7F1io3ozOOhiTv5EnRCMDE_Y9vHADoD4tEl-8gIgf09mXKcbPKe8bo4MncGtgkiZnxB2Ff9iLPUV3AFpiAvb4kZPHmPoIvkKj0LRJTT6bZk_btwOXrfeLbyfrhF33xNjQaOZEQG_h7YVsxwRgS_TAS4pmOx1psawswtTa58JV-EchkkUeELYCz4S1Z0O_2ISTQb3iP30ls1xAQHNeAc3sRGXn6CSL3U" />
+                    <img class="w-8 h-8 rounded-full border-2 border-surface object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDuomvD-wMzP-hWCmDuNSO3Bm03JiITxM1h-3eY35KfpF_L13KZicQwg_7zdnuXTQpBq_9DXYsWthiDVDjOwtWeXGst-aH4OTK8nUnt9VhAagWyQNge8KRMUdWjf9Js-tkcNDmbk73tlFWfjvyXNz5Aq4EfYxWpNWesVIwoeRirD9iW25AWU6Kw0SCFcaeMHjOPw0NGztLMKo6DJlbuEHWKzT8H45SBSU_xV1QcA7izNDH5xquHFDpi3eSqETPYYmPG3EndYG4p4QWI" />
+                <div class="w-8 h-8 rounded-full bg-surface-container-highest border-2 border-surface flex items-center justify-center text-[10px] font-bold">+14</div>
+                </div>
+                <p class="text-on-surface-variant text-sm">Your team processed <span class="text-on-surface font-bold">142 tickets</span> in the last 24 hours.</p>
+                <div class="ml-auto">
+                    <button onclick="document.getElementById('issue-modal').classList.remove('hidden');" class="px-6 py-3 bg-gradient-to-r from-primary to-primary-dim rounded-xl text-white font-bold tracking-wide shadow-[0_0_20px_rgba(163,166,255,0.3)] hover:scale-105 active:scale-95 transition-all text-sm flex items-center gap-2">
+                        <span class="material-symbols-outlined text-[18px]">add</span> Report Issue
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Stats Grid (Responsive Bento) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+            <div class="glass-card p-6 rounded-2xl border border-white/5 relative overflow-hidden group">
+                <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <span class="material-symbols-outlined text-6xl">all_inbox</span>
+                </div>
+                <p class="text-on-surface-variant text-xs font-bold uppercase tracking-wider mb-2">Total Issues</p>
+                <h3 id="metric-total-issues" class="text-4xl font-headline font-bold text-on-surface mb-1 flex items-center gap-2"><span class="material-symbols-outlined animate-spin text-lg">refresh</span></h3>
+                <div class="flex items-center gap-2 text-primary text-xs">
+                    <span class="material-symbols-outlined text-sm">trending_up</span>
+                    <span>+5% vs last week</span>
+                </div>
+            </div>
+            <div class="glass-card p-6 rounded-2xl border border-white/5 relative overflow-hidden group">
+                <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity text-error">
+                    <span class="material-symbols-outlined text-6xl">priority_high</span>
+                </div>
+                <p class="text-on-surface-variant text-xs font-bold uppercase tracking-wider mb-2">High Priority</p>
+                <h3 id="metric-high-priority" class="text-4xl font-headline font-bold text-error mb-1 flex items-center gap-2"><span class="material-symbols-outlined animate-spin text-lg">refresh</span></h3>
+                <div class="flex items-center gap-2 text-error text-xs">
+                    <span class="material-symbols-outlined text-sm">warning</span>
+                    <span>8 require immediate attention</span>
+                </div>
+            </div>
+            <div class="glass-card p-6 rounded-2xl border border-white/5 relative overflow-hidden group">
+                <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity text-secondary">
+                    <span class="material-symbols-outlined text-6xl">content_copy</span>
+                </div>
+                <p class="text-on-surface-variant text-xs font-bold uppercase tracking-wider mb-2">Duplicates</p>
+                <h3 id="metric-duplicates" class="text-4xl font-headline font-bold text-on-surface mb-1 flex items-center gap-2"><span class="material-symbols-outlined animate-spin text-lg">refresh</span></h3>
+                <div class="flex items-center gap-2 text-on-surface-variant text-xs">
+                    <span class="material-symbols-outlined text-sm">auto_awesome</span>
+                    <span>AI merged 24 today</span>
+                </div>
+            </div>
+            <div class="glass-card p-6 rounded-2xl border border-white/5 relative overflow-hidden group">
+                <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity text-tertiary">
+                    <span class="material-symbols-outlined text-6xl">sell</span>
+                </div>
+                <p class="text-on-surface-variant text-xs font-bold uppercase tracking-wider mb-2">Unlabeled</p>
+                <h3 id="metric-unlabeled" class="text-4xl font-headline font-bold text-on-surface mb-1 flex items-center gap-2"><span class="material-symbols-outlined animate-spin text-lg">refresh</span></h3>
+                <div class="flex items-center gap-2 text-tertiary text-xs">
+                    <span class="material-symbols-outlined text-sm">verified</span>
+                    <span>System fully categorized</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analytics Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+            <!-- Triage Trends -->
+            <div class="lg:col-span-2 glass-card p-6 md:p-8 rounded-3xl border border-white/5">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
+                    <div>
+                        <h4 class="text-xl font-headline font-bold">Triage Trends</h4>
+                        <p class="text-sm text-on-surface-variant">Issue detection vs resolution rates</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button class="px-3 py-1 text-xs rounded-lg bg-surface-container-highest text-on-surface font-bold">Weekly</button>
+                        <button class="px-3 py-1 text-xs rounded-lg text-on-surface-variant hover:bg-white/5 transition-colors">Monthly</button>
+                    </div>
+                </div>
+                <div class="h-[250px] md:h-[300px] w-full relative">
+                    <canvas id="triageChart"></canvas>
+                </div>
+            </div>
+            <!-- Issue Distribution -->
+            <div class="glass-card p-6 md:p-8 rounded-3xl border border-white/5">
+                <h4 class="text-xl font-headline font-bold mb-2">Issue Distribution</h4>
+                <p class="text-sm text-on-surface-variant mb-6">Categorization by component</p>
+                <div class="h-[200px] md:h-[250px] w-full flex items-center justify-center relative">
+                    <canvas id="distributionChart"></canvas>
+                </div>
+                <div class="mt-6 space-y-3">
+                    <div class="flex items-center justify-between text-xs">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-primary"></span>
+                            <span>UI/Frontend</span>
+                        </div>
+                        <span class="font-bold">45%</span>
+                    </div>
+                    <div class="flex items-center justify-between text-xs">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-secondary"></span>
+                            <span>Infrastructure</span>
+                        </div>
+                        <span class="font-bold">30%</span>
+                    </div>
+                    <div class="flex items-center justify-between text-xs">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-tertiary"></span>
+                            <span>Security</span>
+                        </div>
+                        <span class="font-bold">25%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Live Stream & Active Issues -->
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            <div class="lg:col-span-3">
+                <div class="flex items-center justify-between mb-6">
+                    <h4 class="text-xl md:text-2xl font-headline font-bold">Live Stream</h4>
+                    <div class="relative flex items-center gap-2 px-3 py-1 rounded-full bg-tertiary/10 text-tertiary text-[10px] font-bold tracking-widest uppercase overflow-hidden">
+                        <div class="oracle-pulse !w-16 !h-16 !-left-4 !-top-4 !opacity-50"></div>
+                        <span class="w-1.5 h-1.5 rounded-full bg-tertiary animate-pulse z-10"></span>
+                        <span class="z-10">AI Active</span>
+                    </div>
+                </div>
+                <!-- Live Stream Feed Container -->
+                <div id="live-stream-container" class="space-y-4">
+                    <div class="glass-card p-4 md:p-5 rounded-2xl border border-white/5 flex items-start gap-4 md:gap-5 justify-center">
+                        <span class="material-symbols-outlined animate-spin text-primary">refresh</span>
+                        <span class="text-sm text-on-surface-variant font-bold">Initializing AI Stream...</span>
+                    </div>
+                </div>
+            </div>
+            <!-- Quick Actions Sidebar for main content -->
+            <div class="space-y-6">
+                <h4 class="text-xl font-headline font-bold">Quick Triage</h4>
+                <div class="glass-card p-6 rounded-3xl border border-white/5 bg-gradient-to-br from-white/5 to-transparent">
+                    <img alt="Quick View" class="w-full h-24 md:h-32 object-cover rounded-xl mb-4 grayscale hover:grayscale-0 transition-all duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBzRPNbfAERXGtQ3zw83Xy2dMl6rcObAo5B_olG2kkIMDGisi2m8fqP761EZZpqjb1VtE8NhxwqejJKfbSqTo9hAG1V0-q42ttBUeqSnr7y9uiXWBG64JjYBXXAxoSPNSsNEJC7V6VNo4XEWd0KUBdtSnGVHOLEIz0riCOg25AyN3R-1t1Ysq0GYYCoB11qnkfIiTHOusNa0nT8TT-WYi5Z431rRnEu6Kz_AJrTVav-lzEp4Xql1d8IIyAE39GEg8QUFtQ4oy_j5Z9L" />
+                    <p class="text-xs font-bold text-primary uppercase tracking-widest mb-2">Next Batch</p>
+                    <h5 class="text-base md:text-lg font-headline font-bold mb-4 leading-tight">Unassigned Infrastructure Tickets</h5>
+                    <button class="w-full py-2.5 md:py-3 bg-white/5 border border-white/10 rounded-xl text-sm font-bold hover:bg-white/10 transition-all">
+                        Launch Flow
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Add Issue Modal -->
+    <div id="issue-modal" class="fixed inset-0 z-[100] bg-surface/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="glass-card w-full max-w-lg rounded-3xl border border-white/10 p-8 shadow-[0_20px_40px_rgba(0,0,0,0.5)] animate-[fade-in_0.3s_ease-out] relative">
+            <button onclick="document.getElementById('issue-modal').classList.add('hidden');" class="absolute top-6 right-6 text-on-surface-variant hover:text-white transition-colors">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+            <div class="flex items-center gap-3 mb-2">
+                <div class="w-10 h-10 rounded-xl bg-primary/20 text-primary flex items-center justify-center">
+                    <span class="material-symbols-outlined">smart_toy</span>
+                </div>
+                <h2 class="text-2xl font-headline font-bold text-on-surface mb-2 mt-2">Report Issue</h2>
+            </div>
+            <p class="text-sm text-on-surface-variant mb-6">Our AI will automatically categorize and assess priority based on semantic content.</p>
+            
+            <form id="add-issue-form" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">Issue Title</label>
+                    <input id="issue-title" type="text" required placeholder="e.g. Navigation bar breaks on mobile safari" class="w-full bg-surface-container-high border border-white/5 rounded-xl py-3 px-4 text-sm focus:ring-1 focus:ring-primary focus:border-primary transition-all text-white">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">Description</label>
+                    <textarea id="issue-desc" required rows="4" placeholder="Provide details about the issue..." class="w-full bg-surface-container-high border border-white/5 rounded-xl py-3 px-4 text-sm focus:ring-1 focus:ring-primary focus:border-primary transition-all resize-none text-white"></textarea>
+                </div>
+                <div class="pt-4 flex justify-end">
+                    <button type="submit" id="submit-issue-btn" class="px-6 py-3 rounded-xl bg-primary hover:bg-primary-dim text-on-primary font-bold shadow-[0_0_15px_rgba(163,166,255,0.4)] transition-all flex items-center justify-center gap-2">
+                        Submit Issue
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

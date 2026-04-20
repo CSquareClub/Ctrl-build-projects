@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>OpenIssue | Auto Labeling</title>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+    <!-- Material Symbols -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <!-- Scripts & Styles -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#a3a6ff",
+                        "primary-dim": "#6063ee",
+                        "secondary": "#a28efc",
+                        "tertiary": "#ffa5d9",
+                        "error": "#ff6e84",
+                        "surface": "#0a0e19",
+                        "surface-variant": "#202535",
+                        "surface-container-low": "#0f131f",
+                        "surface-container-high": "#1a1f2e",
+                        "surface-container-highest": "#202535",
+                        "on-surface": "#e8eafb",
+                        "on-surface-variant": "#a7aaba",
+                        "on-primary": "#0f00a4",
+                    },
+                    fontFamily: {
+                        "headline": ["Space Grotesk", "sans-serif"],
+                        "body": ["Manrope", "sans-serif"],
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="styles.css" rel="stylesheet" />
+    <script defer src="script.js"></script>
+    <script defer src="auto-labeling.js"></script>
+</head>
+
+<body class="bg-surface text-on-surface font-body overflow-x-hidden selection:bg-primary/30">
+    
+    <!-- SideNavBar -->
+    <aside id="sidebar" class="flex flex-col fixed left-0 top-0 h-screen w-64 border-r border-white/5 bg-[#0a0e19] shadow-[20px_0_40px_rgba(0,0,0,0.4)] z-[60] font-headline tracking-tight transition-transform duration-300 -translate-x-full md:translate-x-0">
+        <div class="p-8">
+            <div class="flex items-center gap-3 mb-10">
+                <div class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-[0_0_20px_rgba(163,166,255,0.4)]">
+                    <span class="material-symbols-outlined text-on-primary" style="font-variation-settings: 'FILL' 1;">dataset</span>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold tracking-tighter text-indigo-400">OpenIssue</h1>
+                    <p class="text-[10px] uppercase tracking-widest text-on-surface-variant">AI Triage</p>
+                </div>
+            </div>
+            <nav class="space-y-2">
+                <a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-indigo-300 hover:bg-white/5 transition-all duration-300 hover:translate-x-1" href="index.html">
+                    <span class="material-symbols-outlined">dashboard</span>
+                    <span>Dashboard</span>
+                </a>
+                <a class="flex items-center gap-3 px-4 py-3 text-indigo-400 font-bold border-r-2 border-indigo-400 bg-white/5 transition-all duration-300 hover:translate-x-1" href="auto-labeling.html">
+                    <span class="material-symbols-outlined">label_important</span>
+                    <span>Auto Labeling</span>
+                </a>
+                <a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-indigo-300 hover:bg-white/5 transition-all duration-300 hover:translate-x-1" href="issue-analysis.html">
+                    <span class="material-symbols-outlined">analytics</span>
+                    <span>Issue Analysis</span>
+                </a>
+                <a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-indigo-300 hover:bg-white/5 transition-all duration-300 hover:translate-x-1" href="duplicate-detection.html">
+                    <span class="material-symbols-outlined">difference</span>
+                    <span>Duplicates</span>
+                </a>
+                <a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-indigo-300 hover:bg-white/5 transition-all duration-300 hover:translate-x-1" href="priority-dashboard.html">
+                    <span class="material-symbols-outlined">priority_high</span>
+                    <span>Priority</span>
+                </a>
+                <a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-indigo-300 hover:bg-white/5 transition-all duration-300 hover:translate-x-1" href="insights.html">
+                    <span class="material-symbols-outlined">insights</span>
+                    <span>Insights</span>
+                </a>
+                <a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-indigo-300 hover:bg-white/5 transition-all duration-300 hover:translate-x-1" href="settings.html">
+                    <span class="material-symbols-outlined">settings</span>
+                    <span>Settings</span>
+                </a>
+            </nav>
+        </div>
+        <div class="mt-auto p-6">
+            <button class="w-full py-2.5 bg-gradient-to-r from-primary to-primary-dim rounded-lg text-on-primary text-sm font-bold shadow-[0_0_20px_rgba(163,166,255,0.3)] hover:shadow-[0_0_25px_rgba(163,166,255,0.5)] transition-all">
+                Triage Now
+            </button>
+        </div>
+    </aside>
+
+    <!-- TopAppBar -->
+    <header class="flex items-center justify-between px-4 md:px-8 ml-0 md:ml-64 h-16 bg-surface/80 backdrop-blur-lg sticky top-0 z-40 transition-all duration-300 font-body font-medium border-b border-white/5">
+        <div class="flex items-center flex-1 gap-4">
+            <button id="sidebar-toggle" class="md:hidden p-2 text-slate-400 hover:bg-white/10 rounded-full transition-all">
+                <span class="material-symbols-outlined">menu</span>
+            </button>
+            <div class="relative w-full max-w-md hidden sm:block group">
+                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm">search</span>
+                <input class="w-full bg-surface-container-low border-none rounded-full pl-10 pr-4 py-2 text-sm focus:ring-1 focus:ring-primary focus:bg-surface-container-high transition-all text-on-surface placeholder:text-on-surface-variant/50" placeholder="Search parameters..." type="text" />
+            </div>
+        </div>
+        <div class="flex items-center gap-2 md:gap-4">
+            <button class="p-2 text-slate-400 hover:bg-white/10 rounded-full transition-all">
+                <span class="material-symbols-outlined">notifications</span>
+            </button>
+            <div class="h-8 w-[1px] bg-white/5 mx-1 md:mx-2"></div>
+            <img alt="User Profile" class="h-9 w-9 rounded-full border border-white/10 object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDIkgr_4veDS0wh_q5mxF8l5KQxEiEc0B_9qBbNicGEhTYry0isxRSK6HW3YmToGwPbvqCNLV6FmGxpjFHSgZ1TwZDPy5_LarNfTce_LgsPx3A6Kyt9nrO9Euer9bk-9elWm9syPod1_xV5WxsxWx0ftoJQV6pH_awXn-uRq0rAUx_treJdlFCCPO5oua794Na3VMEY_uNMhkV1LBoS1crf9j-q4AmG1kMroeRXyyVSW_NWW2HPDljwjkCsfCQvjSJGqSbszzBYoB5V" />
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="ml-0 md:ml-64 p-4 md:p-8 min-h-[calc(100vh-4rem)] relative">
+        <!-- Ambient Background Glow -->
+        <div class="oracle-pulse !top-1/4 !left-1/4 !opacity-30"></div>
+        <div class="oracle-pulse !top-3/4 !right-1/4 !bg-primary/20 !opacity-20"></div>
+
+        <div class="max-w-7xl mx-auto flex flex-col xl:flex-row gap-8">
+            
+            <!-- Left Side: Header & Issue Tracking -->
+            <div class="flex-1 space-y-8">
+                <!-- Page Header -->
+                <header class="space-y-4 mb-4">
+                    <p class="text-xs uppercase tracking-widest text-primary font-bold">Neural Categorization System</p>
+                    <h2 class="text-4xl md:text-5xl font-headline font-bold text-on-surface tracking-tighter">Automated Contextual Tagging</h2>
+                </header>
+
+                <div class="glass-card rounded-2xl border border-white/5 p-4 md:p-8">
+                    <!-- Filters -->
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 pb-4 border-b border-white/5 gap-4">
+                        <div class="flex flex-wrap gap-2 md:gap-4" id="filter-buttons">
+                            <button data-filter="incoming" class="px-4 py-2 rounded-full bg-white/5 text-on-surface font-bold text-sm border-2 border-primary/30 transition-all focus:outline-none shadow-[0_0_15px_rgba(163,166,255,0.15)]">Incoming Stream</button>
+                            <button data-filter="review" class="px-4 py-2 rounded-full text-on-surface-variant font-bold text-sm hover:text-on-surface transition-colors border-2 border-transparent">Needs Review</button>
+                            <button data-filter="approved" class="px-4 py-2 rounded-full text-on-surface-variant font-bold text-sm hover:text-on-surface transition-colors border-2 border-transparent">Auto-Approved</button>
+                        </div>
+                        <button class="text-on-surface-variant hover:text-on-surface transition-colors">
+                            <span class="material-symbols-outlined">filter_list</span>
+                        </button>
+                    </div>
+
+                    <!-- Issues List -->
+                    <div id="issues-container" class="space-y-4">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right Side: Classification Confidence Panel -->
+            <div class="w-full xl:w-96 space-y-6">
+                <!-- Main Status Panel -->
+                <div class="glass-card rounded-2xl border border-white/5 overflow-hidden">
+                    <div class="mesh-gradient h-32 w-full relative opacity-80">
+                        <div class="absolute inset-0 bg-surface/50 backdrop-blur-sm"></div>
+                        <div class="absolute inset-0 flex flex-col items-center justify-center">
+                            <span id="global-accuracy" class="text-4xl font-headline font-bold text-white tracking-tighter mb-1 select-none">0%</span>
+                            <span class="text-[10px] uppercase tracking-widest text-white/70 font-bold select-none">Global Accuracy Model</span>
+                        </div>
+                    </div>
+                    
+                    <div class="p-6 md:p-8 space-y-6">
+                        <div class="flex items-center justify-between">
+                            <h4 class="font-headline font-bold flex items-center gap-2">
+                                <span class="material-symbols-outlined text-primary text-sm">settings_suggest</span>
+                                Classification Matrix
+                            </h4>
+                            <button class="text-primary text-xs font-bold hover:underline">Retrain</button>
+                        </div>
+                        
+                        <div class="space-y-4">
+                            <!-- Category progress -->
+                            <div>
+                                <div class="flex justify-between text-xs mb-1 font-bold">
+                                    <span class="text-on-surface">Bug Detection</span>
+                                    <span id="stat-bug-pct" class="text-primary">0%</span>
+                                </div>
+                                <div class="h-1.5 w-full bg-surface-container rounded-full overflow-hidden">
+                                    <div id="stat-bug-bar" class="h-full bg-primary rounded-full shadow-[0_0_10px_rgba(163,166,255,0.6)]" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-xs mb-1 font-bold">
+                                    <span class="text-on-surface">Feature Req.</span>
+                                    <span id="stat-feature-pct" class="text-secondary">0%</span>
+                                </div>
+                                <div class="h-1.5 w-full bg-surface-container rounded-full overflow-hidden">
+                                    <div id="stat-feature-bar" class="h-full bg-secondary rounded-full" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-xs mb-1 font-bold">
+                                    <span class="text-on-surface">Documentation</span>
+                                    <span id="stat-docs-pct" class="text-tertiary">0%</span>
+                                </div>
+                                <div class="h-1.5 w-full bg-surface-container rounded-full overflow-hidden">
+                                    <div id="stat-docs-bar" class="h-full bg-tertiary rounded-full" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pt-6 border-t border-white/5 space-y-3">
+                            <div id="concept-drift-box" class="flex items-start gap-3 p-3 rounded-xl bg-white/5 border border-white/5 hidden">
+                                <span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">insights</span>
+                                <div>
+                                    <p class="text-xs font-bold text-on-surface mb-1">Concept Drift Detected</p>
+                                    <p id="concept-drift-msg" class="text-[10px] text-on-surface-variant leading-relaxed">Stable performance expected.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+    </main>
+
+    <!-- Floating Action Button -->
+    <button class="fixed bottom-6 right-6 md:bottom-8 md:right-8 w-12 h-12 md:w-14 md:h-14 bg-primary text-on-primary rounded-full flex items-center justify-center shadow-[0_10px_30px_rgba(0,0,0,0.5)] hover:scale-110 active:scale-95 transition-all z-40">
+        <span class="material-symbols-outlined">add</span>
+    </button>
+</body>
+</html>
