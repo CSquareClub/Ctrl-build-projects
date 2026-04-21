@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Blocked — FocusRoom</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a0f;
+      --accent: #7c6af7;
+      --danger: #f56565;
+      --text: #e8e8f0;
+      --muted: #6b6b80;
+    }
+
+    html, body {
+      height: 100%; background: var(--bg);
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(245,101,101,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(245,101,101,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+    }
+
+    .card {
+      position: relative;
+      max-width: 480px; width: 90%;
+      background: rgba(22,22,31,0.9);
+      border: 1px solid rgba(245,101,101,0.2);
+      border-radius: 20px;
+      padding: 48px 40px;
+      text-align: center;
+      backdrop-filter: blur(12px);
+    }
+
+    .shield {
+      width: 64px; height: 64px;
+      background: rgba(245,101,101,0.1);
+      border: 1px solid rgba(245,101,101,0.3);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 24px;
+      font-size: 28px;
+      animation: throb 2s ease-in-out infinite;
+    }
+    @keyframes throb {
+      0%,100% { box-shadow: 0 0 0 0 rgba(245,101,101,0); }
+      50% { box-shadow: 0 0 0 12px rgba(245,101,101,0.1); }
+    }
+
+    h1 {
+      font-size: 28px; font-weight: 800;
+      color: var(--danger);
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+    }
+
+    .blocked-url {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      color: var(--muted);
+      background: rgba(255,255,255,0.04);
+      padding: 6px 14px;
+      border-radius: 20px;
+      display: inline-block;
+      margin: 12px 0 20px;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    p {
+      font-size: 15px; line-height: 1.6;
+      color: var(--muted);
+      max-width: 340px; margin: 0 auto 28px;
+    }
+
+    .timer-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(124,106,247,0.1);
+      border: 1px solid rgba(124,106,247,0.25);
+      border-radius: 12px;
+      padding: 10px 18px;
+      font-size: 13px; font-weight: 700;
+      color: var(--accent);
+      margin-bottom: 24px;
+    }
+    .timer-count {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 18px;
+    }
+
+    .btn-back {
+      display: inline-block;
+      padding: 11px 24px;
+      border-radius: 10px;
+      background: var(--accent);
+      color: #fff;
+      font-family: 'Syne', sans-serif;
+      font-size: 12px; font-weight: 800;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      cursor: pointer; border: none;
+      transition: all 0.15s;
+      text-decoration: none;
+    }
+    .btn-back:hover { background: #6b59e8; transform: translateY(-1px); }
+    .btn-back:active { transform: scale(0.98); }
+
+    .quote {
+      margin-top: 28px; padding-top: 20px;
+      border-top: 1px solid rgba(255,255,255,0.05);
+      font-size: 12px; font-style: italic;
+      color: rgba(107,107,128,0.7);
+      line-height: 1.5;
+    }
+
+    @keyframes fadeUp {
+      from { opacity:0; transform:translateY(16px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+    .card { animation: fadeUp 0.35s ease both; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="shield">🛡</div>
+    <h1>Site Blocked</h1>
+    <div class="blocked-url" id="blockedUrl">—</div>
+    <p>This site is blocked during your FocusRoom session. Stay on task — your focus score depends on it.</p>
+
+    <div class="timer-badge">
+      <span>Session remaining:</span>
+      <span class="timer-count" id="remainingTimer">--:--</span>
+    </div>
+
+    <br/>
+    <button class="btn-back" onclick="window.history.back()">← Go Back</button>
+
+    <div class="quote" id="quoteEl"></div>
+  </div>
+
+  <script>
+    // Show blocked URL
+    const params = new URLSearchParams(window.location.search);
+    const url = document.referrer || 'this site';
+    try {
+      const host = new URL(document.referrer).hostname.replace('www.', '');
+      document.getElementById('blockedUrl').textContent = host;
+    } catch (_) {
+      document.getElementById('blockedUrl').textContent = 'Distraction site';
+    }
+
+    // Motivational quotes
+    const quotes = [
+      '"The successful warrior is the average man, with laser-like focus." — Bruce Lee',
+      '"Concentrate all your thoughts upon the work at hand." — Alexander Graham Bell',
+      '"You don\'t need more time. You need to decide." — Seth Godin',
+      '"Deep work is the ability to focus without distraction." — Cal Newport',
+      '"Where focus goes, energy flows." — Tony Robbins'
+    ];
+    document.getElementById('quoteEl').textContent = quotes[Math.floor(Math.random() * quotes.length)];
+
+    // Show remaining session time
+    chrome.storage.local.get(['sessionActive', 'sessionStartTime', 'sessionDuration'], (data) => {
+      if (!data.sessionActive || !data.sessionStartTime) return;
+
+      function tick() {
+        const elapsed = Date.now() - data.sessionStartTime;
+        const total = (data.sessionDuration ?? 45) * 60000;
+        const remaining = Math.max(0, total - elapsed);
+        const m = Math.floor(remaining / 60000);
+        const s = Math.floor((remaining % 60000) / 1000);
+        document.getElementById('remainingTimer').textContent =
+          `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+      }
+      tick();
+      setInterval(tick, 1000);
+    });
+  </script>
+</body>
+</html>

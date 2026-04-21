@@ -1,0 +1,66 @@
+{
+  "manifest_version": 3,
+  "name": "FocusRoom — The Enforcer",
+  "version": "1.0.0",
+  "description": "AI-powered focus enforcer. Blocks distractions, syncs with your study room, and keeps you accountable.",
+
+  "permissions": [
+    "declarativeNetRequest",
+    "declarativeNetRequestFeedback",
+    "storage",
+    "tabs",
+    "activeTab",
+    "alarms",
+    "scripting",
+    "notifications"
+  ],
+
+  "host_permissions": [
+    "http://localhost:3000/*",
+    "http://localhost:5001/*",
+    "*://*.youtube.com/*",
+    "*://*.instagram.com/*",
+    "*://*.netflix.com/*",
+    "*://*.twitter.com/*",
+    "*://*.x.com/*",
+    "*://*.reddit.com/*",
+    "*://*.facebook.com/*",
+    "*://*.tiktok.com/*",
+    "*://*.twitch.tv/*",
+    "*://*.discord.com/*"
+  ],
+
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+  "default_popup": "popup.html"
+},
+ 
+
+  
+
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "distraction_blocklist",
+        "enabled": false,
+        "path": "rules.json"
+      }
+    ]
+  },
+
+
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  },
+
+  "web_accessible_resources": [
+    {
+      "resources": ["blocked.html", "icons/*"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+  
+}
