@@ -1,0 +1,184 @@
+.jdparser-section {
+  padding: 4rem 2rem;
+}
+
+.jdparser-container {
+  max-width: 900px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.jdparser-header {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.jdparser-icon-wrap {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent-purple);
+  flex-shrink: 0;
+}
+
+.jdparser-header h3 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+
+.jdparser-header p {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+.jd-parse-input {
+  width: 100%;
+  background: rgba(17, 24, 39, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  padding: 1.25rem;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.jd-parse-input:focus {
+  border-color: var(--accent-purple);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.jdp-error {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #ff7b7b;
+  font-size: 0.9rem;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  background: rgba(239, 68, 68, 0.08);
+  border-left: 3px solid var(--red-accent);
+}
+
+.jdp-parse-btn {
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.jdp-parse-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Result Card */
+.jdp-result {
+  padding: 2rem;
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.jdp-result-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.jdp-role {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: 0.4rem;
+}
+
+.ai-badge {
+  font-size: 0.78rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 100px;
+  background: rgba(99, 102, 241, 0.15);
+  color: var(--accent-purple);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  font-weight: 500;
+}
+
+.jdp-level-badge {
+  padding: 0.4rem 1rem;
+  border-radius: 100px;
+  background: rgba(59, 130, 246, 0.15);
+  color: var(--accent-main);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  font-size: 0.85rem;
+  font-weight: 600;
+  align-self: flex-start;
+  white-space: nowrap;
+}
+
+.jd-tag-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.jd-group-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+}
+
+.tag-blue {
+  background: rgba(59, 130, 246, 0.12);
+  color: #93c5fd;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.tag-purple {
+  background: rgba(99, 102, 241, 0.12);
+  color: #a5b4fc;
+  border: 1px solid rgba(99, 102, 241, 0.2);
+}
+
+.jdp-list-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.jdp-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.jdp-list li {
+  padding: 0.6rem 1rem;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border-left: 2px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}

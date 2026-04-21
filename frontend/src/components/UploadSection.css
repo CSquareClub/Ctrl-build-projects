@@ -1,0 +1,314 @@
+.upload-section {
+  padding: 6rem 2rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.upload-container {
+  max-width: 800px;
+  width: 100%;
+  margin: 0 auto;
+  position: relative;
+  z-index: 10;
+}
+
+.jd-input-wrapper {
+  margin: 2rem 0;
+  text-align: left;
+}
+
+.jd-input-wrapper label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--accent-secondary);
+  margin-bottom: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.jd-textarea {
+  width: 100%;
+  height: 120px;
+  background: rgba(17, 24, 39, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 1.25rem;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 1rem;
+  line-height: 1.6;
+  resize: none;
+  transition: all 0.3s ease;
+  outline: none;
+}
+
+.jd-textarea:focus {
+  border-color: var(--accent-main);
+  background: rgba(17, 24, 39, 0.6);
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.25);
+}
+
+.jd-tip {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-top: 0.75rem;
+  font-style: italic;
+  opacity: 0.7;
+}
+
+.section-title {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.section-subtitle {
+  color: var(--text-secondary);
+  margin-bottom: 3rem;
+  font-size: 1.1rem;
+}
+
+/* ========================================
+   DROP ZONE — Pixel-perfect hitbox
+   ======================================== */
+.drop-zone.premium-glass {
+  border-radius: 32px;
+  padding: 4rem 2rem;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  background: linear-gradient(145deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-right-color: rgba(255, 255, 255, 0.02);
+  border-bottom-color: rgba(255, 255, 255, 0.02);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2), inset 0 1px 1px rgba(255, 255, 255, 0.1);
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.4s ease;
+  position: relative;
+  overflow: hidden; /* CRITICAL: Contains ALL inner effects within the box boundary */
+  isolation: isolate; /* Creates a new stacking context — no z-index leaks */
+}
+
+/* ========================================
+   COLOR PLATE GLOW — fully contained
+   ======================================== */
+.color-plate-glow {
+  position: absolute;
+  inset: 0; /* Flush with parent, NOT outside it */
+  background: linear-gradient(135deg, #06b6d4, #3b82f6, #6366f1);
+  z-index: -1;
+  border-radius: inherit;
+  filter: blur(20px);
+  opacity: 0.25;
+  pointer-events: none;
+  animation: breathe-plate 4s ease-in-out infinite;
+  transition: opacity 0.4s ease, filter 0.4s ease, background 0.4s ease;
+}
+
+/* ========================================
+   HOVER — only on .drop-zone:hover itself
+   ======================================== */
+.drop-zone.premium-glass:hover {
+  transform: translateY(-4px) scale(1.015);
+  border-color: rgba(6, 182, 212, 0.35);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.25),
+              inset 0 1px 1px rgba(255, 255, 255, 0.12),
+              0 0 25px rgba(59, 130, 246, 0.12);
+}
+
+.drop-zone.drag-active {
+  transform: translateY(-4px) scale(1.015);
+  border-color: rgba(6, 182, 212, 0.5);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.25),
+              inset 0 1px 1px rgba(255, 255, 255, 0.12),
+              0 0 30px rgba(59, 130, 246, 0.2);
+}
+
+.drop-zone.premium-glass:active {
+  transform: translateY(2px) scale(0.99);
+  box-shadow: inset 0 4px 15px rgba(0,0,0,0.3);
+}
+
+/* Glow intensifies ONLY on direct hover or file-drag */
+.drop-zone.premium-glass:hover .color-plate-glow,
+.drop-zone.drag-active .color-plate-glow {
+  opacity: 0.55;
+  filter: blur(30px);
+  background: linear-gradient(135deg, #6366f1, #3b82f6, #06b6d4);
+  animation: pulse-plate 1.5s infinite alternate;
+}
+
+@keyframes breathe-plate {
+  0%   { opacity: 0.2; }
+  50%  { opacity: 0.35; }
+  100% { opacity: 0.2; }
+}
+
+@keyframes pulse-plate {
+  0%   { opacity: 0.45; filter: blur(25px); }
+  100% { opacity: 0.65; filter: blur(35px); }
+}
+
+/* ========================================
+   PSEUDO-ELEMENT — contained with inset
+   ======================================== */
+.drop-zone.premium-glass::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(135deg, transparent, rgba(99, 102, 241, 0.04), transparent);
+  transform: translateY(100%);
+  transition: transform 0.5s ease;
+  pointer-events: none;
+}
+
+.drop-zone.premium-glass:hover::before {
+  transform: translateY(0);
+}
+
+/* ========================================
+   NEURAL PARTICLES — contained
+   ======================================== */
+.neural-particles {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-image: radial-gradient(circle, rgba(255,255,255,0.08) 1px, transparent 1px);
+  background-size: 24px 24px;
+  opacity: 0.4;
+  pointer-events: none;
+  animation: drift-bg 20s linear infinite;
+}
+
+@keyframes drift-bg {
+  0%   { background-position: 0 0; }
+  100% { background-position: 48px 48px; }
+}
+
+/* ========================================
+   DROP CONTENT — above decorative layers
+   ======================================== */
+.drop-content-wrapper {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  pointer-events: none; /* Let parent handle all pointer events */
+}
+
+/* Re-enable pointer events on actual interactive children */
+.drop-content-wrapper input,
+.drop-content-wrapper button {
+  pointer-events: auto;
+}
+
+.hidden {
+  display: none;
+}
+
+.upload-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.upload-state.uploading {
+  position: relative;
+  overflow: hidden;
+  padding: 3rem 0;
+  width: 100%;
+}
+
+.scan-line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: var(--accent-main);
+  box-shadow: 0 0 20px 5px rgba(79, 172, 254, 0.6);
+  animation: scan-vertical 2.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  z-index: 10;
+  pointer-events: none;
+}
+
+@keyframes scan-vertical {
+  0%   { top: -10%; opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { top: 110%; opacity: 0; }
+}
+
+.upload-icon-wrapper {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 1.5rem;
+  border-radius: 50%;
+  margin-bottom: 1rem;
+  transition: transform 0.3s ease, background 0.3s ease;
+}
+
+.drop-zone.premium-glass:hover .upload-icon-wrapper {
+  transform: scale(1.1);
+  background: rgba(79, 172, 254, 0.1);
+}
+
+.upload-icon {
+  color: var(--text-primary);
+  transition: color 0.3s ease;
+}
+
+.drop-zone.premium-glass:hover .upload-icon {
+  color: var(--accent-secondary);
+}
+
+.upload-state h3 {
+  font-size: 1.5rem;
+}
+
+.upload-state p {
+  color: var(--text-secondary);
+}
+
+/* Spinner Animation */
+.spinner-icon {
+  color: var(--accent-main);
+  animation: spin 1.5s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* Upload Error */
+.upload-error {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem 1.5rem;
+  margin-bottom: 1.5rem;
+  border-radius: 12px;
+  border-left: 4px solid var(--red-accent);
+  color: #ff7b7b;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.parsed-jd-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.85rem 1.25rem;
+  margin-bottom: 1rem;
+  border-radius: 12px;
+  border-left: 4px solid var(--green-accent);
+  color: #69f0ae;
+  font-size: 0.9rem;
+}
+

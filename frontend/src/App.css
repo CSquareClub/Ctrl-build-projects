@@ -1,0 +1,7 @@
+/* App specific layout styles */
+.post-analysis-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  padding-bottom: 2rem;
+}

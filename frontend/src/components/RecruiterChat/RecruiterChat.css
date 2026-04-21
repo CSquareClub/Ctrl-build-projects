@@ -1,0 +1,215 @@
+.rc-section { padding: 2rem 2rem 0; }
+
+.rc-container {
+  max-width: 900px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.rc-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.5rem 2rem;
+  border-radius: 20px;
+}
+
+.rc-header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.rc-icon-wrap {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  color: var(--green-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.rc-header h3 { font-size: 1.2rem; font-weight: 700; }
+.rc-header p { font-size: 0.9rem; color: var(--text-secondary); }
+
+/* Chat Area */
+.rc-chat-area {
+  border-radius: 20px;
+  padding: 1.5rem;
+  min-height: 320px;
+  max-height: 500px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.rc-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.rc-prompts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.rc-prompt-chip {
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  color: var(--accent-main);
+  border-radius: 100px;
+  padding: 0.45rem 1rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.rc-prompt-chip:hover {
+  background: rgba(59, 130, 246, 0.2);
+  transform: translateY(-1px);
+}
+
+/* Messages */
+.rc-messages {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.rc-msg {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.rc-msg.user { flex-direction: row-reverse; }
+
+.rc-msg-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.rc-msg.user .rc-msg-avatar {
+  background: rgba(59, 130, 246, 0.15);
+  color: var(--accent-main);
+}
+
+.rc-msg.assistant .rc-msg-avatar {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--green-accent);
+}
+
+.rc-msg-body {
+  max-width: 75%;
+  padding: 0.85rem 1.25rem;
+  border-radius: 16px;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.rc-msg.user .rc-msg-body {
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(59, 130, 246, 0.15);
+  border-top-right-radius: 4px;
+  color: var(--text-primary);
+}
+
+.rc-msg.assistant .rc-msg-body {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-top-left-radius: 4px;
+  color: var(--text-secondary);
+}
+
+.ai-badge-mini {
+  display: inline-block;
+  margin-top: 0.5rem;
+  font-size: 0.72rem;
+  padding: 0.15rem 0.6rem;
+  border-radius: 100px;
+  background: rgba(99, 102, 241, 0.12);
+  color: var(--accent-purple);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+}
+
+/* Typing */
+.rc-msg-body.typing {
+  display: flex;
+  gap: 4px;
+  padding: 1rem 1.5rem;
+}
+
+.rc-msg-body.typing span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-secondary);
+  animation: typing-bounce 1.4s infinite ease-in-out;
+}
+
+.rc-msg-body.typing span:nth-child(2) { animation-delay: 0.2s; }
+.rc-msg-body.typing span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes typing-bounce {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+/* Input */
+.rc-input-area {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 16px;
+}
+
+.rc-input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.95rem;
+  padding: 0.5rem;
+}
+
+.rc-send-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  border: none;
+  background: var(--accent-main);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.rc-send-btn:hover { background: #2563eb; transform: scale(1.05); }
+.rc-send-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
